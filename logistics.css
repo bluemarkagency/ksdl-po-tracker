@@ -52,9 +52,29 @@
 .manual-po-grid small{font-weight:500;line-height:1.4}
 .manual-po-span{grid-column:1/-1}
 @media(max-width:760px){
-  .table-title-actions{width:100%;justify-content:stretch}
-  .table-title-actions button{flex:1}
+  html,body{max-width:100%;overflow-x:hidden}
+  .app-shell{width:100%;max-width:100%}
+  .topbar{flex-direction:column;align-items:stretch;gap:14px}
+  .topbar>div:first-child,.top-actions,.table-title>div:first-child,.trip-dialog-head>div{min-width:0}
+  .top-actions{display:grid;width:100%;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+  .top-actions .connection-status{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .top-language{grid-column:1/-1;order:0;width:100%;min-width:0;justify-content:flex-start}
+  .top-language .language-select{flex:1;min-width:0;max-width:100%}
+  #refreshBtn,#signOutBtn{width:100%;min-width:0}
+  .summary-grid article,.toolbar>*{min-width:0}
+  .table-card,.table-wrap{width:100%;max-width:100%;min-width:0}
+  .table-wrap,.po-detail-wrap,.complete-po-wrap{-webkit-overflow-scrolling:touch}
+  .table-title{flex-direction:column;align-items:stretch;gap:12px}
+  .table-title-actions{display:grid;width:100%;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+  .table-title-actions button{width:100%;min-width:0;white-space:normal}
   .manual-po-grid{grid-template-columns:1fr}
   .manual-po-span{grid-column:auto}
-  .manual-po-dialog form{padding:18px}
+  .manual-po-dialog,.trip-plan-dialog,.complete-trip-dialog{max-width:calc(100% - 16px);max-height:calc(100dvh - 16px);overflow-y:auto}
+  .manual-po-dialog form,.trip-plan-dialog form,.complete-trip-dialog form{padding:18px}
+  .toast{left:max(12px,env(safe-area-inset-left));right:max(12px,env(safe-area-inset-right));bottom:max(12px,env(safe-area-inset-bottom));max-width:none}
+}
+@media(max-width:430px){
+  .table-title-actions{grid-template-columns:1fr}
+  .plan-actions{display:grid;grid-template-columns:1fr;width:100%}
+  .plan-actions button{width:100%;min-width:0}
 }
