@@ -5,6 +5,7 @@
   const BASE_URL = String(CONFIG.SUPABASE_URL || '').replace(/\/$/, '');
   const PUBLIC_KEY = CONFIG.SUPABASE_ANON_KEY || '';
   const SESSION_KEY = 'ksdl-po-tracker-session';
+  const NOTE_BUCKET = 'delivery-notes';
   const INR = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 });
   let session = null, refreshPromise = null, invoices = [], advices = [];
 
@@ -16,6 +17,7 @@
   const statusClass = value => String(value || '').toLowerCase().replaceAll(' ', '-');
   const show = id => $(id).classList.remove('hidden');
   const hide = id => $(id).classList.add('hidden');
+  if (window.pdfjsLib) window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
   function saveSession(next) { session = next; sessionStorage.setItem(SESSION_KEY, JSON.stringify(session)); }
   function tokenExpiresSoon() {
     if (!session?.access_token) return false;
@@ -49,6 +51,55 @@
   async function ensureAccess() {
     const role = await api('/rest/v1/rpc/po_tracker_role', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
     if (!['owner', 'accountant'].includes(role)) throw new Error('Only the owner or accountant can access Customer Receivables.');
+  }
+  function storagePath(value) {
+    const text = String(value || '');
+    for (const marker of [`/storage/v1/object/public/${NOTE_BUCKET}/`, `/storage/v1/object/sign/${NOTE_BUCKET}/`, `/storage/v1/object/${NOTE_BUCKET}/`]) {
+      if (text.includes(marker)) return decodeURIComponent(text.split(marker)[1].split('?')[0]);
+    }
+    return text.replace(/^\/+/, '');
+  }
+  async function signedInvoiceUrl(value) {
+    const path = storagePath(value); if (!path) throw new Error('Invoice copy path is missing.');
+    const data = await api(`/storage/v1/object/sign/${NOTE_BUCKET}/${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ expiresIn: 600 }) });
+    if (!data?.signedURL) throw new Error('Could not open the private invoice copy.');
+    return `${BASE_URL}/storage/v1${data.signedURL}`;
+  }
+  async function readPdfLines(blob) {
+    if (!window.pdfjsLib) throw new Error('PDF reader did not load. Check the internet connection and try again.');
+    const pdf = await window.pdfjsLib.getDocument({ data: await blob.arrayBuffer() }).promise;
+    const pages = [];
+    for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+      const page = await pdf.getPage(pageNumber), content = await page.getTextContent();
+      const positioned = content.items.filter(item => String(item.str || '').trim()).map(item => ({ text: String(item.str).trim(), x: item.transform?.[4] || 0, y: item.transform?.[5] || 0 }));
+      const rows = [];
+      positioned.sort((a, b) => Math.abs(b.y - a.y) > 2 ? b.y - a.y : a.x - b.x).forEach(item => {
+        let row = rows.find(candidate => Math.abs(candidate.y - item.y) <= 2);
+        if (!row) { row = { y: item.y, items: [] }; rows.push(row); }
+        row.items.push(item);
+      });
+      pages.push(rows.sort((a, b) => b.y - a.y).map(row => row.items.sort((a, b) => a.x - b.x).map(item => item.text).join(' ').replace(/\s+/g, ' ').trim()));
+    }
+    return pages.flat();
+  }
+  function invoiceDateToIso(value) {
+    const match = String(value || '').match(/(\d{1,2})[-\s/]([A-Za-z]{3,9})[-\s/](\d{2,4})/);
+    if (!match) return '';
+    const months = { jan: 1, january: 1, feb: 2, february: 2, mar: 3, march: 3, apr: 4, april: 4, may: 5, jun: 6, june: 6, jul: 7, july: 7, aug: 8, august: 8, sep: 9, sept: 9, september: 9, oct: 10, october: 10, nov: 11, november: 11, dec: 12, december: 12 };
+    const month = months[match[2].toLowerCase()]; if (!month) return '';
+    const year = match[3].length === 2 ? 2000 + Number(match[3]) : Number(match[3]);
+    return `${year}-${String(month).padStart(2, '0')}-${String(Number(match[1])).padStart(2, '0')}`;
+  }
+  function parseAttachedInvoice(lines) {
+    const flat = lines.join(' ').replace(/\s+/g, ' ');
+    const invoiceNumber = flat.match(/\b(BMAG\/\d{2}-\d{2}\/\d{3,8})\b/i)?.[1] || '';
+    const invoiceIndex = lines.findIndex(line => invoiceNumber && line.includes(invoiceNumber));
+    const invoiceDateText = invoiceIndex >= 0 ? lines.slice(invoiceIndex, invoiceIndex + 6).join(' ').match(/\b(\d{1,2}[-\s/][A-Za-z]{3,9}[-\s/]\d{2,4})\b/)?.[1] || '' : '';
+    const totalLine = lines.find(line => /\bTotal\b/i.test(line) && /(?:₹|Rs\.?)/i.test(line) && /\d[\d,]*\.\d{2}/.test(line)) || '';
+    const totalAmount = totalLine.match(/(?:₹|Rs\.?)\s*([\d,]+\.\d{2})(?!.*\d[\d,]*\.\d{2})/i)?.[1]
+      || flat.match(/Total\s+Inv\s+Amt\s*:\s*([\d,]+\.\d{2})/i)?.[1]
+      || '';
+    return { invoiceNumber, invoiceDate: invoiceDateToIso(invoiceDateText), invoiceAmount: totalAmount ? Number(totalAmount.replace(/,/g, '')) : null };
   }
   function dayDifference(date) {
     if (!date) return null;
@@ -99,7 +150,7 @@
         <td class="${paid ? 'money-positive' : 'money-negative'}">${money(outstanding(invoice))}</td>
         <td><span class="age-chip ${days != null && days >= 0 && !paid ? 'overdue' : ''}">${safe(age)}</span></td>
         <td><span class="receivable-status ${statusClass(invoice.payment_status)}">${safe(invoice.payment_status)}</span></td>
-        <td><button class="text-btn edit-invoice" data-id="${invoice.id}" type="button">Edit</button></td>
+        <td><div class="row-actions">${invoice.payment_status === 'Needs Data' && invoice.invoice_attachment_url ? `<button class="text-btn read-invoice" data-id="${invoice.id}" type="button">Read invoice copy</button>` : ''}<button class="text-btn edit-invoice" data-id="${invoice.id}" type="button">Edit</button></div></td>
       </tr>`;
     }).join('');
     $('invoiceEmpty').classList.toggle('hidden', rows.length > 0);
@@ -133,13 +184,37 @@
       $('invoiceDialog').close(); await loadData(); toast('Invoice and due date updated in the synced register.');
     } catch (err) { error.textContent = err.message || 'Could not save invoice.'; }
   }
+  async function repairInvoiceFromCopy(id, button) {
+    const invoice = invoices.find(item => item.id === id); if (!invoice?.invoice_attachment_url) return;
+    const originalText = button.textContent;
+    try {
+      button.disabled = true; button.textContent = 'Reading…';
+      const response = await fetch(await signedInvoiceUrl(invoice.invoice_attachment_url));
+      if (!response.ok) throw new Error('Could not download the attached invoice copy.');
+      const parsed = parseAttachedInvoice(await readPdfLines(await response.blob()));
+      const expected = String(invoice.invoice_number || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+      const actual = String(parsed.invoiceNumber || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+      if (!actual || actual !== expected) throw new Error(`The attached PDF does not match ${invoice.invoice_number}.`);
+      if (!parsed.invoiceAmount || parsed.invoiceAmount <= 0) throw new Error('Invoice value could not be read. Use Edit to enter it manually.');
+      await api('/rest/v1/rpc/update_customer_invoice', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+        body: JSON.stringify({ invoice: invoice.id, new_invoice_date: parsed.invoiceDate || invoice.invoice_date || null, new_invoice_amount: parsed.invoiceAmount, new_credit_days: 6 })
+      });
+      await loadData(); toast(`${invoice.invoice_number} updated with ${money(parsed.invoiceAmount)}.`);
+    } catch (err) { toast(err.message || 'Could not read the attached invoice.'); }
+    finally { button.disabled = false; button.textContent = originalText; }
+  }
 
   function bindEvents() {
     $('loginForm').addEventListener('submit', async event => { event.preventDefault(); $('loginError').textContent = ''; try { await signIn($('emailInput').value.trim(), $('passwordInput').value); await start(); } catch (err) { $('loginError').textContent = err.message || 'Sign in failed.'; } });
     $('signOutBtn').addEventListener('click', signOut); $('refreshBtn').addEventListener('click', loadData);
     ['invoiceSearch', 'invoiceStatus', 'ageFilter'].forEach(id => { $(id).addEventListener('input', renderInvoices); $(id).addEventListener('change', renderInvoices); });
     $('clearInvoiceFilters').addEventListener('click', () => { $('invoiceSearch').value = ''; $('invoiceStatus').value = ''; $('ageFilter').value = ''; renderInvoices(); });
-    $('invoiceBody').addEventListener('click', event => { const button = event.target.closest('.edit-invoice'); if (button) openInvoice(button.dataset.id); });
+    $('invoiceBody').addEventListener('click', event => {
+      const readButton = event.target.closest('.read-invoice'), editButton = event.target.closest('.edit-invoice');
+      if (readButton) repairInvoiceFromCopy(readButton.dataset.id, readButton);
+      else if (editButton) openInvoice(editButton.dataset.id);
+    });
     $('invoiceForm').addEventListener('submit', saveInvoice); $('closeInvoiceDialog').addEventListener('click', () => $('invoiceDialog').close()); $('cancelInvoiceBtn').addEventListener('click', () => $('invoiceDialog').close());
     ['editInvoiceDate', 'editCreditDays'].forEach(id => $(id).addEventListener('input', previewDueDate));
   }
