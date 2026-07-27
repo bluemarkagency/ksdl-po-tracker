@@ -460,7 +460,7 @@
   async function loadData() {
     setConnectionStatus('loadingPos');
     const [poResult, tripResult, transporterResult] = await Promise.allSettled([
-      api('/rest/v1/purchase_orders?select=*&order=po_received_date.desc'),
+      api('/rest/v1/purchase_orders?is_archived=eq.false&select=*&order=po_received_date.desc'),
       api('/rest/v1/delivery_trips?select=*,delivery_trip_pos(purchase_order_id,allocated_cost,invoice_number,invoice_date,invoice_amount,invoice_attachment_url,delivery_status,correction_reason,purchase_orders(id,po_number,customer_name,delivery_location,status,po_attachment_url))&order=trip_date.desc,created_at.desc'),
       api('/rest/v1/transporters?select=id,name,phone,active&active=eq.true&order=name.asc')
     ]);
