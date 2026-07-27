@@ -47,8 +47,8 @@
       slipTooLarge: 'Delivery slip must be 10 MB or smaller.', pdfReaderError: 'The PDF reader did not load. Check the internet connection and try again.', tripSetupNotReady: 'Trip setup is not ready. Please contact the administrator.',
       couldNotSaveTrip: 'Could not save the trip.', couldNotComplete: 'Could not complete the delivery.', signInFailed: 'Sign in failed.', notConfigured: 'The app is not configured.', signInAgain: 'Please sign in again.',
       invoiceNumberPlaceholder: 'Invoice number',
-      imageInvoiceManual: 'Image attached — enter the invoice number and date manually.', wrongInvoice: 'Wrong invoice: it belongs to PO {actual}, not {expected}.',
-      invoiceMatched: '✓ PO {po} matched', verifyInvoice: 'Please verify the invoice details manually.', savingChanges: 'Saving changes…', creatingTrip: 'Creating trip…',
+      imageInvoiceManual: 'Please select the original Tally invoice PDF. Images and PO copies cannot be read as invoices.', wrongInvoice: 'Wrong invoice: it belongs to PO {actual}, not {expected}.',
+      invoiceMatched: '✓ PO {po} matched', verifyInvoice: 'This is not a readable Tally invoice PDF. Please select the original invoice PDF.', savingChanges: 'Saving changes…', creatingTrip: 'Creating trip…',
       createManualPo: '+ Create manual PO', manualPoEyebrow: 'MANUAL PURCHASE ORDER', manualPoTitle: 'Create a new PO',
       manualPoHelp: 'Enter the PO details below. It will be saved as Received and appear in the open PO list immediately.',
       customerName: 'Customer name*', customerPlaceholder: 'Example: DMart', manualPoNumber: 'PO number*', poNumberPlaceholder: 'Enter PO number',
@@ -96,8 +96,8 @@
       slipTooLarge: 'ડિલિવરી સ્લિપ 10 MB અથવા તેનાથી નાની હોવી જોઈએ.', pdfReaderError: 'PDF રીડર લોડ થયો નથી. ઇન્ટરનેટ તપાસી ફરી પ્રયાસ કરો.', tripSetupNotReady: 'ટ્રિપ સેટઅપ તૈયાર નથી. એડમિનિસ્ટ્રેટરનો સંપર્ક કરો.',
       couldNotSaveTrip: 'ટ્રિપ સાચવી શકાઈ નથી.', couldNotComplete: 'ડિલિવરી પૂર્ણ થઈ શકી નથી.', signInFailed: 'સાઇન ઇન થઈ શક્યું નથી.', notConfigured: 'એપનું સેટઅપ પૂર્ણ નથી.', signInAgain: 'ફરી સાઇન ઇન કરો.',
       invoiceNumberPlaceholder: 'ઇન્વૉઇસ નંબર',
-      imageInvoiceManual: 'ઇમેજ જોડાઈ — ઇન્વૉઇસ નંબર અને તારીખ જાતે દાખલ કરો.', wrongInvoice: 'ખોટું ઇન્વૉઇસ: આ PO {actual}નું છે, {expected}નું નથી.',
-      invoiceMatched: '✓ PO {po} મેળ ખાય છે', verifyInvoice: 'ઇન્વૉઇસ વિગતો જાતે ચકાસો.', savingChanges: 'ફેરફાર સાચવી રહ્યા છે…', creatingTrip: 'ટ્રિપ બની રહી છે…',
+      imageInvoiceManual: 'મૂળ Tally ઇન્વૉઇસ PDF પસંદ કરો. ઇમેજ અથવા PO નકલ ઇન્વૉઇસ તરીકે વાંચી શકાતી નથી.', wrongInvoice: 'ખોટું ઇન્વૉઇસ: આ PO {actual}નું છે, {expected}નું નથી.',
+      invoiceMatched: '✓ PO {po} મેળ ખાય છે', verifyInvoice: 'આ વાંચી શકાય તેવી Tally ઇન્વૉઇસ PDF નથી. મૂળ ઇન્વૉઇસ PDF પસંદ કરો.', savingChanges: 'ફેરફાર સાચવી રહ્યા છે…', creatingTrip: 'ટ્રિપ બની રહી છે…',
       createManualPo: '+ મેન્યુઅલ PO બનાવો', manualPoEyebrow: 'મેન્યુઅલ પરચેઝ ઓર્ડર', manualPoTitle: 'નવો PO બનાવો',
       manualPoHelp: 'નીચે POની વિગતો દાખલ કરો. તે મળેલ સ્થિતિમાં સાચવાશે અને તરત ઓપન PO યાદીમાં દેખાશે.',
       customerName: 'ગ્રાહકનું નામ*', customerPlaceholder: 'ઉદાહરણ: DMart', manualPoNumber: 'PO નંબર*', poNumberPlaceholder: 'PO નંબર દાખલ કરો',
@@ -145,8 +145,8 @@
       slipTooLarge: 'डिलीवरी स्लिप 10 MB या उससे छोटी होनी चाहिए।', pdfReaderError: 'PDF रीडर लोड नहीं हुआ। इंटरनेट जाँचकर फिर प्रयास करें।', tripSetupNotReady: 'ट्रिप सेटअप तैयार नहीं है। एडमिनिस्ट्रेटर से संपर्क करें।',
       couldNotSaveTrip: 'ट्रिप सहेजी नहीं जा सकी।', couldNotComplete: 'डिलीवरी पूरी नहीं हो सकी।', signInFailed: 'साइन इन नहीं हुआ।', notConfigured: 'ऐप का सेटअप पूरा नहीं है।', signInAgain: 'फिर से साइन इन करें।',
       invoiceNumberPlaceholder: 'इनवॉइस नंबर',
-      imageInvoiceManual: 'इमेज जुड़ी — इनवॉइस नंबर और तारीख खुद भरें।', wrongInvoice: 'गलत इनवॉइस: यह PO {actual} का है, {expected} का नहीं।',
-      invoiceMatched: '✓ PO {po} मेल खाता है', verifyInvoice: 'इनवॉइस विवरण स्वयं जाँचें।', savingChanges: 'बदलाव सहेजे जा रहे हैं…', creatingTrip: 'ट्रिप बन रही है…',
+      imageInvoiceManual: 'मूल Tally इनवॉइस PDF चुनें। इमेज या PO कॉपी को इनवॉइस के रूप में नहीं पढ़ा जा सकता।', wrongInvoice: 'गलत इनवॉइस: यह PO {actual} का है, {expected} का नहीं।',
+      invoiceMatched: '✓ PO {po} मेल खाता है', verifyInvoice: 'यह पढ़ने योग्य Tally इनवॉइस PDF नहीं है। मूल इनवॉइस PDF चुनें।', savingChanges: 'बदलाव सहेजे जा रहे हैं…', creatingTrip: 'ट्रिप बन रही है…',
       createManualPo: '+ मैन्युअल PO बनाएँ', manualPoEyebrow: 'मैन्युअल परचेज़ ऑर्डर', manualPoTitle: 'नया PO बनाएँ',
       manualPoHelp: 'नीचे PO का विवरण भरें। यह प्राप्त स्थिति में सहेजा जाएगा और तुरंत खुले PO की सूची में दिखेगा।',
       customerName: 'ग्राहक का नाम*', customerPlaceholder: 'उदाहरण: DMart', manualPoNumber: 'PO नंबर*', poNumberPlaceholder: 'PO नंबर दर्ज करें',
@@ -389,21 +389,28 @@
     }
     return pages.flat();
   }
-  function parseTallyInvoice(lines) {
+  function parseTallyInvoice(lines, expectedPoNumber = '') {
     const flat = lines.join(' ').replace(/\s+/g, ' ');
     const invoiceNumber = flat.match(/\b(BMAG\/\d{2}-\d{2}\/\d{3,8})\b/i)?.[1] || flat.match(/\b([A-Z]{2,10}[A-Z0-9 -]*\/\d{2}-\d{2}\/\d{3,8})\b/i)?.[1]?.replace(/\s+/g, ' ') || '';
     let invoiceDate = '';
     const invoiceLineIndex = lines.findIndex(line => invoiceNumber && line.includes(invoiceNumber));
     if (invoiceLineIndex >= 0) invoiceDate = lines.slice(invoiceLineIndex, invoiceLineIndex + 6).join(' ').match(/\b(\d{1,2}[-\s/][A-Za-z]{3,9}[-\s/]\d{2,4})\b/)?.[1] || '';
     if (!invoiceDate) invoiceDate = nearbyValue(lines, /\bDated\b/i, /\b(\d{1,2}[-\s/][A-Za-z]{3,9}[-\s/]\d{2,4})\b/, 5);
-    const poNumber = nearbyValue(lines, /Buyer'?s\s+Order\s+No/i, /\b(\d{8,12})\b/, 10);
+    const expectedPo = normalizePoNumber(expectedPoNumber);
+    const expectedPoPattern = expectedPo ? new RegExp(`(?:^|\\D)${expectedPo}(?:\\D|$)`) : null;
+    const poNumber = expectedPoPattern?.test(flat)
+      ? expectedPoNumber
+      : nearbyValue(lines, /Buyer'?s\s+Order\s+No/i, /\b(\d{8,12})\b/, 10);
     let destination = nearbyValue(lines, /\bDestination\b/i, /\bDestination\b\s*[:\-]?\s*([A-Za-z][A-Za-z .'-]{1,45})/i, 3).trim();
     destination = destination.replace(/\s+(Terms|Dispatch|Dated|Buyer|Mode|Other)\b.*$/i, '').trim();
     const amountWordsIndex = lines.findIndex(line => /Amount\s+Chargeable/i.test(line));
     const invoiceAmountBlock = amountWordsIndex > 0 ? lines.slice(Math.max(0, amountWordsIndex - 5), amountWordsIndex).join(' ') : '';
     const ewayInvoiceAmount = flat.match(/Total\s+Inv\s+Amt\s*:\s*([\d,]+\.\d{2})/i)?.[1] || '';
+    const tallyTotalIndex = lines.findIndex(line => /^\s*Total\b/i.test(line) && /\b(?:PCS|CBS|NOS|EA|BOX|CTN)\b/i.test(line));
+    const tallyTotalBlock = tallyTotalIndex >= 0 ? lines.slice(tallyTotalIndex, tallyTotalIndex + 3).join(' ') : '';
     const tallyTotalLine = lines.find(line => /\bTotal\b/i.test(line) && /(?:₹|Rs\.?)/i.test(line) && /\d[\d,]*\.\d{2}/.test(line)) || '';
-    const tallyTotalAmount = tallyTotalLine.match(/(?:₹|Rs\.?)\s*([\d,]+\.\d{2})(?!.*\d[\d,]*\.\d{2})/i)?.[1]
+    const tallyTotalAmount = tallyTotalBlock.match(/(?:₹|Rs\.?)\s*([\d,]+\.\d{2})/i)?.[1]
+      || tallyTotalLine.match(/(?:₹|Rs\.?)\s*([\d,]+\.\d{2})(?!.*\d[\d,]*\.\d{2})/i)?.[1]
       || flat.match(/\bTotal\s+\d+(?:\.\d+)?\s+[A-Z]{2,8}\s+\d+(?:\.\d+)?\s+[A-Z]{2,8}\s+(?:₹|Rs\.?)?\s*([\d,]+\.\d{2})/i)?.[1]
       || '';
     const invoiceAmounts = invoiceAmountBlock.match(/\d[\d,]*\.\d{2}/g) || [];
@@ -433,7 +440,7 @@
     }
     invoiceStatus(row, 'reading', t('readingInvoice'));
     try {
-      const parsed = parseTallyInvoice(await readPdfLines(file));
+      const parsed = parseTallyInvoice(await readPdfLines(file), record.po_number);
       if (parsed.invoiceNumber) row.querySelector('.po-invoice-number').value = parsed.invoiceNumber;
       if (parsed.invoiceDate) row.querySelector('.po-invoice-date').value = parsed.invoiceDate;
       if (parsed.invoiceValue != null) row.querySelector('.po-invoice-amount').value = parsed.invoiceValue.toFixed(2);
@@ -644,6 +651,17 @@
         await api('/rest/v1/delivery_trip_pos', { method: 'POST', headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify(links) });
         selectedPoIds.clear();
       }
+      await Promise.all(details.map(detail => api(`/rest/v1/purchase_orders?id=eq.${encodeURIComponent(detail.record.id)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+        body: JSON.stringify({
+          invoice_number: detail.invoiceNumber,
+          invoice_date: detail.invoiceDate,
+          invoice_amount: detail.invoiceAmount,
+          invoice_attachment_url: detail.invoicePath,
+          updated_at: new Date().toISOString()
+        })
+      })));
       closeTripDialog(); await loadData(); toast(editTrip ? t('tripChangesSaved') : t('tripCreated'));
     } catch (err) { error.textContent = err.message || t('couldNotSaveTrip'); }
     finally { button.disabled = false; button.textContent = editTrip ? t('saveTripChanges') : t('createTripCount', { count: chosen.length }); }

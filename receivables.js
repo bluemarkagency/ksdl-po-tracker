@@ -95,8 +95,12 @@
     const invoiceNumber = flat.match(/\b(BMAG\/\d{2}-\d{2}\/\d{3,8})\b/i)?.[1] || '';
     const invoiceIndex = lines.findIndex(line => invoiceNumber && line.includes(invoiceNumber));
     const invoiceDateText = invoiceIndex >= 0 ? lines.slice(invoiceIndex, invoiceIndex + 6).join(' ').match(/\b(\d{1,2}[-\s/][A-Za-z]{3,9}[-\s/]\d{2,4})\b/)?.[1] || '' : '';
+    const totalIndex = lines.findIndex(line => /^\s*Total\b/i.test(line) && /\b(?:PCS|CBS|NOS|EA|BOX|CTN)\b/i.test(line));
+    const totalBlock = totalIndex >= 0 ? lines.slice(totalIndex, totalIndex + 3).join(' ') : '';
     const totalLine = lines.find(line => /\bTotal\b/i.test(line) && /(?:₹|Rs\.?)/i.test(line) && /\d[\d,]*\.\d{2}/.test(line)) || '';
-    const totalAmount = totalLine.match(/(?:₹|Rs\.?)\s*([\d,]+\.\d{2})(?!.*\d[\d,]*\.\d{2})/i)?.[1]
+    const totalAmount = totalBlock.match(/(?:₹|Rs\.?)\s*([\d,]+\.\d{2})/i)?.[1]
+      || totalLine.match(/(?:₹|Rs\.?)\s*([\d,]+\.\d{2})(?!.*\d[\d,]*\.\d{2})/i)?.[1]
+      || flat.match(/\bTotal\s+\d+(?:\.\d+)?\s+[A-Z]{2,8}\s+\d+(?:\.\d+)?\s+[A-Z]{2,8}\s+(?:₹|Rs\.?)?\s*([\d,]+\.\d{2})/i)?.[1]
       || flat.match(/Total\s+Inv\s+Amt\s*:\s*([\d,]+\.\d{2})/i)?.[1]
       || '';
     return { invoiceNumber, invoiceDate: invoiceDateToIso(invoiceDateText), invoiceAmount: totalAmount ? Number(totalAmount.replace(/,/g, '')) : null };
@@ -150,14 +154,34 @@
         <td class="${paid ? 'money-positive' : 'money-negative'}">${money(outstanding(invoice))}</td>
         <td><span class="age-chip ${days != null && days >= 0 && !paid ? 'overdue' : ''}">${safe(age)}</span></td>
         <td><span class="receivable-status ${statusClass(invoice.payment_status)}">${safe(invoice.payment_status)}</span></td>
-        <td><div class="row-actions">${invoice.payment_status === 'Needs Data' && invoice.invoice_attachment_url ? `<button class="text-btn read-invoice" data-id="${invoice.id}" type="button">Read invoice copy</button>` : ''}<button class="text-btn edit-invoice" data-id="${invoice.id}" type="button">Edit</button></div></td>
+        <td><button class="text-btn edit-invoice" data-id="${invoice.id}" type="button">Edit</button></td>
       </tr>`;
     }).join('');
     $('invoiceEmpty').classList.toggle('hidden', rows.length > 0);
   }
   function render() { renderSummary(); renderAging(); renderInvoices(); }
 
-  async function loadData() {
+  async function syncMissingInvoiceData() {
+    const candidates = invoices.filter(invoice => invoice.payment_status === 'Needs Data' && invoice.invoice_attachment_url);
+    let updated = 0;
+    for (const invoice of candidates) {
+      try {
+        const response = await fetch(await signedInvoiceUrl(invoice.invoice_attachment_url));
+        if (!response.ok) continue;
+        const parsed = parseAttachedInvoice(await readPdfLines(await response.blob()));
+        const expected = String(invoice.invoice_number || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+        const actual = String(parsed.invoiceNumber || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+        if (!actual || actual !== expected || !parsed.invoiceAmount || parsed.invoiceAmount <= 0) continue;
+        await api('/rest/v1/rpc/update_customer_invoice', {
+          method: 'POST', headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+          body: JSON.stringify({ invoice: invoice.id, new_invoice_date: parsed.invoiceDate || invoice.invoice_date || null, new_invoice_amount: parsed.invoiceAmount, new_credit_days: 6 })
+        });
+        updated += 1;
+      } catch (_) { /* Leave genuinely unreadable historical records in Needs Data. */ }
+    }
+    return updated;
+  }
+  async function loadData(runBackgroundSync = true) {
     $('connectionStatus').textContent = 'Loading receivables…';
     const [invoiceRows, adviceRows] = await Promise.all([
       api('/rest/v1/customer_invoices?select=*,purchase_orders(id,po_number,delivery_location,status)&order=invoice_date.desc.nullslast,created_at.desc'),
@@ -165,6 +189,10 @@
     ]);
     invoices = Array.isArray(invoiceRows) ? invoiceRows : []; advices = Array.isArray(adviceRows) ? adviceRows : [];
     $('connectionStatus').textContent = 'Cloud synced'; render();
+    if (runBackgroundSync && await syncMissingInvoiceData()) {
+      await loadData(false);
+      toast('Stored invoice data was updated automatically.');
+    }
   }
 
   function previewDueDate() {
@@ -184,37 +212,12 @@
       $('invoiceDialog').close(); await loadData(); toast('Invoice and due date updated in the synced register.');
     } catch (err) { error.textContent = err.message || 'Could not save invoice.'; }
   }
-  async function repairInvoiceFromCopy(id, button) {
-    const invoice = invoices.find(item => item.id === id); if (!invoice?.invoice_attachment_url) return;
-    const originalText = button.textContent;
-    try {
-      button.disabled = true; button.textContent = 'Reading…';
-      const response = await fetch(await signedInvoiceUrl(invoice.invoice_attachment_url));
-      if (!response.ok) throw new Error('Could not download the attached invoice copy.');
-      const parsed = parseAttachedInvoice(await readPdfLines(await response.blob()));
-      const expected = String(invoice.invoice_number || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase();
-      const actual = String(parsed.invoiceNumber || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase();
-      if (!actual || actual !== expected) throw new Error(`The attached PDF does not match ${invoice.invoice_number}.`);
-      if (!parsed.invoiceAmount || parsed.invoiceAmount <= 0) throw new Error('Invoice value could not be read. Use Edit to enter it manually.');
-      await api('/rest/v1/rpc/update_customer_invoice', {
-        method: 'POST', headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' },
-        body: JSON.stringify({ invoice: invoice.id, new_invoice_date: parsed.invoiceDate || invoice.invoice_date || null, new_invoice_amount: parsed.invoiceAmount, new_credit_days: 6 })
-      });
-      await loadData(); toast(`${invoice.invoice_number} updated with ${money(parsed.invoiceAmount)}.`);
-    } catch (err) { toast(err.message || 'Could not read the attached invoice.'); }
-    finally { button.disabled = false; button.textContent = originalText; }
-  }
-
   function bindEvents() {
     $('loginForm').addEventListener('submit', async event => { event.preventDefault(); $('loginError').textContent = ''; try { await signIn($('emailInput').value.trim(), $('passwordInput').value); await start(); } catch (err) { $('loginError').textContent = err.message || 'Sign in failed.'; } });
     $('signOutBtn').addEventListener('click', signOut); $('refreshBtn').addEventListener('click', loadData);
     ['invoiceSearch', 'invoiceStatus', 'ageFilter'].forEach(id => { $(id).addEventListener('input', renderInvoices); $(id).addEventListener('change', renderInvoices); });
     $('clearInvoiceFilters').addEventListener('click', () => { $('invoiceSearch').value = ''; $('invoiceStatus').value = ''; $('ageFilter').value = ''; renderInvoices(); });
-    $('invoiceBody').addEventListener('click', event => {
-      const readButton = event.target.closest('.read-invoice'), editButton = event.target.closest('.edit-invoice');
-      if (readButton) repairInvoiceFromCopy(readButton.dataset.id, readButton);
-      else if (editButton) openInvoice(editButton.dataset.id);
-    });
+    $('invoiceBody').addEventListener('click', event => { const button = event.target.closest('.edit-invoice'); if (button) openInvoice(button.dataset.id); });
     $('invoiceForm').addEventListener('submit', saveInvoice); $('closeInvoiceDialog').addEventListener('click', () => $('invoiceDialog').close()); $('cancelInvoiceBtn').addEventListener('click', () => $('invoiceDialog').close());
     ['editInvoiceDate', 'editCreditDays'].forEach(id => $(id).addEventListener('input', previewDueDate));
   }
