@@ -41,7 +41,7 @@
       tripCreated: 'Trip created — selected POs moved to POs in trip.', correctedResubmitted: 'Corrected delivery resubmitted to the owner.',
       deliveryUpdated: 'Delivery completed — linked POs updated in the owner tracker.', readingInvoice: 'Reading invoice…',
       selectAtLeastOne: 'Select at least one PO first.', waitForInvoice: 'Wait for invoice reading to finish for PO {po}.', replaceWrongInvoice: 'The uploaded invoice does not match PO {po}. Replace it before saving.',
-      uploadVerifyInvoice: 'Upload and verify the invoice for PO {po}.', selectTransporterError: 'Select a transporter from the Transporter Master.', editInvoiceFirst: 'Edit the trip and complete the invoice details for PO {po}.',
+      uploadVerifyInvoice: 'Upload and verify the invoice for PO {po}.', invoiceAmountRequired: 'Enter or verify the invoice amount for PO {po}.', selectTransporterError: 'Select a transporter from the Transporter Master.', editInvoiceFirst: 'Edit the trip and complete the invoice details for PO {po}.',
       planning: 'Planning', pending: 'Pending', delivered: 'Delivered', cancelled: 'Cancelled',
       invoiceCopyRequired: 'Attach the invoice copy before creating the trip.', invoiceTooLarge: 'Invoice copy must be 10 MB or smaller.', slipRequired: 'Upload the signed delivery slip before completing the trip.',
       slipTooLarge: 'Delivery slip must be 10 MB or smaller.', pdfReaderError: 'The PDF reader did not load. Check the internet connection and try again.', tripSetupNotReady: 'Trip setup is not ready. Please contact the administrator.',
@@ -90,7 +90,7 @@
       tripCreated: 'ટ્રિપ બની — પસંદ કરેલા PO ટ્રિપ વિભાગમાં ખસેડાયા.', correctedResubmitted: 'સુધારેલી ડિલિવરી ઓનરને ફરી મોકલાઈ.',
       deliveryUpdated: 'ડિલિવરી પૂર્ણ — જોડાયેલા PO ઓનર ટ્રેકરમાં અપડેટ થયા.', readingInvoice: 'ઇન્વૉઇસ વાંચી રહ્યું છે…',
       selectAtLeastOne: 'પહેલા ઓછામાં ઓછો એક PO પસંદ કરો.', waitForInvoice: 'PO {po}નું ઇન્વૉઇસ વાંચવાનું પૂરું થાય ત્યાં સુધી રાહ જુઓ.', replaceWrongInvoice: 'અપલોડ કરેલું ઇન્વૉઇસ PO {po} સાથે મળતું નથી. સાચું ઇન્વૉઇસ અપલોડ કરો.',
-      uploadVerifyInvoice: 'PO {po}નું ઇન્વૉઇસ અપલોડ કરીને ચકાસો.', selectTransporterError: 'ટ્રાન્સપોર્ટર માસ્ટરમાંથી ટ્રાન્સપોર્ટર પસંદ કરો.', editInvoiceFirst: 'ટ્રિપ સુધારી PO {po}ની ઇન્વૉઇસ વિગતો પૂર્ણ કરો.',
+      uploadVerifyInvoice: 'PO {po}નું ઇન્વૉઇસ અપલોડ કરીને ચકાસો.', invoiceAmountRequired: 'PO {po} માટે ઇન્વૉઇસ રકમ દાખલ કરો અથવા ચકાસો.', selectTransporterError: 'ટ્રાન્સપોર્ટર માસ્ટરમાંથી ટ્રાન્સપોર્ટર પસંદ કરો.', editInvoiceFirst: 'ટ્રિપ સુધારી PO {po}ની ઇન્વૉઇસ વિગતો પૂર્ણ કરો.',
       planning: 'આયોજન', pending: 'બાકી', delivered: 'ડિલિવર થયેલ', cancelled: 'રદ થયેલ',
       invoiceCopyRequired: 'ટ્રિપ બનાવતા પહેલા ઇન્વૉઇસ નકલ જોડો.', invoiceTooLarge: 'ઇન્વૉઇસ નકલ 10 MB અથવા તેનાથી નાની હોવી જોઈએ.', slipRequired: 'ટ્રિપ પૂર્ણ કરતા પહેલા સહીવાળી ડિલિવરી સ્લિપ અપલોડ કરો.',
       slipTooLarge: 'ડિલિવરી સ્લિપ 10 MB અથવા તેનાથી નાની હોવી જોઈએ.', pdfReaderError: 'PDF રીડર લોડ થયો નથી. ઇન્ટરનેટ તપાસી ફરી પ્રયાસ કરો.', tripSetupNotReady: 'ટ્રિપ સેટઅપ તૈયાર નથી. એડમિનિસ્ટ્રેટરનો સંપર્ક કરો.',
@@ -139,7 +139,7 @@
       tripCreated: 'ट्रिप बनी — चुने गए PO ट्रिप सेक्शन में चले गए।', correctedResubmitted: 'सुधारी गई डिलीवरी मालिक को फिर भेजी गई।',
       deliveryUpdated: 'डिलीवरी पूरी — जुड़े PO मालिक के ट्रैकर में अपडेट हुए।', readingInvoice: 'इनवॉइस पढ़ा जा रहा है…',
       selectAtLeastOne: 'पहले कम से कम एक PO चुनें।', waitForInvoice: 'PO {po} का इनवॉइस पढ़ना पूरा होने तक रुकें।', replaceWrongInvoice: 'अपलोड किया गया इनवॉइस PO {po} से मेल नहीं खाता। सही इनवॉइस लगाएँ।',
-      uploadVerifyInvoice: 'PO {po} का इनवॉइस अपलोड करके जाँचें।', selectTransporterError: 'ट्रांसपोर्टर मास्टर से ट्रांसपोर्टर चुनें।', editInvoiceFirst: 'ट्रिप संपादित करके PO {po} का इनवॉइस विवरण पूरा करें।',
+      uploadVerifyInvoice: 'PO {po} का इनवॉइस अपलोड करके जाँचें।', invoiceAmountRequired: 'PO {po} की इनवॉइस राशि दर्ज करें या जाँचें।', selectTransporterError: 'ट्रांसपोर्टर मास्टर से ट्रांसपोर्टर चुनें।', editInvoiceFirst: 'ट्रिप संपादित करके PO {po} का इनवॉइस विवरण पूरा करें।',
       planning: 'योजना', pending: 'बाकी', delivered: 'डिलीवर हुआ', cancelled: 'रद्द',
       invoiceCopyRequired: 'ट्रिप बनाने से पहले इनवॉइस कॉपी लगाएँ।', invoiceTooLarge: 'इनवॉइस कॉपी 10 MB या उससे छोटी होनी चाहिए।', slipRequired: 'ट्रिप पूरी करने से पहले हस्ताक्षरित डिलीवरी स्लिप अपलोड करें।',
       slipTooLarge: 'डिलीवरी स्लिप 10 MB या उससे छोटी होनी चाहिए।', pdfReaderError: 'PDF रीडर लोड नहीं हुआ। इंटरनेट जाँचकर फिर प्रयास करें।', tripSetupNotReady: 'ट्रिप सेटअप तैयार नहीं है। एडमिनिस्ट्रेटर से संपर्क करें।',
@@ -400,10 +400,20 @@
     let destination = nearbyValue(lines, /\bDestination\b/i, /\bDestination\b\s*[:\-]?\s*([A-Za-z][A-Za-z .'-]{1,45})/i, 3).trim();
     destination = destination.replace(/\s+(Terms|Dispatch|Dated|Buyer|Mode|Other)\b.*$/i, '').trim();
     const amountWordsIndex = lines.findIndex(line => /Amount\s+Chargeable/i.test(line));
-    const invoiceAmountBlock = amountWordsIndex > 0 ? lines.slice(Math.max(0, amountWordsIndex - 4), amountWordsIndex).join(' ') : '';
+    const invoiceAmountBlock = amountWordsIndex > 0 ? lines.slice(Math.max(0, amountWordsIndex - 5), amountWordsIndex).join(' ') : '';
     const ewayInvoiceAmount = flat.match(/Total\s+Inv\s+Amt\s*:\s*([\d,]+\.\d{2})/i)?.[1] || '';
+    const tallyTotalLine = lines.find(line => /\bTotal\b/i.test(line) && /(?:₹|Rs\.?)/i.test(line) && /\d[\d,]*\.\d{2}/.test(line)) || '';
+    const tallyTotalAmount = tallyTotalLine.match(/(?:₹|Rs\.?)\s*([\d,]+\.\d{2})(?!.*\d[\d,]*\.\d{2})/i)?.[1]
+      || flat.match(/\bTotal\s+\d+(?:\.\d+)?\s+[A-Z]{2,8}\s+\d+(?:\.\d+)?\s+[A-Z]{2,8}\s+(?:₹|Rs\.?)?\s*([\d,]+\.\d{2})/i)?.[1]
+      || '';
     const invoiceAmounts = invoiceAmountBlock.match(/\d[\d,]*\.\d{2}/g) || [];
-    const invoiceValue = ewayInvoiceAmount ? Number(ewayInvoiceAmount.replace(/,/g, '')) : invoiceAmounts.length ? Math.max(...invoiceAmounts.map(value => Number(value.replace(/,/g, '')))) : null;
+    const invoiceValue = tallyTotalAmount
+      ? Number(tallyTotalAmount.replace(/,/g, ''))
+      : ewayInvoiceAmount
+        ? Number(ewayInvoiceAmount.replace(/,/g, ''))
+        : invoiceAmounts.length
+          ? Math.max(...invoiceAmounts.map(value => Number(value.replace(/,/g, ''))))
+          : null;
     const ewayBill = flat.match(/(?:e-?Way\s+Bill(?:\s+No\.?)?)[^0-9]{0,30}(\d{12})/i)?.[1] || '';
     const vehicleNumber = flat.match(/\b([A-Z]{2}\s?\d{1,2}\s?[A-Z]{1,3}\s?\d{4})\b/i)?.[1]?.replace(/\s+/g, '').toUpperCase() || '';
     return { invoiceNumber, invoiceDate: tallyDateToIso(invoiceDate), poNumber, destination, invoiceValue, ewayBill, vehicleNumber };
@@ -551,7 +561,7 @@
       <td><span class="po-main">${safe(record.po_number)}</span><span class="po-secondary">${safe(record.delivery_location || t('locationPending'))}</span>${correction}</td>
       <td><input class="po-invoice-number" required placeholder="${safe(t('invoiceNumberPlaceholder'))}" value="${safe(link?.invoice_number || '')}" /></td>
       <td><input class="po-invoice-date" type="date" required value="${safe(link?.invoice_date || '')}" /></td>
-      <td><input class="po-invoice-amount" type="number" min="0" step="0.01" placeholder="Optional" value="${link?.invoice_amount ?? ''}" /></td>
+      <td><input class="po-invoice-amount" type="number" min="0.01" step="0.01" required placeholder="Required" value="${link?.invoice_amount ?? ''}" /></td>
       <td><input class="po-invoice-file" type="file" accept="application/pdf,image/*" ${hasInvoice ? '' : 'required'} /><small class="invoice-read-status" data-state="${hasInvoice ? 'matched' : 'idle'}">${invoiceStatusText}</small></td>
       <td><input class="po-allocated-cost" type="number" min="0" step="0.01" placeholder="Optional" value="${link?.allocated_cost ?? ''}" /></td>
     </tr>`;
@@ -620,6 +630,7 @@
       for (const detail of details) if (detail.invoiceState === 'reading') throw new Error(t('waitForInvoice', { po: detail.record.po_number }));
       for (const detail of details) if (detail.invoiceState === 'mismatch') throw new Error(t('replaceWrongInvoice', { po: detail.record.po_number }));
       for (const detail of details) if (!detail.invoiceNumber || !detail.invoiceDate || (!detail.invoiceFile && !detail.existingInvoicePath)) throw new Error(t('uploadVerifyInvoice', { po: detail.record.po_number }));
+      for (const detail of details) if (detail.invoiceAmount == null || !Number.isFinite(detail.invoiceAmount) || detail.invoiceAmount <= 0) throw new Error(t('invoiceAmountRequired', { po: detail.record.po_number }));
       await Promise.all(details.map(async detail => { detail.invoicePath = detail.invoiceFile ? await uploadTripInvoice(tripId, detail.record.id, detail.invoiceFile) : detail.existingInvoicePath; }));
       const transporterId = $('tripTransporter').value, transporterName = $('tripTransporter').selectedOptions[0]?.textContent?.trim() || '';
       if (!transporterId) throw new Error(t('selectTransporterError'));
@@ -650,7 +661,7 @@
     const trip = trips.find(item => item.id === tripId); if (!trip) return;
     const correctionLinks = (trip.delivery_trip_pos || []).filter(link => link.delivery_status === 'Needs Correction');
     const links = correctionLinks.length ? correctionLinks : (trip.delivery_trip_pos || []);
-    const incompleteInvoice = links.find(link => !(link.invoice_number || trip.invoice_number) || !(link.invoice_date || trip.invoice_date) || !(link.invoice_attachment_url || trip.invoice_attachment_url));
+    const incompleteInvoice = links.find(link => !(link.invoice_number || trip.invoice_number) || !(link.invoice_date || trip.invoice_date) || Number(link.invoice_amount || 0) <= 0 || !(link.invoice_attachment_url || trip.invoice_attachment_url));
     if (incompleteInvoice) { toast(t('editInvoiceFirst', { po: incompleteInvoice.purchase_orders?.po_number || '' })); return; }
     completingTripId = tripId; $('completeTripForm').reset(); $('completeTripError').textContent = '';
     $('completeTripSummary').textContent = correctionLinks.length ? t('returnedByOwner', { count: links.length }) : t('completeEachDelivery', { count: links.length });
