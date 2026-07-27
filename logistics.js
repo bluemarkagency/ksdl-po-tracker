@@ -35,7 +35,8 @@
       viewPoCopy: 'View PO copy', viewInvoiceCopy: 'View invoice copy', poCopyUnavailable: 'PO copy unavailable', invoiceCopyUnavailable: 'Invoice copy unavailable',
       invoiceAttached: 'Invoice already attached. Upload a file only to replace it.', selectTally: 'Select a Tally PDF to auto-fill.', ownerCorrection: 'Owner correction: {reason}',
       correctionRequested: 'Correction requested', pleaseReview: 'Please review this delivery.', noPosLinked: 'No POs linked', needsCorrection: 'Needs Correction',
-      edit: 'Edit', correctDelivery: 'Correct delivery', saveTripChanges: 'Save trip changes', completeEachDelivery: '{count} PO(s) in this trip — complete each delivery separately.',
+      edit: 'Edit', deleteTrip: 'Delete entry', deleteTripConfirm: 'Delete this trip entry? Its POs will return to the open list so the trip can be recreated.', tripDeleted: 'Trip entry deleted. The POs are available for a new trip.', couldNotDeleteTrip: 'Could not delete this trip entry.',
+      correctDelivery: 'Correct delivery', saveTripChanges: 'Save trip changes', completeEachDelivery: '{count} PO(s) in this trip — complete each delivery separately.',
       returnedByOwner: '{count} PO(s) returned by the owner — upload the corrected delivery slip and final cost.', tripNotFound: 'Trip not found. Refresh and try again.',
       uploadSlipForPo: 'Upload the signed delivery slip for PO {po}.', completingDelivery: 'Completing delivery…', tripChangesSaved: 'Trip changes saved.',
       tripCreated: 'Trip created — selected POs moved to POs in trip.', correctedResubmitted: 'Corrected delivery resubmitted to the owner.',
@@ -84,7 +85,8 @@
       viewPoCopy: 'PO નકલ જુઓ', viewInvoiceCopy: 'ઇન્વૉઇસ નકલ જુઓ', poCopyUnavailable: 'PO નકલ ઉપલબ્ધ નથી', invoiceCopyUnavailable: 'ઇન્વૉઇસ નકલ ઉપલબ્ધ નથી',
       invoiceAttached: 'ઇન્વૉઇસ પહેલેથી જોડાયેલ છે. બદલવા માટે જ નવી ફાઇલ અપલોડ કરો.', selectTally: 'આપમેળે ભરવા Tally PDF પસંદ કરો.', ownerCorrection: 'ઓનર સુધારો: {reason}',
       correctionRequested: 'સુધારો માંગેલ', pleaseReview: 'આ ડિલિવરી ફરી તપાસો.', noPosLinked: 'કોઈ PO જોડાયેલ નથી', needsCorrection: 'સુધારો જરૂરી',
-      edit: 'સુધારો', correctDelivery: 'ડિલિવરી સુધારો', saveTripChanges: 'ટ્રિપ ફેરફાર સાચવો', completeEachDelivery: 'આ ટ્રિપના {count} PO — દરેક ડિલિવરી અલગથી પૂર્ણ કરો.',
+      edit: 'સુધારો', deleteTrip: 'એન્ટ્રી કાઢી નાખો', deleteTripConfirm: 'આ ટ્રિપ એન્ટ્રી કાઢી નાખવી છે? તેના PO ફરી ઓપન યાદીમાં આવશે જેથી નવી ટ્રિપ બનાવી શકાય.', tripDeleted: 'ટ્રિપ એન્ટ્રી કાઢી નાખી. PO નવી ટ્રિપ માટે ઉપલબ્ધ છે.', couldNotDeleteTrip: 'આ ટ્રિપ એન્ટ્રી કાઢી શકાયી નથી.',
+      correctDelivery: 'ડિલિવરી સુધારો', saveTripChanges: 'ટ્રિપ ફેરફાર સાચવો', completeEachDelivery: 'આ ટ્રિપના {count} PO — દરેક ડિલિવરી અલગથી પૂર્ણ કરો.',
       returnedByOwner: 'ઓનરે {count} PO પાછા મોકલ્યા — સુધારેલી ડિલિવરી સ્લિપ અને અંતિમ ખર્ચ અપલોડ કરો.', tripNotFound: 'ટ્રિપ મળી નથી. રિફ્રેશ કરીને ફરી પ્રયાસ કરો.',
       uploadSlipForPo: 'PO {po} માટે સહીવાળી ડિલિવરી સ્લિપ અપલોડ કરો.', completingDelivery: 'ડિલિવરી પૂર્ણ થઈ રહી છે…', tripChangesSaved: 'ટ્રિપ ફેરફાર સાચવ્યા.',
       tripCreated: 'ટ્રિપ બની — પસંદ કરેલા PO ટ્રિપ વિભાગમાં ખસેડાયા.', correctedResubmitted: 'સુધારેલી ડિલિવરી ઓનરને ફરી મોકલાઈ.',
@@ -133,7 +135,8 @@
       viewPoCopy: 'PO कॉपी देखें', viewInvoiceCopy: 'इनवॉइस कॉपी देखें', poCopyUnavailable: 'PO कॉपी उपलब्ध नहीं', invoiceCopyUnavailable: 'इनवॉइस कॉपी उपलब्ध नहीं',
       invoiceAttached: 'इनवॉइस पहले से जुड़ा है। बदलने के लिए ही नई फाइल अपलोड करें।', selectTally: 'अपने आप भरने के लिए Tally PDF चुनें।', ownerCorrection: 'मालिक का सुधार: {reason}',
       correctionRequested: 'सुधार माँगा गया', pleaseReview: 'इस डिलीवरी को फिर जाँचें।', noPosLinked: 'कोई PO जुड़ा नहीं', needsCorrection: 'सुधार जरूरी',
-      edit: 'संपादित करें', correctDelivery: 'डिलीवरी सुधारें', saveTripChanges: 'ट्रिप बदलाव सहेजें', completeEachDelivery: 'इस ट्रिप के {count} PO — हर डिलीवरी अलग से पूरी करें।',
+      edit: 'संपादित करें', deleteTrip: 'एंट्री हटाएँ', deleteTripConfirm: 'यह ट्रिप एंट्री हटाएँ? इसके PO फिर खुली सूची में आ जाएँगे ताकि ट्रिप दोबारा बनाई जा सके।', tripDeleted: 'ट्रिप एंट्री हटा दी गई। PO नई ट्रिप के लिए उपलब्ध हैं।', couldNotDeleteTrip: 'यह ट्रिप एंट्री हटाई नहीं जा सकी।',
+      correctDelivery: 'डिलीवरी सुधारें', saveTripChanges: 'ट्रिप बदलाव सहेजें', completeEachDelivery: 'इस ट्रिप के {count} PO — हर डिलीवरी अलग से पूरी करें।',
       returnedByOwner: 'मालिक ने {count} PO वापस भेजे — सही डिलीवरी स्लिप और अंतिम खर्च अपलोड करें।', tripNotFound: 'ट्रिप नहीं मिली। रिफ्रेश करके फिर प्रयास करें।',
       uploadSlipForPo: 'PO {po} की हस्ताक्षरित डिलीवरी स्लिप अपलोड करें।', completingDelivery: 'डिलीवरी पूरी हो रही है…', tripChangesSaved: 'ट्रिप बदलाव सहेजे गए।',
       tripCreated: 'ट्रिप बनी — चुने गए PO ट्रिप सेक्शन में चले गए।', correctedResubmitted: 'सुधारी गई डिलीवरी मालिक को फिर भेजी गई।',
@@ -461,7 +464,7 @@
     setConnectionStatus('loadingPos');
     const [poResult, tripResult, transporterResult] = await Promise.allSettled([
       api('/rest/v1/purchase_orders?is_archived=eq.false&select=*&order=po_received_date.desc'),
-      api('/rest/v1/delivery_trips?select=*,delivery_trip_pos(purchase_order_id,allocated_cost,invoice_number,invoice_date,invoice_amount,invoice_attachment_url,delivery_status,correction_reason,purchase_orders(id,po_number,customer_name,delivery_location,status,po_attachment_url))&order=trip_date.desc,created_at.desc'),
+      api('/rest/v1/delivery_trips?select=*,delivery_trip_pos(purchase_order_id,allocated_cost,invoice_number,invoice_date,invoice_amount,invoice_attachment_url,delivery_status,correction_reason,purchase_orders(id,po_number,customer_name,delivery_location,status,po_attachment_url,invoice_number,invoice_date,invoice_amount,invoice_attachment_url))&order=trip_date.desc,created_at.desc'),
       api('/rest/v1/transporters?select=id,name,phone,active&active=eq.true&order=name.asc')
     ]);
     if (poResult.status === 'rejected') {
@@ -477,7 +480,7 @@
     }));
     await Promise.all(trips.flatMap(trip => (trip.delivery_trip_pos || []).map(async link => {
       const poCopy = link.purchase_orders?.po_attachment_url;
-      const invoiceCopy = link.invoice_attachment_url || trip.invoice_attachment_url;
+      const invoiceCopy = link.invoice_attachment_url || trip.invoice_attachment_url || link.purchase_orders?.invoice_attachment_url;
       if (poCopy) link.po_attachment_link = await signedFileUrl(poCopy).catch(() => '');
       if (invoiceCopy) link.invoice_attachment_link = await signedFileUrl(invoiceCopy).catch(() => '');
     })));
@@ -561,14 +564,14 @@
     $('tripDialogTitle').textContent = editTrip ? t('editTrip') : t('createNewTrip');
     $('selectedPoSummary').textContent = chosen.length ? t('selectedPos', { count: chosen.length, pos: chosen.map(record => record.po_number).join(', ') }) : t('selectPosHelp');
     $('tripPoDetails').innerHTML = chosen.map(record => {
-      const link = editLinksByPo.get(record.id); const hasInvoice = Boolean(link?.invoice_attachment_url);
+      const link = editLinksByPo.get(record.id); const hasInvoice = Boolean(link?.invoice_attachment_url || record.invoice_attachment_url);
       const invoiceStatusText = hasInvoice ? t('invoiceAttached') : t('selectTally');
       const correction = link?.delivery_status === 'Needs Correction' ? `<span class="correction-note">${safe(t('ownerCorrection', { reason: link.correction_reason || t('pleaseReview') }))}</span>` : '';
-      return `<tr data-po-id="${record.id}" data-invoice-state="${hasInvoice ? 'existing' : 'idle'}" data-existing-invoice="${safe(link?.invoice_attachment_url || '')}">
+      return `<tr data-po-id="${record.id}" data-invoice-state="${hasInvoice ? 'existing' : 'idle'}" data-existing-invoice="${safe(link?.invoice_attachment_url || record.invoice_attachment_url || '')}">
       <td><span class="po-main">${safe(record.po_number)}</span><span class="po-secondary">${safe(record.delivery_location || t('locationPending'))}</span>${correction}</td>
-      <td><input class="po-invoice-number" required placeholder="${safe(t('invoiceNumberPlaceholder'))}" value="${safe(link?.invoice_number || '')}" /></td>
-      <td><input class="po-invoice-date" type="date" required value="${safe(link?.invoice_date || '')}" /></td>
-      <td><input class="po-invoice-amount" type="number" min="0.01" step="0.01" required placeholder="Required" value="${link?.invoice_amount ?? ''}" /></td>
+      <td><input class="po-invoice-number" required placeholder="${safe(t('invoiceNumberPlaceholder'))}" value="${safe(link?.invoice_number || record.invoice_number || '')}" /></td>
+      <td><input class="po-invoice-date" type="date" required value="${safe(link?.invoice_date || record.invoice_date || '')}" /></td>
+      <td><input class="po-invoice-amount" type="number" min="0.01" step="0.01" required placeholder="Required" value="${link?.invoice_amount ?? record.invoice_amount ?? ''}" /></td>
       <td><input class="po-invoice-file" type="file" accept="application/pdf,image/*" ${hasInvoice ? '' : 'required'} /><small class="invoice-read-status" data-state="${hasInvoice ? 'matched' : 'idle'}">${invoiceStatusText}</small></td>
       <td><input class="po-allocated-cost" type="number" min="0" step="0.01" placeholder="Optional" value="${link?.allocated_cost ?? ''}" /></td>
     </tr>`;
@@ -594,10 +597,12 @@
         const invoiceCopy = link.invoice_attachment_link
           ? `<a class="trip-doc-link invoice-copy-link" href="${safe(link.invoice_attachment_link)}" target="_blank" rel="noopener">${safe(t('viewInvoiceCopy'))}</a>`
           : `<span class="trip-doc-missing">${safe(t('invoiceCopyUnavailable'))}</span>`;
-        return `<div class="trip-invoice-row"><div><strong>${safe(link.purchase_orders?.po_number || 'PO')}:</strong> ${safe(link.invoice_number || trip.invoice_number || '—')} · Invoice ${link.invoice_amount == null ? '—' : money(link.invoice_amount)} · Delivery ${money(link.allocated_cost)}</div>${invoiceCopy}</div>`;
+        const invoiceNumber = link.invoice_number || trip.invoice_number || link.purchase_orders?.invoice_number;
+        const invoiceAmount = link.invoice_amount ?? link.purchase_orders?.invoice_amount;
+        return `<div class="trip-invoice-row"><div><strong>${safe(link.purchase_orders?.po_number || 'PO')}:</strong> ${safe(invoiceNumber || '—')} · Invoice ${invoiceAmount == null ? '—' : money(invoiceAmount)} · Delivery ${money(link.allocated_cost)}</div>${invoiceCopy}</div>`;
       }).join('');
       const tempoCost = Number(trip.actual_freight || 0);
-      return `<tr class="${needsCorrection ? 'correction-trip' : ''}"><td>${localDate(trip.trip_date)}</td><td><div class="trip-po-list">${chips || safe(t('noPosLinked'))}</div></td><td>${safe(trip.vehicle_number || trip.transporter || '—')}<span class="po-secondary">${safe(trip.driver_name || '')}</span></td><td>${invoices || '—'}</td><td><span class="executive-status ${needsCorrection ? 'needs-correction' : ''}">${safe(needsCorrection ? t('needsCorrection') : statusLabel(trip.status))}</span></td><td>${tempoCost ? money(tempoCost) : '—'}</td><td><div class="trip-actions"><button class="text-btn edit-trip-btn" type="button" data-trip-id="${trip.id}">${safe(t('edit'))}</button><button class="complete-trip-btn" type="button" data-trip-id="${trip.id}">${safe(needsCorrection ? t('correctDelivery') : t('completeDelivery'))}</button></div></td></tr>`;
+      return `<tr class="${needsCorrection ? 'correction-trip' : ''}"><td>${localDate(trip.trip_date)}</td><td><div class="trip-po-list">${chips || safe(t('noPosLinked'))}</div></td><td>${safe(trip.vehicle_number || trip.transporter || '—')}<span class="po-secondary">${safe(trip.driver_name || '')}</span></td><td>${invoices || '—'}</td><td><span class="executive-status ${needsCorrection ? 'needs-correction' : ''}">${safe(needsCorrection ? t('needsCorrection') : statusLabel(trip.status))}</span></td><td>${tempoCost ? money(tempoCost) : '—'}</td><td><div class="trip-actions"><button class="text-btn edit-trip-btn" type="button" data-trip-id="${trip.id}">${safe(t('edit'))}</button><button class="complete-trip-btn" type="button" data-trip-id="${trip.id}">${safe(needsCorrection ? t('correctDelivery') : t('completeDelivery'))}</button><button class="text-btn danger delete-trip-btn" type="button" data-trip-id="${trip.id}">${safe(t('deleteTrip'))}</button></div></td></tr>`;
     }).join('');
     $('tripEmptyState').classList.toggle('hidden', trips.length !== 0);
   }
@@ -651,17 +656,6 @@
         await api('/rest/v1/delivery_trip_pos', { method: 'POST', headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify(links) });
         selectedPoIds.clear();
       }
-      await Promise.all(details.map(detail => api(`/rest/v1/purchase_orders?id=eq.${encodeURIComponent(detail.record.id)}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' },
-        body: JSON.stringify({
-          invoice_number: detail.invoiceNumber,
-          invoice_date: detail.invoiceDate,
-          invoice_amount: detail.invoiceAmount,
-          invoice_attachment_url: detail.invoicePath,
-          updated_at: new Date().toISOString()
-        })
-      })));
       closeTripDialog(); await loadData(); toast(editTrip ? t('tripChangesSaved') : t('tripCreated'));
     } catch (err) { error.textContent = err.message || t('couldNotSaveTrip'); }
     finally { button.disabled = false; button.textContent = editTrip ? t('saveTripChanges') : t('createTripCount', { count: chosen.length }); }
@@ -679,7 +673,12 @@
     const trip = trips.find(item => item.id === tripId); if (!trip) return;
     const correctionLinks = (trip.delivery_trip_pos || []).filter(link => link.delivery_status === 'Needs Correction');
     const links = correctionLinks.length ? correctionLinks : (trip.delivery_trip_pos || []);
-    const incompleteInvoice = links.find(link => !(link.invoice_number || trip.invoice_number) || !(link.invoice_date || trip.invoice_date) || Number(link.invoice_amount || 0) <= 0 || !(link.invoice_attachment_url || trip.invoice_attachment_url));
+    const incompleteInvoice = links.find(link =>
+      !(link.invoice_number || trip.invoice_number || link.purchase_orders?.invoice_number)
+      || !(link.invoice_date || trip.invoice_date || link.purchase_orders?.invoice_date)
+      || Number(link.invoice_amount ?? link.purchase_orders?.invoice_amount ?? 0) <= 0
+      || !(link.invoice_attachment_url || trip.invoice_attachment_url || link.purchase_orders?.invoice_attachment_url)
+    );
     if (incompleteInvoice) { toast(t('editInvoiceFirst', { po: incompleteInvoice.purchase_orders?.po_number || '' })); return; }
     completingTripId = tripId; $('completeTripForm').reset(); $('completeTripError').textContent = '';
     $('completeTripSummary').textContent = correctionLinks.length ? t('returnedByOwner', { count: links.length }) : t('completeEachDelivery', { count: links.length });
@@ -707,6 +706,25 @@
     } catch (err) { error.textContent = err.message || t('couldNotComplete'); }
     finally { button.disabled = false; button.textContent = t('completeDelivery'); }
   }
+  async function deleteTripEntry(tripId, button) {
+    const trip = trips.find(item => item.id === tripId); if (!trip || !confirm(t('deleteTripConfirm'))) return;
+    const originalText = button.textContent;
+    try {
+      button.disabled = true; button.textContent = '…';
+      await api('/rest/v1/rpc/delete_delivery_trip', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+        body: JSON.stringify({ trip: tripId })
+      });
+      selectedPoIds.clear();
+      await loadData();
+      toast(t('tripDeleted'));
+    } catch (err) {
+      toast(err.message || t('couldNotDeleteTrip'));
+    } finally {
+      button.disabled = false; button.textContent = originalText;
+    }
+  }
 
   function toggleCustomDates() { $('customDateFilters').classList.toggle('hidden', $('dateRangeFilter').value !== 'custom'); }
   function clearFilters() { $('searchInput').value = ''; $('statusFilter').value = ''; $('dateRangeFilter').value = ''; $('dateFrom').value = ''; $('dateTo').value = ''; toggleCustomDates(); render(); }
@@ -724,8 +742,10 @@
     $('completeTripForm').addEventListener('submit', completeTrip); $('closeCompleteTripBtn').addEventListener('click', closeCompleteTripDialog); $('cancelCompleteTripBtn').addEventListener('click', closeCompleteTripDialog);
     $('completeTripPoDetails').addEventListener('input', event => { if (event.target.matches('.complete-po-cost')) updateCompleteTripTotal(); });
     $('inTripBody').addEventListener('click', event => {
-      const editButton = event.target.closest('.edit-trip-btn'), completeButton = event.target.closest('.complete-trip-btn');
-      if (editButton) openEditTrip(editButton.dataset.tripId); else if (completeButton) openCompleteTrip(completeButton.dataset.tripId);
+      const editButton = event.target.closest('.edit-trip-btn'), completeButton = event.target.closest('.complete-trip-btn'), deleteButton = event.target.closest('.delete-trip-btn');
+      if (editButton) openEditTrip(editButton.dataset.tripId);
+      else if (completeButton) openCompleteTrip(completeButton.dataset.tripId);
+      else if (deleteButton) deleteTripEntry(deleteButton.dataset.tripId, deleteButton);
     });
     ['searchInput', 'statusFilter', 'dateFrom', 'dateTo'].forEach(id => { $(id).addEventListener('input', render); $(id).addEventListener('change', render); });
     $('dateRangeFilter').addEventListener('change', () => { toggleCustomDates(); render(); });
