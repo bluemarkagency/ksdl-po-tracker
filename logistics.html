@@ -42,6 +42,7 @@
           <span id="connectionStatus" class="connection-status">Connecting…</span>
           <span id="signedInAs" class="connection-status"></span>
           <label class="top-language"><span data-i18n="language">Language</span><select id="languageSelect" class="language-select" aria-label="Language"><option value="en">English</option><option value="gu">ગુજરાતી</option><option value="hi">हिन्दी</option></select></label>
+          <a id="receivablesNav" class="tracker-nav-link hidden" href="receivables.html">Receivables</a>
           <button id="refreshBtn" type="button" data-i18n="refresh">Refresh</button>
           <button id="signOutBtn" class="text-btn" type="button" data-i18n="signOut">Sign out</button>
         </div>
@@ -138,7 +139,7 @@
             <label><span data-i18n="vehicleCost">Vehicle / tempo cost (₹)</span><input id="tripFreight" type="number" min="0" step="0.01" placeholder="Optional" data-i18n-placeholder="optional" /></label>
           </div>
           <div class="po-detail-heading"><div><h3 data-i18n="invoiceCostHeading">Invoice and delivery cost for each PO</h3><p data-i18n="invoiceCostHelp">Upload each Tally invoice PDF. The invoice number and date will be filled automatically and checked against the selected PO.</p></div></div>
-          <div class="po-detail-wrap"><table class="po-detail-table"><thead><tr><th data-i18n="poLocation">PO / location</th><th data-i18n="invoiceNumber">Invoice number*</th><th data-i18n="invoiceDate">Invoice date*</th><th data-i18n="invoiceCopy">Invoice copy</th><th data-i18n="allocatedCost">Allocated cost (₹)</th></tr></thead><tbody id="tripPoDetails"></tbody></table></div>
+          <div class="po-detail-wrap"><table class="po-detail-table"><thead><tr><th data-i18n="poLocation">PO / location</th><th data-i18n="invoiceNumber">Invoice number*</th><th data-i18n="invoiceDate">Invoice date*</th><th data-i18n="invoiceAmount">Invoice amount (₹)</th><th data-i18n="invoiceCopy">Invoice copy</th><th data-i18n="allocatedCost">Allocated cost (₹)</th></tr></thead><tbody id="tripPoDetails"></tbody></table></div>
           <p id="tripPlanError" class="error" aria-live="polite"></p>
           <div class="plan-actions"><button id="cancelTripBtn" type="button" data-i18n="cancel">Cancel</button><button id="createTripBtn" class="primary" disabled>Create trip with 0 POs</button></div>
         </form>
@@ -166,6 +167,6 @@
     <div id="toast" class="toast" role="status"></div>
     <script src="config.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <script src="logistics.js?v=manual-po-20260724"></script>
+    <script src="logistics.js?v=receivables-sync-20260727"></script>
   </body>
 </html>

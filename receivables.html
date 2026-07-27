@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#124e45" />
+    <title>KSDL Customer Receivables</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="mobile-filters.css" />
+    <link rel="stylesheet" href="receivables.css?v=20260727-1" />
+  </head>
+  <body>
+    <section id="loginScreen" class="login-screen hidden">
+      <form id="loginForm" class="login-card">
+        <span class="eyebrow">KSDL DISTRIBUTION</span>
+        <h1>Customer Receivables</h1>
+        <p>Owner or accountant sign-in is required.</p>
+        <label>Email<input id="emailInput" type="email" autocomplete="username" required autofocus /></label>
+        <label>Password<input id="passwordInput" type="password" autocomplete="current-password" required /></label>
+        <p id="loginError" class="error" aria-live="polite"></p>
+        <button>Sign in</button>
+      </form>
+    </section>
+
+    <main id="app" class="app-shell hidden">
+      <header class="topbar">
+        <div><span class="eyebrow">GUJARAT · OWNER CONTROL</span><h1>Customer Receivables</h1></div>
+        <div class="top-actions">
+          <span id="connectionStatus" class="connection-status">Connecting…</span>
+          <span id="signedInAs" class="connection-status"></span>
+          <a class="tracker-nav-link" href="index.html">PO Tracker</a>
+          <a class="tracker-nav-link" href="logistics.html">Dispatch</a>
+          <a class="tracker-nav-link" href="payments.html">Transport payments</a>
+          <button id="refreshBtn" type="button">Refresh</button>
+          <button id="signOutBtn" class="text-btn" type="button">Sign out</button>
+        </div>
+      </header>
+
+      <section class="summary-grid receivable-summary" aria-label="Receivables summary">
+        <article><span>Total outstanding</span><strong id="outstandingAmount">₹0</strong><small id="outstandingCount">0 invoices</small></article>
+        <article class="attention"><span>Overdue</span><strong id="overdueAmount">₹0</strong><small id="overdueCount">0 invoices</small></article>
+        <article><span>Due in 3 days</span><strong id="dueSoonAmount">₹0</strong><small id="dueSoonCount">0 invoices</small></article>
+        <article><span>Received this month</span><strong id="receivedAmount">₹0</strong><small>Bank-confirmed advice</small></article>
+        <article><span>Needs review</span><strong id="reviewCount">0</strong><small>Unmatched advice rows</small></article>
+        <article><span>Missing invoice data</span><strong id="missingCount">0</strong><small>Older tracker records</small></article>
+      </section>
+
+      <section class="receivable-card aging-card">
+        <div class="section-head"><div><span class="eyebrow">COLLECTION PRIORITY</span><h2>Outstanding ageing</h2><p>DMart credit period is set to 3 calendar days from invoice date.</p></div></div>
+        <div id="agingGrid" class="aging-grid"></div>
+      </section>
+
+      <section class="receivable-card">
+        <div class="section-head"><div><span class="eyebrow">INVOICE REGISTER</span><h2>Gujarat invoices</h2><p>Future BMAG invoices are synced automatically from Logistics and the main tracker.</p></div></div>
+        <div class="receivable-filters">
+          <label class="search-field">Search<input id="invoiceSearch" placeholder="Invoice, PO or location" /></label>
+          <label>Status<select id="invoiceStatus"><option value="">All statuses</option><option>Needs Data</option><option>Open</option><option>Partially Paid</option><option>Paid</option><option>Disputed</option></select></label>
+          <label>Age<select id="ageFilter"><option value="">All ages</option><option value="not-due">Not due</option><option value="0-7">0–7 overdue</option><option value="8-15">8–15 overdue</option><option value="16-30">16–30 overdue</option><option value="31-45">31–45 overdue</option><option value="46+">46+ overdue</option></select></label>
+          <button id="clearInvoiceFilters" class="text-btn" type="button">Clear</button>
+        </div>
+        <div class="table-wrap"><table class="receivable-table invoice-table"><thead><tr><th>Invoice / PO</th><th>Invoice date</th><th>Due date</th><th>Location</th><th>Invoice value</th><th>Received / TDS</th><th>Outstanding</th><th>Age</th><th>Status</th><th>Action</th></tr></thead><tbody id="invoiceBody"></tbody></table></div>
+        <div id="invoiceEmpty" class="empty-state"><h3>No invoices found</h3><p>Synced Gujarat invoices will appear here.</p></div>
+      </section>
+
+      <section class="receivable-card">
+        <div class="section-head"><div><span class="eyebrow">BANK ADVICE INBOX</span><h2>DMart payment advice</h2><p>An advice is not treated as paid until the owner or accountant confirms the credit in the bank account.</p></div></div>
+        <div class="table-wrap"><table class="receivable-table advice-table"><thead><tr><th>Advice / UTR</th><th>Payment date</th><th>Net amount</th><th>TDS</th><th>Gujarat invoices</th><th>Status</th><th>Source</th><th>Action</th></tr></thead><tbody id="adviceBody"></tbody></table></div>
+        <div id="adviceEmpty" class="empty-state"><h3>No payment advice imported</h3><p>The Gmail automation will add new DMart advice here.</p></div>
+      </section>
+    </main>
+
+    <dialog id="invoiceDialog" class="receivable-dialog">
+      <form id="invoiceForm">
+        <div class="modal-header"><div><span class="eyebrow">INVOICE DATA</span><h2 id="invoiceDialogTitle">Update invoice</h2><p id="invoiceDialogSummary"></p></div><button id="closeInvoiceDialog" class="icon-btn" type="button" aria-label="Close">×</button></div>
+        <input id="invoiceId" type="hidden" />
+        <div class="form-grid invoice-form-grid">
+          <label>Invoice date<input id="editInvoiceDate" type="date" /></label>
+          <label>Invoice amount (₹)<input id="editInvoiceAmount" type="number" min="0" step="0.01" /></label>
+          <label>Credit days<input id="editCreditDays" type="number" min="0" step="1" value="3" /></label>
+          <div class="due-preview"><span>Calculated due date</span><strong id="editDueDate">—</strong></div>
+        </div>
+        <p id="invoiceError" class="error" aria-live="polite"></p>
+        <div class="modal-actions"><span></span><button id="cancelInvoiceBtn" type="button">Cancel</button><button class="primary">Save invoice</button></div>
+      </form>
+    </dialog>
+
+    <dialog id="adviceDialog" class="receivable-dialog advice-dialog">
+      <div class="dialog-inner">
+        <div class="modal-header"><div><span class="eyebrow">PAYMENT ADVICE REVIEW</span><h2 id="adviceDialogTitle">Advice details</h2><p id="adviceDialogSummary"></p></div><button id="closeAdviceDialog" class="icon-btn" type="button" aria-label="Close">×</button></div>
+        <div id="adviceReviewWarning" class="review-warning hidden"></div>
+        <div class="table-wrap"><table class="receivable-table advice-item-table"><thead><tr><th>Invoice</th><th>Site</th><th>Gross</th><th>Net</th><th>TDS</th><th>Match</th><th>Correction</th></tr></thead><tbody id="adviceItemBody"></tbody></table></div>
+        <p id="adviceError" class="error" aria-live="polite"></p>
+        <div class="modal-actions"><a id="adviceAttachmentLink" class="tracker-nav-link hidden" target="_blank" rel="noopener">Open private advice PDF</a><button id="confirmAdviceBtn" class="primary" type="button">Confirm bank credit</button></div>
+      </div>
+    </dialog>
+
+    <div id="toast" class="toast" role="status"></div>
+    <script src="config.js"></script>
+    <script src="receivables.js?v=20260727-1"></script>
+  </body>
+</html>

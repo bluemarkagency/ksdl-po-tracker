@@ -22,7 +22,7 @@
       tripDate: 'Trip date*', transporterOwner: 'Transporter / tempo owner*', selectTransporter: 'Select transporter', vehicleNumber: 'Vehicle number', driverName: 'Driver name',
       driverPhone: 'Driver phone', vehicleCost: 'Vehicle / tempo cost (₹)', optional: 'Optional', invoiceCostHeading: 'Invoice and delivery cost for each PO',
       invoiceCostHelp: 'Upload each Tally invoice PDF. The invoice number and date will be filled automatically and checked against the selected PO.',
-      poLocation: 'PO / location', invoiceNumber: 'Invoice number*', invoiceDate: 'Invoice date*', invoiceCopy: 'Invoice copy', allocatedCost: 'Allocated cost (₹)', cancel: 'Cancel',
+      poLocation: 'PO / location', invoiceNumber: 'Invoice number*', invoiceDate: 'Invoice date*', invoiceAmount: 'Invoice amount (₹)', invoiceCopy: 'Invoice copy', allocatedCost: 'Allocated cost (₹)', cancel: 'Cancel',
       deliveryCompleted: 'DELIVERY COMPLETED', completeDelivery: 'Complete delivery', finalTransportCost: 'Final transport cost (₹)', signedDeliverySlip: 'Signed delivery slip*',
       finalTotalCost: 'Final total transport cost', completionNote: 'The total is calculated automatically from all PO costs. Each PO will receive its own delivery slip, final cost, invoice details and invoice copy in the owner tracker.',
       step4: 'STEP 4', posInTrip: 'POs in trip', reviewHint: 'Open the PO and invoice copies here to verify that the correct documents are attached.', tripDatePlain: 'Trip date',
@@ -71,7 +71,7 @@
       tripDate: 'ટ્રિપ તારીખ*', transporterOwner: 'ટ્રાન્સપોર્ટર / ટેમ્પો માલિક*', selectTransporter: 'ટ્રાન્સપોર્ટર પસંદ કરો', vehicleNumber: 'વાહન નંબર', driverName: 'ડ્રાઇવરનું નામ',
       driverPhone: 'ડ્રાઇવર ફોન', vehicleCost: 'વાહન / ટેમ્પો ખર્ચ (₹)', optional: 'વૈકલ્પિક', invoiceCostHeading: 'દરેક PO માટે ઇન્વૉઇસ અને ડિલિવરી ખર્ચ',
       invoiceCostHelp: 'દરેક Tally ઇન્વૉઇસ PDF અપલોડ કરો. ઇન્વૉઇસ નંબર અને તારીખ આપમેળે ભરાશે અને પસંદ કરેલા PO સાથે ચકાસાશે.',
-      poLocation: 'PO / સ્થળ', invoiceNumber: 'ઇન્વૉઇસ નંબર*', invoiceDate: 'ઇન્વૉઇસ તારીખ*', invoiceCopy: 'ઇન્વૉઇસ નકલ', allocatedCost: 'ફાળવેલ ખર્ચ (₹)', cancel: 'રદ કરો',
+      poLocation: 'PO / સ્થળ', invoiceNumber: 'ઇન્વૉઇસ નંબર*', invoiceDate: 'ઇન્વૉઇસ તારીખ*', invoiceAmount: 'ઇન્વૉઇસ રકમ (₹)', invoiceCopy: 'ઇન્વૉઇસ નકલ', allocatedCost: 'ફાળવેલ ખર્ચ (₹)', cancel: 'રદ કરો',
       deliveryCompleted: 'ડિલિવરી પૂર્ણ', completeDelivery: 'ડિલિવરી પૂર્ણ કરો', finalTransportCost: 'અંતિમ ટ્રાન્સપોર્ટ ખર્ચ (₹)', signedDeliverySlip: 'સહીવાળી ડિલિવરી સ્લિપ*',
       finalTotalCost: 'કુલ અંતિમ ટ્રાન્સપોર્ટ ખર્ચ', completionNote: 'બધા POના ખર્ચ પરથી કુલ આપમેળે ગણાશે. દરેક POની ડિલિવરી સ્લિપ, અંતિમ ખર્ચ, ઇન્વૉઇસ વિગતો અને નકલ ઓનર ટ્રેકરમાં જશે.',
       step4: 'પગલું 4', posInTrip: 'ટ્રિપમાં PO', reviewHint: 'સાચા દસ્તાવેજ જોડાયેલા છે કે નહીં તે તપાસવા PO અને ઇન્વૉઇસની નકલ અહીં ખોલો.', tripDatePlain: 'ટ્રિપ તારીખ',
@@ -120,7 +120,7 @@
       tripDate: 'ट्रिप तारीख*', transporterOwner: 'ट्रांसपोर्टर / टेम्पो मालिक*', selectTransporter: 'ट्रांसपोर्टर चुनें', vehicleNumber: 'वाहन नंबर', driverName: 'ड्राइवर का नाम',
       driverPhone: 'ड्राइवर फोन', vehicleCost: 'वाहन / टेम्पो खर्च (₹)', optional: 'वैकल्पिक', invoiceCostHeading: 'हर PO का इनवॉइस और डिलीवरी खर्च',
       invoiceCostHelp: 'हर Tally इनवॉइस PDF अपलोड करें। इनवॉइस नंबर और तारीख अपने आप भरेंगे और चुने गए PO से जाँच होगी।',
-      poLocation: 'PO / स्थान', invoiceNumber: 'इनवॉइस नंबर*', invoiceDate: 'इनवॉइस तारीख*', invoiceCopy: 'इनवॉइस कॉपी', allocatedCost: 'आवंटित खर्च (₹)', cancel: 'रद्द करें',
+      poLocation: 'PO / स्थान', invoiceNumber: 'इनवॉइस नंबर*', invoiceDate: 'इनवॉइस तारीख*', invoiceAmount: 'इनवॉइस राशि (₹)', invoiceCopy: 'इनवॉइस कॉपी', allocatedCost: 'आवंटित खर्च (₹)', cancel: 'रद्द करें',
       deliveryCompleted: 'डिलीवरी पूरी', completeDelivery: 'डिलीवरी पूरी करें', finalTransportCost: 'अंतिम ट्रांसपोर्ट खर्च (₹)', signedDeliverySlip: 'हस्ताक्षरित डिलीवरी स्लिप*',
       finalTotalCost: 'कुल अंतिम ट्रांसपोर्ट खर्च', completionNote: 'सभी PO के खर्च से कुल अपने आप निकलेगा। हर PO की डिलीवरी स्लिप, अंतिम खर्च, इनवॉइस विवरण और कॉपी मालिक के ट्रैकर में जाएगी।',
       step4: 'चरण 4', posInTrip: 'ट्रिप में PO', reviewHint: 'सही दस्तावेज़ लगे हैं या नहीं, यह जाँचने के लिए PO और इनवॉइस कॉपी यहाँ खोलें।', tripDatePlain: 'ट्रिप तारीख',
@@ -426,6 +426,7 @@
       const parsed = parseTallyInvoice(await readPdfLines(file));
       if (parsed.invoiceNumber) row.querySelector('.po-invoice-number').value = parsed.invoiceNumber;
       if (parsed.invoiceDate) row.querySelector('.po-invoice-date').value = parsed.invoiceDate;
+      if (parsed.invoiceValue != null) row.querySelector('.po-invoice-amount').value = parsed.invoiceValue.toFixed(2);
       if (parsed.vehicleNumber) $('tripVehicle').value = parsed.vehicleNumber;
       const expectedPo = normalizePoNumber(record.po_number), invoicePo = normalizePoNumber(parsed.poNumber);
       const details = [parsed.invoiceNumber, record.delivery_location || parsed.destination, parsed.invoiceValue != null ? money(parsed.invoiceValue) : '', parsed.ewayBill ? `e-Way ${parsed.ewayBill}` : ''].filter(Boolean).join(' · ');
@@ -443,7 +444,7 @@
     setConnectionStatus('loadingPos');
     const [poResult, tripResult, transporterResult] = await Promise.allSettled([
       api('/rest/v1/purchase_orders?select=*&order=po_received_date.desc'),
-      api('/rest/v1/delivery_trips?select=*,delivery_trip_pos(purchase_order_id,allocated_cost,invoice_number,invoice_date,invoice_attachment_url,delivery_status,correction_reason,purchase_orders(id,po_number,customer_name,delivery_location,status,po_attachment_url))&order=trip_date.desc,created_at.desc'),
+      api('/rest/v1/delivery_trips?select=*,delivery_trip_pos(purchase_order_id,allocated_cost,invoice_number,invoice_date,invoice_amount,invoice_attachment_url,delivery_status,correction_reason,purchase_orders(id,po_number,customer_name,delivery_location,status,po_attachment_url))&order=trip_date.desc,created_at.desc'),
       api('/rest/v1/transporters?select=id,name,phone,active&active=eq.true&order=name.asc')
     ]);
     if (poResult.status === 'rejected') {
@@ -550,6 +551,7 @@
       <td><span class="po-main">${safe(record.po_number)}</span><span class="po-secondary">${safe(record.delivery_location || t('locationPending'))}</span>${correction}</td>
       <td><input class="po-invoice-number" required placeholder="${safe(t('invoiceNumberPlaceholder'))}" value="${safe(link?.invoice_number || '')}" /></td>
       <td><input class="po-invoice-date" type="date" required value="${safe(link?.invoice_date || '')}" /></td>
+      <td><input class="po-invoice-amount" type="number" min="0" step="0.01" placeholder="Optional" value="${link?.invoice_amount ?? ''}" /></td>
       <td><input class="po-invoice-file" type="file" accept="application/pdf,image/*" ${hasInvoice ? '' : 'required'} /><small class="invoice-read-status" data-state="${hasInvoice ? 'matched' : 'idle'}">${invoiceStatusText}</small></td>
       <td><input class="po-allocated-cost" type="number" min="0" step="0.01" placeholder="Optional" value="${link?.allocated_cost ?? ''}" /></td>
     </tr>`;
@@ -575,7 +577,7 @@
         const invoiceCopy = link.invoice_attachment_link
           ? `<a class="trip-doc-link invoice-copy-link" href="${safe(link.invoice_attachment_link)}" target="_blank" rel="noopener">${safe(t('viewInvoiceCopy'))}</a>`
           : `<span class="trip-doc-missing">${safe(t('invoiceCopyUnavailable'))}</span>`;
-        return `<div class="trip-invoice-row"><div><strong>${safe(link.purchase_orders?.po_number || 'PO')}:</strong> ${safe(link.invoice_number || trip.invoice_number || '—')} · ${money(link.allocated_cost)}</div>${invoiceCopy}</div>`;
+        return `<div class="trip-invoice-row"><div><strong>${safe(link.purchase_orders?.po_number || 'PO')}:</strong> ${safe(link.invoice_number || trip.invoice_number || '—')} · Invoice ${link.invoice_amount == null ? '—' : money(link.invoice_amount)} · Delivery ${money(link.allocated_cost)}</div>${invoiceCopy}</div>`;
       }).join('');
       const tempoCost = Number(trip.actual_freight || 0);
       return `<tr class="${needsCorrection ? 'correction-trip' : ''}"><td>${localDate(trip.trip_date)}</td><td><div class="trip-po-list">${chips || safe(t('noPosLinked'))}</div></td><td>${safe(trip.vehicle_number || trip.transporter || '—')}<span class="po-secondary">${safe(trip.driver_name || '')}</span></td><td>${invoices || '—'}</td><td><span class="executive-status ${needsCorrection ? 'needs-correction' : ''}">${safe(needsCorrection ? t('needsCorrection') : statusLabel(trip.status))}</span></td><td>${tempoCost ? money(tempoCost) : '—'}</td><td><div class="trip-actions"><button class="text-btn edit-trip-btn" type="button" data-trip-id="${trip.id}">${safe(t('edit'))}</button><button class="complete-trip-btn" type="button" data-trip-id="${trip.id}">${safe(needsCorrection ? t('correctDelivery') : t('completeDelivery'))}</button></div></td></tr>`;
@@ -612,7 +614,8 @@
       const freight = Number($('tripFreight').value || 0), tripId = editTrip?.id || crypto.randomUUID();
       const details = chosen.map(record => {
         const row = $('tripPoDetails').querySelector(`tr[data-po-id="${record.id}"]`);
-        return { record, invoiceState: row.dataset.invoiceState || 'idle', existingInvoicePath: row.dataset.existingInvoice || '', invoiceNumber: row.querySelector('.po-invoice-number').value.trim(), invoiceDate: row.querySelector('.po-invoice-date').value, invoiceFile: row.querySelector('.po-invoice-file').files[0], allocatedCost: Number(row.querySelector('.po-allocated-cost').value || 0) };
+        const invoiceAmountText = row.querySelector('.po-invoice-amount').value;
+        return { record, invoiceState: row.dataset.invoiceState || 'idle', existingInvoicePath: row.dataset.existingInvoice || '', invoiceNumber: row.querySelector('.po-invoice-number').value.trim(), invoiceDate: row.querySelector('.po-invoice-date').value, invoiceAmount: invoiceAmountText === '' ? null : Number(invoiceAmountText), invoiceFile: row.querySelector('.po-invoice-file').files[0], allocatedCost: Number(row.querySelector('.po-allocated-cost').value || 0) };
       });
       for (const detail of details) if (detail.invoiceState === 'reading') throw new Error(t('waitForInvoice', { po: detail.record.po_number }));
       for (const detail of details) if (detail.invoiceState === 'mismatch') throw new Error(t('replaceWrongInvoice', { po: detail.record.po_number }));
@@ -623,10 +626,10 @@
       const tripPayload = { trip_date: $('tripDate').value, transporter_id: transporterId, transporter: transporterName, vehicle_number: $('tripVehicle').value.trim() || null, driver_name: $('tripDriver').value.trim() || null, driver_phone: $('tripDriverPhone').value.trim() || null, quoted_cost: freight, actual_freight: freight };
       if (editTrip) {
         await api(`/rest/v1/delivery_trips?id=eq.${encodeURIComponent(tripId)}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify(tripPayload) });
-        await Promise.all(details.map(detail => api(`/rest/v1/delivery_trip_pos?trip_id=eq.${encodeURIComponent(tripId)}&purchase_order_id=eq.${encodeURIComponent(detail.record.id)}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify({ allocation_method: 'Manual', allocated_cost: detail.allocatedCost, invoice_number: detail.invoiceNumber, invoice_date: detail.invoiceDate, invoice_attachment_url: detail.invoicePath }) })));
+        await Promise.all(details.map(detail => api(`/rest/v1/delivery_trip_pos?trip_id=eq.${encodeURIComponent(tripId)}&purchase_order_id=eq.${encodeURIComponent(detail.record.id)}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify({ allocation_method: 'Manual', allocated_cost: detail.allocatedCost, invoice_number: detail.invoiceNumber, invoice_date: detail.invoiceDate, invoice_amount: detail.invoiceAmount, invoice_attachment_url: detail.invoicePath }) })));
       } else {
         await api('/rest/v1/delivery_trips', { method: 'POST', headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify({ id: tripId, status: 'Planning', ...tripPayload }) });
-        const links = details.map(detail => ({ trip_id: tripId, purchase_order_id: detail.record.id, allocation_method: 'Manual', allocated_cost: detail.allocatedCost, invoice_number: detail.invoiceNumber, invoice_date: detail.invoiceDate, invoice_attachment_url: detail.invoicePath, delivery_status: 'Pending' }));
+        const links = details.map(detail => ({ trip_id: tripId, purchase_order_id: detail.record.id, allocation_method: 'Manual', allocated_cost: detail.allocatedCost, invoice_number: detail.invoiceNumber, invoice_date: detail.invoiceDate, invoice_amount: detail.invoiceAmount, invoice_attachment_url: detail.invoicePath, delivery_status: 'Pending' }));
         await api('/rest/v1/delivery_trip_pos', { method: 'POST', headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify(links) });
         selectedPoIds.clear();
       }
@@ -702,7 +705,10 @@
   }
   async function start() {
     if (!BASE_URL || !PUBLIC_KEY) { show('loginScreen'); $('loginError').textContent = t('notConfigured'); return; }
-    $('signedInAs').textContent = session?.user?.email || ''; hide('loginScreen'); show('app'); $('tripDate').value = today(); await loadData(); clearInterval(refreshTimer); refreshTimer = setInterval(loadData, 60000);
+    $('signedInAs').textContent = session?.user?.email || '';
+    const role = await api('/rest/v1/rpc/po_tracker_role', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).catch(() => '');
+    $('receivablesNav').classList.toggle('hidden', !['owner', 'accountant'].includes(role));
+    hide('loginScreen'); show('app'); $('tripDate').value = today(); await loadData(); clearInterval(refreshTimer); refreshTimer = setInterval(loadData, 60000);
   }
 
   bindEvents(); applyLanguage(currentLanguage); toggleCustomDates();
