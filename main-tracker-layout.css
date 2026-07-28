@@ -1,4 +1,5 @@
 .po-table {
+  width: 1410px;
   min-width: 1410px;
   table-layout: fixed;
 }
@@ -15,91 +16,110 @@
 }
 
 @media (max-width: 760px) {
-  .table-card {
-    border: 0;
-    background: transparent;
+  html,
+  body {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
   }
 
-  .table-title {
-    margin-bottom: 8px;
-    padding: 8px 2px;
-    border: 0;
+  .app-shell {
+    width: 100%;
+    max-width: 100%;
+    padding: 14px;
   }
 
-  .table-wrap {
-    overflow: visible;
-  }
-
-  .po-table,
-  .po-table tbody,
-  .po-table tr,
-  .po-table td {
+  .topbar {
     display: block;
     width: 100%;
+    margin-bottom: 18px;
   }
 
-  .po-table {
+  .top-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 8px;
+    width: 100%;
+    margin-top: 13px;
+  }
+
+  .top-actions .connection-status {
+    display: none;
+  }
+
+  .top-actions .tracker-nav-link,
+  .top-actions button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-width: 0;
+    min-height: 42px;
+    padding: 8px;
+    text-align: center;
+    line-height: 1.2;
+  }
+
+  .top-actions a[href="receivables.html"] {
+    grid-column: 1 / -1;
+  }
+
+  .summary-grid,
+  .toolbar,
+  .table-card {
+    width: 100%;
+    max-width: 100%;
     min-width: 0;
   }
 
-  .po-table colgroup,
-  .po-table thead {
-    display: none;
-  }
-
-  .po-table tbody {
+  .toolbar {
     display: grid;
-    gap: 12px;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 8px;
   }
 
-  .po-table tr {
-    overflow: hidden;
-    border: 1px solid var(--line);
-    border-radius: 13px;
-    background: var(--white);
-    box-shadow: 0 5px 16px #153d3512;
+  .toolbar .search,
+  .toolbar #dateRangeFilter,
+  .toolbar .custom-date-filters,
+  .toolbar .toolbar-actions {
+    grid-column: 1 / -1;
+    width: 100%;
   }
 
-  .po-table td {
+  .toolbar select {
+    width: 100%;
+    max-width: none;
+  }
+
+  .toolbar-actions {
     display: grid;
-    grid-template-columns: 126px minmax(0, 1fr);
-    gap: 12px;
-    align-items: start;
-    min-height: 42px;
-    padding: 10px 13px;
-    border-bottom: 1px solid #edf1f0;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 8px;
+    margin: 0;
   }
 
-  .po-table td::before {
-    content: attr(data-label);
-    color: var(--muted);
-    font-size: 10px;
-    font-weight: 800;
-    letter-spacing: .06em;
-    text-transform: uppercase;
-  }
-
-  .po-table td[data-column="po"] {
-    display: block;
-    padding: 14px 13px;
-    background: #f7faf9;
-  }
-
-  .po-table td[data-column="po"]::before {
-    display: none;
-  }
-
-  .po-table td[data-column="action"] {
-    display: block;
-    border-bottom: 0;
-  }
-
-  .po-table td[data-column="action"]::before {
-    display: none;
-  }
-
-  .po-table .action-btn {
+  .toolbar-actions button {
     width: 100%;
     min-height: 42px;
+  }
+
+  .table-card {
+    overflow: hidden;
+  }
+
+  .table-wrap {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-inline: contain;
+  }
+
+  .po-table {
+    display: table;
+    width: 1410px;
+    min-width: 1410px;
+    table-layout: fixed;
   }
 }
