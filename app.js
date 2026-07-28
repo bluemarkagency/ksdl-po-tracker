@@ -72,7 +72,6 @@ function poRow(record) {
     <td data-column="location">${safe(record.deliveryLocation || '—')}</td>
     <td data-column="invoice">${safe(record.invoiceNumber || '—')}<span class="secondary">${date(record.invoiceDate)}</span>${record.invoiceAttachmentLink ? `<a class="note-link" href="${safe(record.invoiceAttachmentLink)}" target="_blank" rel="noopener">View invoice</a>` : ''}</td>
     <td data-column="transport">${safe(record.transporter || '—')}<span class="secondary">${safe(record.trackingNumber || '')}${record.transportAmount ? ` · ${money(record.transportAmount)}` : ''}</span></td>
-    <td data-column="assigned">${safe(record.assignedTo || '—')}</td>
     <td data-column="age">${ageDays(record) === null ? '—' : `${ageDays(record)} days`}</td>
     <td data-column="action"><button class="action-btn" data-edit="${record.id}">Edit</button></td>
   </tr>`;
@@ -129,9 +128,6 @@ render = function() {
 
   [...$('poTableBody').rows].forEach((row, index) => {
     const record = showing[index];
-
-    const locationCell = row.insertCell(5);
-    locationCell.textContent = record?.deliveryLocation || '—';
 
     if (!record?.poAttachmentLink) {
       return;

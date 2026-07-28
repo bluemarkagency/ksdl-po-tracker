@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#124e45" />
     <title>KSDL PO Tracker</title>
-    <link rel="stylesheet" href="styles.css?v=main-table-alignment-20260728" />
+    <link rel="stylesheet" href="styles.css?v=main-table-alignment-2-20260728" />
     <link rel="stylesheet" href="mobile-filters.css" />
     <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   </head>
@@ -72,11 +72,11 @@
             <col class="col-po" /><col class="col-po-date" /><col class="col-status" />
             <col class="col-delivery-date" /><col class="col-completed-date" />
             <col class="col-value" /><col class="col-location" /><col class="col-invoice" />
-            <col class="col-transport" /><col class="col-assigned" /><col class="col-age" />
+            <col class="col-transport" /><col class="col-age" />
             <col class="col-action" />
           </colgroup>
           <thead><tr>
-          <th scope="col">PO / Customer</th><th scope="col">PO date</th><th scope="col">Status</th><th scope="col">Delivery date</th><th scope="col">Delivery completed date</th><th scope="col">PO value</th><th scope="col">Delivery location</th><th scope="col">Invoice</th><th scope="col">Transport</th><th scope="col">Assigned</th><th scope="col">PO age</th><th scope="col">Action</th>
+          <th scope="col">PO / Customer</th><th scope="col">PO date</th><th scope="col">Status</th><th scope="col">Delivery date</th><th scope="col">Delivery completed date</th><th scope="col">PO value</th><th scope="col">Delivery location</th><th scope="col">Invoice</th><th scope="col">Transport</th><th scope="col">PO age</th><th scope="col">Action</th>
         </tr></thead><tbody id="poTableBody"></tbody></table></div>
         <div id="emptyState" class="empty-state hidden"><h3>No purchase orders found</h3><p>Add your first PO, or import your existing Excel file.</p><button id="emptyNewBtn" class="primary">+ Add PO</button></div>
       </section>
@@ -110,6 +110,6 @@
       <div class="modal-actions"><button type="button" id="deleteBtn" class="danger hidden">Delete permanently</button><span></span><button type="button" id="cancelBtn">Cancel</button><button class="primary">Save PO</button></div>
     </form></dialog>
     <div id="toast" class="toast" role="status"></div>
-    <script src="config.js"></script><script src="app.js?v=main-table-alignment-20260728"></script>
+    <script src="config.js"></script><script src="app.js?v=main-table-alignment-2-20260728"></script>
   </body>
 </html>
