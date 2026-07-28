@@ -1,0 +1,105 @@
+.po-table {
+  min-width: 1410px;
+  table-layout: fixed;
+}
+
+.po-table th,
+.po-table td {
+  overflow-wrap: anywhere;
+}
+
+.po-table td[data-column="value"],
+.po-table td[data-column="age"],
+.po-table td[data-column="action"] {
+  white-space: nowrap;
+}
+
+@media (max-width: 760px) {
+  .table-card {
+    border: 0;
+    background: transparent;
+  }
+
+  .table-title {
+    margin-bottom: 8px;
+    padding: 8px 2px;
+    border: 0;
+  }
+
+  .table-wrap {
+    overflow: visible;
+  }
+
+  .po-table,
+  .po-table tbody,
+  .po-table tr,
+  .po-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .po-table {
+    min-width: 0;
+  }
+
+  .po-table colgroup,
+  .po-table thead {
+    display: none;
+  }
+
+  .po-table tbody {
+    display: grid;
+    gap: 12px;
+  }
+
+  .po-table tr {
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 13px;
+    background: var(--white);
+    box-shadow: 0 5px 16px #153d3512;
+  }
+
+  .po-table td {
+    display: grid;
+    grid-template-columns: 126px minmax(0, 1fr);
+    gap: 12px;
+    align-items: start;
+    min-height: 42px;
+    padding: 10px 13px;
+    border-bottom: 1px solid #edf1f0;
+  }
+
+  .po-table td::before {
+    content: attr(data-label);
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+  }
+
+  .po-table td[data-column="po"] {
+    display: block;
+    padding: 14px 13px;
+    background: #f7faf9;
+  }
+
+  .po-table td[data-column="po"]::before {
+    display: none;
+  }
+
+  .po-table td[data-column="action"] {
+    display: block;
+    border-bottom: 0;
+  }
+
+  .po-table td[data-column="action"]::before {
+    display: none;
+  }
+
+  .po-table .action-btn {
+    width: 100%;
+    min-height: 42px;
+  }
+}

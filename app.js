@@ -63,17 +63,17 @@ function filtered() { const search = $('searchInput').value.trim().toLowerCase()
 function poRow(record) {
   const deliveryDelay = delayDays(record);
   return `<tr>
-    <td data-column="po"><span class="primary-cell">${safe(record.poNumber)}</span><span class="secondary">${safe(record.customerName)}</span></td>
-    <td data-column="po-date">${date(record.poDate)}<span class="secondary">Received ${date(record.poReceivedDate)}</span></td>
-    <td data-column="status"><span class="pill ${slug(record.status)}">${safe(record.status)}</span></td>
-    <td data-column="delivery-date">${date(record.deliveryDate)}${record.deliveryNoteLink ? `<a class="note-link" href="${safe(record.deliveryNoteLink)}" target="_blank" rel="noopener">View delivery note</a>` : ''}${deliveryDelay !== null ? `<span class="secondary">${deliveryDelay} day${Math.abs(deliveryDelay) === 1 ? '' : 's'} from PO</span>` : ''}</td>
-    <td data-column="completed-date">${date(record.deliveryCompletedDate)}<span class="secondary">${record.deliveryCompletedDate ? 'Payment clock starts' : 'Waiting for completion'}</span></td>
-    <td data-column="value">${money(record.poValue)}</td>
-    <td data-column="location">${safe(record.deliveryLocation || '—')}</td>
-    <td data-column="invoice">${safe(record.invoiceNumber || '—')}<span class="secondary">${date(record.invoiceDate)}</span>${record.invoiceAttachmentLink ? `<a class="note-link" href="${safe(record.invoiceAttachmentLink)}" target="_blank" rel="noopener">View invoice</a>` : ''}</td>
-    <td data-column="transport">${safe(record.transporter || '—')}<span class="secondary">${safe(record.trackingNumber || '')}${record.transportAmount ? ` · ${money(record.transportAmount)}` : ''}</span></td>
-    <td data-column="age">${ageDays(record) === null ? '—' : `${ageDays(record)} days`}</td>
-    <td data-column="action"><button class="action-btn" data-edit="${record.id}">Edit</button></td>
+    <td data-column="po" data-label="PO / Customer"><span class="primary-cell">${safe(record.poNumber)}</span><span class="secondary">${safe(record.customerName)}</span></td>
+    <td data-column="po-date" data-label="PO date">${date(record.poDate)}<span class="secondary">Received ${date(record.poReceivedDate)}</span></td>
+    <td data-column="status" data-label="Status"><span class="pill ${slug(record.status)}">${safe(record.status)}</span></td>
+    <td data-column="delivery-date" data-label="Delivery date">${date(record.deliveryDate)}${record.deliveryNoteLink ? `<a class="note-link" href="${safe(record.deliveryNoteLink)}" target="_blank" rel="noopener">View delivery note</a>` : ''}${deliveryDelay !== null ? `<span class="secondary">${deliveryDelay} day${Math.abs(deliveryDelay) === 1 ? '' : 's'} from PO</span>` : ''}</td>
+    <td data-column="completed-date" data-label="Delivery completed">${date(record.deliveryCompletedDate)}<span class="secondary">${record.deliveryCompletedDate ? 'Payment clock starts' : 'Waiting for completion'}</span></td>
+    <td data-column="value" data-label="PO value">${money(record.poValue)}</td>
+    <td data-column="location" data-label="Delivery location">${safe(record.deliveryLocation || '—')}</td>
+    <td data-column="invoice" data-label="Invoice">${safe(record.invoiceNumber || '—')}<span class="secondary">${date(record.invoiceDate)}</span>${record.invoiceAttachmentLink ? `<a class="note-link" href="${safe(record.invoiceAttachmentLink)}" target="_blank" rel="noopener">View invoice</a>` : ''}</td>
+    <td data-column="transport" data-label="Transport">${safe(record.transporter || '—')}<span class="secondary">${safe(record.trackingNumber || '')}${record.transportAmount ? ` · ${money(record.transportAmount)}` : ''}</span></td>
+    <td data-column="age" data-label="PO age">${ageDays(record) === null ? '—' : `${ageDays(record)} days`}</td>
+    <td data-column="action" data-label="Action"><button class="action-btn" data-edit="${record.id}">Edit</button></td>
   </tr>`;
 }
 function render() { updateFilters(); const showing = filtered(), total = showing.reduce((sum, record) => sum + Number(record.poValue || 0), 0), delivered = showing.filter(record => record.status === 'Delivered'), pending = showing.filter(record => ['Received', 'Scheduled'].includes(record.status)), attention = showing.filter(record => isOpen(record) && ageDays(record) >= 3); $('totalCount').textContent = showing.length; $('totalValue').textContent = money(total); $('pendingCount').textContent = pending.length; $('transitCount').textContent = showing.filter(record => record.status === 'In Transit').length; $('deliveredCount').textContent = delivered.length; $('deliveredValue').textContent = `${money(delivered.reduce((sum, record) => sum + Number(record.poValue || 0), 0))} value`; $('attentionCount').textContent = attention.length; $('resultCount').textContent = `${showing.length} record${showing.length === 1 ? '' : 's'}`; $('poTableBody').innerHTML = showing.map(poRow).join(''); $('emptyState').classList.toggle('hidden', showing.length > 0); }
