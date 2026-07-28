@@ -148,7 +148,9 @@
       const age = days == null ? 'Needs data' : days < 0 ? `${Math.abs(days)} day(s) left` : `${days} day(s) overdue`;
       return `<tr>
         <td><strong>${safe(invoice.invoice_number)}</strong><span class="subline">PO ${safe(po.po_number || 'Not linked')}</span>${invoice.invoice_attachment_url ? '<span class="subline">Invoice copy in tracker</span>' : ''}</td>
-        <td>${dateLabel(invoice.invoice_date)}</td><td>${dateLabel(invoice.due_date)}<span class="subline">${invoice.credit_days} credit days</span></td>
+        <td>${dateLabel(invoice.invoice_date)}</td>
+        <td>${dateLabel(invoice.delivery_completed_date || po.delivery_completed_date)}<span class="subline">${invoice.delivery_completed_date || po.delivery_completed_date ? 'Payment clock started' : 'Waiting for delivery'}</span></td>
+        <td>${dateLabel(invoice.due_date)}<span class="subline">${invoice.credit_days} credit days</span></td>
         <td>${safe(invoice.delivery_location || po.delivery_location || '—')}</td><td>${invoice.invoice_amount == null ? '—' : money(invoice.invoice_amount)}</td>
         <td>${money(invoice.net_received_amount)}<span class="subline">TDS ${money(invoice.tds_amount)}</span></td>
         <td class="${paid ? 'money-positive' : 'money-negative'}">${money(outstanding(invoice))}</td>
@@ -162,7 +164,11 @@
   function render() { renderSummary(); renderAging(); renderInvoices(); }
 
   async function syncMissingInvoiceData() {
-    const candidates = invoices.filter(invoice => invoice.payment_status === 'Needs Data' && invoice.invoice_attachment_url);
+    const candidates = invoices.filter(invoice =>
+      invoice.payment_status === 'Needs Data'
+      && invoice.invoice_attachment_url
+      && (!invoice.invoice_date || invoice.invoice_amount == null)
+    );
     let updated = 0;
     for (const invoice of candidates) {
       try {
@@ -184,7 +190,7 @@
   async function loadData(runBackgroundSync = true) {
     $('connectionStatus').textContent = 'Loading receivables…';
     const [invoiceRows, adviceRows] = await Promise.all([
-      api('/rest/v1/customer_invoices?select=*,purchase_orders(id,po_number,delivery_location,status)&order=invoice_date.desc.nullslast,created_at.desc'),
+      api('/rest/v1/customer_invoices?select=*,purchase_orders(id,po_number,delivery_location,delivery_completed_date,status)&order=invoice_date.desc.nullslast,created_at.desc'),
       api('/rest/v1/customer_payment_advices?select=id,status,payment_date,total_net_amount&order=payment_date.desc.nullslast,imported_at.desc')
     ]);
     invoices = Array.isArray(invoiceRows) ? invoiceRows : []; advices = Array.isArray(adviceRows) ? adviceRows : [];
@@ -196,13 +202,20 @@
   }
 
   function previewDueDate() {
-    const date = $('editInvoiceDate').value, days = Number($('editCreditDays').value || 6);
-    if (!date) { $('editDueDate').textContent = '—'; return; }
-    const due = new Date(`${date}T00:00:00`); due.setDate(due.getDate() + Math.max(days, 0)); $('editDueDate').textContent = dateLabel(due.toISOString().slice(0, 10));
+    const completedDate = $('invoiceForm').dataset.deliveryCompletedDate || '';
+    const days = Number($('editCreditDays').value || 6);
+    $('editDeliveryCompletedDate').textContent = dateLabel(completedDate);
+    if (!completedDate) {
+      $('editDueDate').textContent = 'Waiting for delivery completion';
+      return;
+    }
+    const due = new Date(`${completedDate}T00:00:00`);
+    due.setDate(due.getDate() + Math.max(days, 0));
+    $('editDueDate').textContent = dateLabel(due.toISOString().slice(0, 10));
   }
   function openInvoice(id) {
     const invoice = invoices.find(item => item.id === id); if (!invoice) return;
-    $('invoiceForm').reset(); $('invoiceId').value = id; $('invoiceDialogTitle').textContent = invoice.invoice_number; $('invoiceDialogSummary').textContent = `${invoice.purchase_orders?.po_number ? `PO ${invoice.purchase_orders.po_number} · ` : ''}${invoice.delivery_location || 'Location pending'}`;
+    $('invoiceForm').reset(); $('invoiceForm').dataset.deliveryCompletedDate = invoice.delivery_completed_date || invoice.purchase_orders?.delivery_completed_date || ''; $('invoiceId').value = id; $('invoiceDialogTitle').textContent = invoice.invoice_number; $('invoiceDialogSummary').textContent = `${invoice.purchase_orders?.po_number ? `PO ${invoice.purchase_orders.po_number} · ` : ''}${invoice.delivery_location || 'Location pending'}`;
     $('editInvoiceDate').value = invoice.invoice_date || ''; $('editInvoiceAmount').value = invoice.invoice_amount ?? ''; $('editCreditDays').value = invoice.credit_days ?? 6; $('invoiceError').textContent = ''; previewDueDate(); $('invoiceDialog').showModal();
   }
   async function saveInvoice(event) {

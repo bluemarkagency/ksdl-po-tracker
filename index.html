@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#124e45" />
     <title>KSDL PO Tracker</title>
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="styles.css?v=delivery-completed-date-20260728" />
     <link rel="stylesheet" href="mobile-filters.css" />
     <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   </head>
@@ -55,7 +55,7 @@
           <option value="custom">Custom dates</option>
         </select>
         <div id="customDateFilters" class="custom-date-filters hidden">
-          <select id="dateFieldFilter" aria-label="Choose filter date"><option value="poDate">PO date</option><option value="deliveryDate">Delivery date</option></select>
+          <select id="dateFieldFilter" aria-label="Choose filter date"><option value="poDate">PO date</option><option value="deliveryDate">Delivery date</option><option value="deliveryCompletedDate">Delivery completed date</option></select>
           <label class="date-filter">From<input id="dateFrom" type="date" aria-label="From date" /></label>
           <label class="date-filter">To<input id="dateTo" type="date" aria-label="To date" /></label>
         </div>
@@ -67,8 +67,8 @@
 
       <section class="table-card">
         <div class="table-title"><div><h2>All purchase orders</h2><p id="resultCount">0 records</p></div><button id="clearFilters" class="text-btn">Clear filters</button></div>
-        <div class="table-wrap"><table><thead><tr>
-          <th>PO / Customer</th><th>PO Date</th><th>Status</th><th>Delivery</th><th>Value</th><th>Delivery location</th><th>Invoice</th><th>Transport</th><th>Assigned</th><th>Age</th><th></th>
+        <div class="table-wrap"><table class="po-table"><thead><tr>
+          <th>PO / Customer</th><th>PO Date</th><th>Status</th><th>Delivery</th><th>Delivery completed date</th><th>Value</th><th>Delivery location</th><th>Invoice</th><th>Transport</th><th>Assigned</th><th>Age</th><th></th>
         </tr></thead><tbody id="poTableBody"></tbody></table></div>
         <div id="emptyState" class="empty-state hidden"><h3>No purchase orders found</h3><p>Add your first PO, or import your existing Excel file.</p><button id="emptyNewBtn" class="primary">+ Add PO</button></div>
       </section>
@@ -102,6 +102,6 @@
       <div class="modal-actions"><button type="button" id="deleteBtn" class="danger hidden">Delete permanently</button><span></span><button type="button" id="cancelBtn">Cancel</button><button class="primary">Save PO</button></div>
     </form></dialog>
     <div id="toast" class="toast" role="status"></div>
-    <script src="config.js"></script><script src="app.js?v=permanent-po-removal-20260727"></script>
+    <script src="config.js"></script><script src="app.js?v=delivery-completed-date-20260728"></script>
   </body>
 </html>

@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#124e45" />
     <title>KSDL Customer Receivables</title>
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="styles.css?v=delivery-completed-date-20260728" />
     <link rel="stylesheet" href="mobile-filters.css" />
-    <link rel="stylesheet" href="receivables.css?v=20260727-2" />
+    <link rel="stylesheet" href="receivables.css?v=delivery-completed-date-20260728" />
   </head>
   <body>
     <section id="loginScreen" class="login-screen hidden">
@@ -41,11 +41,11 @@
         <article class="attention"><span>Overdue</span><strong id="overdueAmount">₹0</strong><small id="overdueCount">0 invoices</small></article>
         <article><span>Due in next 6 days</span><strong id="dueSoonAmount">₹0</strong><small id="dueSoonCount">0 invoices</small></article>
         <article><span>Received this month</span><strong id="receivedAmount">₹0</strong><small>From matched payment advice</small></article>
-        <article><span>Missing invoice data</span><strong id="missingCount">0</strong><small>Older tracker records</small></article>
+        <article><span>Missing required data</span><strong id="missingCount">0</strong><small>Invoice or delivery completion</small></article>
       </section>
 
       <section class="receivable-card aging-card">
-        <div class="section-head"><div><span class="eyebrow">COLLECTION PRIORITY</span><h2>Outstanding ageing</h2><p>DMart credit period is set to 6 calendar days from invoice date.</p></div></div>
+        <div class="section-head"><div><span class="eyebrow">COLLECTION PRIORITY</span><h2>Outstanding ageing</h2><p>DMart credit period is set to 6 calendar days from the delivery completed date.</p></div></div>
         <div id="agingGrid" class="aging-grid"></div>
       </section>
 
@@ -57,7 +57,7 @@
           <label>Age<select id="ageFilter"><option value="">All ages</option><option value="not-due">Not due</option><option value="0-7">0–7 overdue</option><option value="8-15">8–15 overdue</option><option value="16-30">16–30 overdue</option><option value="31-45">31–45 overdue</option><option value="46+">46+ overdue</option></select></label>
           <button id="clearInvoiceFilters" class="text-btn" type="button">Clear</button>
         </div>
-        <div class="table-wrap"><table class="receivable-table invoice-table"><thead><tr><th>Invoice / PO</th><th>Invoice date</th><th>Due date</th><th>Location</th><th>Invoice value</th><th>Received / TDS</th><th>Outstanding</th><th>Age</th><th>Status</th><th>Action</th></tr></thead><tbody id="invoiceBody"></tbody></table></div>
+        <div class="table-wrap"><table class="receivable-table invoice-table"><thead><tr><th>Invoice / PO</th><th>Invoice date</th><th>Delivery completed date</th><th>Due date</th><th>Location</th><th>Invoice value</th><th>Received / TDS</th><th>Outstanding</th><th>Age</th><th>Status</th><th>Action</th></tr></thead><tbody id="invoiceBody"></tbody></table></div>
         <div id="invoiceEmpty" class="empty-state"><h3>No invoices found</h3><p>Synced Gujarat invoices will appear here.</p></div>
       </section>
 
@@ -71,6 +71,7 @@
           <label>Invoice date<input id="editInvoiceDate" type="date" /></label>
           <label>Invoice amount (₹)<input id="editInvoiceAmount" type="number" min="0" step="0.01" /></label>
           <label>Credit days<input id="editCreditDays" type="number" min="0" step="1" value="6" /></label>
+          <div class="due-preview"><span>Delivery completed date</span><strong id="editDeliveryCompletedDate">—</strong></div>
           <div class="due-preview"><span>Calculated due date</span><strong id="editDueDate">—</strong></div>
         </div>
         <p id="invoiceError" class="error" aria-live="polite"></p>
@@ -81,6 +82,6 @@
     <div id="toast" class="toast" role="status"></div>
     <script src="config.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <script src="receivables.js?v=automatic-invoice-sync-20260727"></script>
+    <script src="receivables.js?v=delivery-completed-date-20260728"></script>
   </body>
 </html>
