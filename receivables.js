@@ -145,7 +145,9 @@
     const rows = filteredInvoices();
     $('invoiceBody').innerHTML = rows.map(invoice => {
       const po = invoice.purchase_orders || {}, days = dayDifference(invoice.due_date), paid = invoice.payment_status === 'Paid';
-      const age = days == null ? 'Needs data' : days < 0 ? `${Math.abs(days)} day(s) left` : `${days} day(s) overdue`;
+      const difference = invoice.invoice_amount == null ? null : Number(invoice.invoice_amount) - Number(invoice.settled_gross_amount || 0);
+      const acceptedRoundOff = paid && difference != null && Math.abs(difference) > 0 && Math.abs(difference) <= 5;
+      const age = paid ? 'Settled' : days == null ? 'Needs data' : days < 0 ? `${Math.abs(days)} day(s) left` : `${days} day(s) overdue`;
       return `<tr>
         <td><strong>${safe(invoice.invoice_number)}</strong><span class="subline">PO ${safe(po.po_number || 'Not linked')}</span>${invoice.invoice_attachment_url ? '<span class="subline">Invoice copy in tracker</span>' : ''}</td>
         <td>${dateLabel(invoice.invoice_date)}</td>
@@ -153,7 +155,7 @@
         <td>${dateLabel(invoice.due_date)}<span class="subline">${invoice.credit_days} credit days</span></td>
         <td>${safe(invoice.delivery_location || po.delivery_location || '—')}</td><td>${invoice.invoice_amount == null ? '—' : money(invoice.invoice_amount)}</td>
         <td>${money(invoice.net_received_amount)}<span class="subline">TDS ${money(invoice.tds_amount)}</span></td>
-        <td class="${paid ? 'money-positive' : 'money-negative'}">${money(outstanding(invoice))}</td>
+        <td class="${paid ? 'money-positive' : 'money-negative'}">${money(outstanding(invoice))}${acceptedRoundOff ? `<span class="subline">₹${Math.abs(difference).toFixed(2)} round-off accepted</span>` : ''}</td>
         <td><span class="age-chip ${days != null && days >= 0 && !paid ? 'overdue' : ''}">${safe(age)}</span></td>
         <td><span class="receivable-status ${statusClass(invoice.payment_status)}">${safe(invoice.payment_status)}</span></td>
         <td><button class="text-btn edit-invoice" data-id="${invoice.id}" type="button">Edit</button></td>
@@ -190,7 +192,7 @@
   async function loadData(runBackgroundSync = true) {
     $('connectionStatus').textContent = 'Loading receivables…';
     const [invoiceRows, adviceRows] = await Promise.all([
-      api('/rest/v1/customer_invoices?select=*,purchase_orders(id,po_number,delivery_location,delivery_completed_date,status)&order=invoice_date.desc.nullslast,created_at.desc'),
+      api('/rest/v1/customer_invoices?select=*,purchase_orders(id,po_number,delivery_location,delivery_date,delivery_completed_date,status)&order=invoice_date.desc.nullslast,created_at.desc'),
       api('/rest/v1/customer_payment_advices?select=id,status,payment_date,total_net_amount&order=payment_date.desc.nullslast,imported_at.desc')
     ]);
     invoices = Array.isArray(invoiceRows) ? invoiceRows : []; advices = Array.isArray(adviceRows) ? adviceRows : [];
@@ -202,27 +204,26 @@
   }
 
   function previewDueDate() {
-    const completedDate = $('invoiceForm').dataset.deliveryCompletedDate || '';
+    const completedDate = $('editDeliveryCompletedDate').value || '';
     const days = Number($('editCreditDays').value || 6);
-    $('editDeliveryCompletedDate').textContent = dateLabel(completedDate);
     if (!completedDate) {
       $('editDueDate').textContent = 'Waiting for delivery completion';
       return;
     }
-    const due = new Date(`${completedDate}T00:00:00`);
-    due.setDate(due.getDate() + Math.max(days, 0));
+    const [year, month, day] = completedDate.split('-').map(Number);
+    const due = new Date(Date.UTC(year, month - 1, day + Math.max(days, 0)));
     $('editDueDate').textContent = dateLabel(due.toISOString().slice(0, 10));
   }
   function openInvoice(id) {
     const invoice = invoices.find(item => item.id === id); if (!invoice) return;
-    $('invoiceForm').reset(); $('invoiceForm').dataset.deliveryCompletedDate = invoice.delivery_completed_date || invoice.purchase_orders?.delivery_completed_date || ''; $('invoiceId').value = id; $('invoiceDialogTitle').textContent = invoice.invoice_number; $('invoiceDialogSummary').textContent = `${invoice.purchase_orders?.po_number ? `PO ${invoice.purchase_orders.po_number} · ` : ''}${invoice.delivery_location || 'Location pending'}`;
-    $('editInvoiceDate').value = invoice.invoice_date || ''; $('editInvoiceAmount').value = invoice.invoice_amount ?? ''; $('editCreditDays').value = invoice.credit_days ?? 6; $('invoiceError').textContent = ''; previewDueDate(); $('invoiceDialog').showModal();
+    $('invoiceForm').reset(); $('invoiceId').value = id; $('invoiceDialogTitle').textContent = invoice.invoice_number; $('invoiceDialogSummary').textContent = `${invoice.purchase_orders?.po_number ? `PO ${invoice.purchase_orders.po_number} · ` : ''}${invoice.delivery_location || 'Location pending'}`;
+    $('editInvoiceDate').value = invoice.invoice_date || ''; $('editInvoiceAmount').value = invoice.invoice_amount ?? ''; $('editDeliveryDate').value = invoice.purchase_orders?.delivery_date || ''; $('editDeliveryCompletedDate').value = invoice.delivery_completed_date || invoice.purchase_orders?.delivery_completed_date || ''; $('editCreditDays').value = invoice.credit_days ?? 6; $('invoiceError').textContent = ''; previewDueDate(); $('invoiceDialog').showModal();
   }
   async function saveInvoice(event) {
     event.preventDefault(); const error = $('invoiceError'); error.textContent = ''; const amountText = $('editInvoiceAmount').value;
     try {
-      await api('/rest/v1/rpc/update_customer_invoice', { method: 'POST', headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify({ invoice: $('invoiceId').value, new_invoice_date: $('editInvoiceDate').value || null, new_invoice_amount: amountText === '' ? null : Number(amountText), new_credit_days: Number($('editCreditDays').value || 6) }) });
-      $('invoiceDialog').close(); await loadData(); toast('Invoice and due date updated in the synced register.');
+      await api('/rest/v1/rpc/update_customer_invoice_details', { method: 'POST', headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify({ invoice: $('invoiceId').value, new_invoice_date: $('editInvoiceDate').value || null, new_invoice_amount: amountText === '' ? null : Number(amountText), new_credit_days: Number($('editCreditDays').value || 6), new_delivery_date: $('editDeliveryDate').value || null, new_delivery_completed_date: $('editDeliveryCompletedDate').value || null }) });
+      $('invoiceDialog').close(); await loadData(); toast('Invoice, delivery dates and due date updated.');
     } catch (err) { error.textContent = err.message || 'Could not save invoice.'; }
   }
   function bindEvents() {
@@ -232,7 +233,7 @@
     $('clearInvoiceFilters').addEventListener('click', () => { $('invoiceSearch').value = ''; $('invoiceStatus').value = ''; $('ageFilter').value = ''; renderInvoices(); });
     $('invoiceBody').addEventListener('click', event => { const button = event.target.closest('.edit-invoice'); if (button) openInvoice(button.dataset.id); });
     $('invoiceForm').addEventListener('submit', saveInvoice); $('closeInvoiceDialog').addEventListener('click', () => $('invoiceDialog').close()); $('cancelInvoiceBtn').addEventListener('click', () => $('invoiceDialog').close());
-    ['editInvoiceDate', 'editCreditDays'].forEach(id => $(id).addEventListener('input', previewDueDate));
+    ['editDeliveryCompletedDate', 'editCreditDays'].forEach(id => $(id).addEventListener('input', previewDueDate));
   }
   async function start() { await ensureAccess(); $('signedInAs').textContent = session.user?.email || ''; hide('loginScreen'); show('app'); await loadData(); }
 
