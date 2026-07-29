@@ -45,6 +45,12 @@
 .manual-po-dialog{width:min(820px,calc(100% - 24px));padding:0;border:0;border-radius:16px;background:#fff;box-shadow:0 24px 70px #18312e40}
 .manual-po-dialog::backdrop{background:#122a257d}
 .manual-po-dialog form{padding:22px}
+.appointment-dialog{width:min(520px,calc(100% - 24px))}
+.appointment-date-field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;color:var(--muted);font-size:.82rem;font-weight:700}
+.appointment-date-field input{width:100%}
+.appointment-date-field small{font-weight:500}
+.appointment-cell{display:flex;min-width:132px;flex-direction:column;align-items:flex-start;gap:4px}
+.appointment-edit-btn{padding:2px 0!important;font-size:.72rem}
 .manual-po-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
 .manual-po-grid label{display:flex;flex-direction:column;gap:6px;color:var(--muted);font-size:.79rem;font-weight:750}
 .manual-po-grid input,.manual-po-grid textarea{width:100%}

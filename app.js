@@ -66,8 +66,8 @@ function poRow(record) {
     <td data-column="po" data-label="PO / Customer"><span class="primary-cell">${safe(record.poNumber)}</span><span class="secondary">${safe(record.customerName)}</span></td>
     <td data-column="po-date" data-label="PO date">${date(record.poDate)}<span class="secondary">Received ${date(record.poReceivedDate)}</span></td>
     <td data-column="status" data-label="Status"><span class="pill ${slug(record.status)}">${safe(record.status)}</span></td>
-    <td data-column="delivery-date" data-label="Delivery date">${date(record.deliveryDate)}${record.deliveryNoteLink ? `<a class="note-link" href="${safe(record.deliveryNoteLink)}" target="_blank" rel="noopener">View delivery note</a>` : ''}${deliveryDelay !== null ? `<span class="secondary">${deliveryDelay} day${Math.abs(deliveryDelay) === 1 ? '' : 's'} from PO</span>` : ''}</td>
-    <td data-column="completed-date" data-label="Delivery completed">${date(record.deliveryCompletedDate)}<span class="secondary">${record.deliveryCompletedDate ? 'Payment clock starts' : 'Waiting for completion'}</span></td>
+    <td data-column="delivery-date" data-label="Appointment date">${date(record.deliveryDate)}${deliveryDelay !== null ? `<span class="secondary">${deliveryDelay} day${Math.abs(deliveryDelay) === 1 ? '' : 's'} from PO</span>` : ''}</td>
+    <td data-column="completed-date" data-label="Delivery completed">${date(record.deliveryCompletedDate)}<span class="secondary">${record.deliveryCompletedDate ? 'Payment clock starts' : 'Waiting for completion'}</span>${record.deliveryNoteLink ? `<a class="note-link" href="${safe(record.deliveryNoteLink)}" target="_blank" rel="noopener">View delivery note</a>` : ''}</td>
     <td data-column="value" data-label="PO value">${money(record.poValue)}</td>
     <td data-column="location" data-label="Delivery location">${safe(record.deliveryLocation || '—')}</td>
     <td data-column="invoice" data-label="Invoice">${safe(record.invoiceNumber || '—')}<span class="secondary">${date(record.invoiceDate)}</span>${record.invoiceAttachmentLink ? `<a class="note-link" href="${safe(record.invoiceAttachmentLink)}" target="_blank" rel="noopener">View invoice</a>` : ''}</td>
@@ -81,9 +81,135 @@ function openDialog(record) { $('poForm').reset(); $('recordId').value = record?
 function toast(message) { const element = $('toast'); element.textContent = message; element.classList.add('show'); clearTimeout(toast.timer); toast.timer = setTimeout(() => element.classList.remove('show'), 2600); }
 function formatImportDate(value) { if (!value) return ''; if (value instanceof Date) return value.toISOString().slice(0, 10); const converted = new Date(value); return Number.isNaN(converted) ? '' : converted.toISOString().slice(0, 10); }
 function mapped(row, keys) { for (const key of keys) if (row[key] !== undefined && row[key] !== null) return row[key]; return ''; }
-function importRows(rows) { const additions = rows.map(row => ({id: crypto.randomUUID(), customerName: mapped(row, ['Customer Name', 'Customer', 'customerName']), poNumber: mapped(row, ['PO Number', 'PO No', 'poNumber']), poDate: formatImportDate(mapped(row, ['PO Date', 'poDate'])), poReceivedDate: formatImportDate(mapped(row, ['PO Received Date', 'Received Date', 'poReceivedDate'])) || today(), deliveryDate: formatImportDate(mapped(row, ['Delivery Date', 'deliveryDate'])), deliveryCompletedDate: formatImportDate(mapped(row, ['Delivery Completed Date', 'deliveryCompletedDate'])), status: mapped(row, ['Delivery Status', 'Status', 'status']) || 'Received', poValue: mapped(row, ['PO Value (₹)', 'PO Value', 'poValue']) || 0, invoiceNumber: mapped(row, ['Invoice Number', 'invoiceNumber']), invoiceDate: formatImportDate(mapped(row, ['Invoice Date', 'invoiceDate'])), transporter: mapped(row, ['Transporter', 'transporter']), transportAmount: mapped(row, ['Transport Amount (₹)', 'Transport Amount', 'transportAmount']) || 0, trackingNumber: mapped(row, ['LR / Tracking No', 'LR/Tracking No', 'Tracking Number', 'trackingNumber']), assignedTo: mapped(row, ['Assigned To', 'assignedTo']), remarks: mapped(row, ['Remarks', 'remarks']), deliveryNoteUrl: mapped(row, ['Delivery Note URL', 'deliveryNoteUrl'])})).filter(record => record.customerName && record.poNumber); records.push(...additions); return additions.length; }
-function exportExcel() { const exportRows = filtered().map(record => ({'Customer Name': record.customerName, 'PO Number': record.poNumber, 'PO Date': record.poDate, 'PO Received Date': record.poReceivedDate, 'Delivery Date': record.deliveryDate, 'Delivery Completed Date': record.deliveryCompletedDate, 'Delivery Status': record.status, 'Delivery Note URL': record.deliveryNoteUrl || '', 'PO Value (₹)': Number(record.poValue || 0), 'Delivery Location': record.deliveryLocation, 'Invoice Number': record.invoiceNumber, 'Invoice Date': record.invoiceDate, 'Invoice Copy URL': record.invoiceAttachmentUrl || '', Transporter: record.transporter, 'Transport Amount (₹)': Number(record.transportAmount || 0), 'LR / Tracking No': record.trackingNumber, 'Assigned To': record.assignedTo, 'PO Age (Days)': ageDays(record), 'Delay (Days)': delayDays(record), Remarks: record.remarks})); const sheet = XLSX.utils.json_to_sheet(exportRows); sheet['!cols'] = [20, 16, 14, 18, 15, 22, 20, 32, 14, 18, 18, 14, 32, 18, 20, 20, 18, 14, 14, 35].map(width => ({wch: width})); const book = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(book, sheet, 'PO Tracker'); XLSX.writeFile(book, `KSDL_PO_Tracker_${today()}.xlsx`); }
-function initialise() { $('statusFilter').innerHTML = '<option value="">All statuses</option>' + STATUSES.map(status => `<option>${status}</option>`).join(''); $('poForm').elements.status.innerHTML = STATUSES.map(status => `<option>${status}</option>`).join(''); ['searchInput', 'statusFilter', 'customerFilter', 'dateFieldFilter', 'dateFrom', 'dateTo'].forEach(id => { $(id).addEventListener('input', render); $(id).addEventListener('change', render); }); $('clearFilters').onclick = () => { $('searchInput').value = ''; $('statusFilter').value = ''; $('customerFilter').value = ''; $('dateFieldFilter').value = 'poDate'; $('dateFrom').value = ''; $('dateTo').value = ''; render(); }; $('newPoBtn').onclick = () => openDialog(); $('emptyNewBtn').onclick = () => openDialog(); $('closeDialog').onclick = () => $('poDialog').close(); $('cancelBtn').onclick = () => $('poDialog').close(); $('poTableBody').onclick = event => { const id = event.target.dataset.edit; if (id) openDialog(records.find(record => record.id === id)); }; $('poForm').addEventListener('submit', async event => { event.preventDefault(); const form = new FormData(event.target), id = $('recordId').value, previous = records.find(record => record.id === id), record = {...previous, ...Object.fromEntries(fields.map(field => [field, form.get(field)]))}; record.id = id || crypto.randomUUID(); record.poValue = Number(record.poValue || 0); record.transportAmount = Number(record.transportAmount || 0); const note = form.get('deliveryNote'); try { if (note && note.size) { record.deliveryNoteUrl = await uploadDeliveryNote(record.id, note); record.deliveryNoteLink = await signedDeliveryNoteUrl_(record.deliveryNoteUrl); record.status = 'Delivered'; if (!record.deliveryDate) record.deliveryDate = today(); if (!record.deliveryCompletedDate) record.deliveryCompletedDate = today(); } const index = records.findIndex(item => item.id === id), isNew = index < 0; if (isNew) records.push(record); else records[index] = record; await persist(record, false, isNew); $('poDialog').close(); render(); toast(note && note.size ? 'Delivery note uploaded — PO marked Delivered' : 'PO saved'); } catch (error) { toast(error.message || 'Could not save PO'); } }); $('deleteBtn').onclick = async () => { const id = $('recordId').value, record = records.find(item => item.id === id); if (!record) return; const replacement = prompt(`PO ${record.poNumber} will be permanently removed and blocked from Gmail re-import. Enter the corrected replacement PO number, if any:`, ''); if (replacement === null) return; if (!confirm(`Permanently remove PO ${record.poNumber}${replacement.trim() ? ` and mark ${replacement.trim()} as its replacement` : ''}?`)) return; try { await permanentlyRemovePo(record, replacement.trim()); records = records.filter(item => item.id !== id); $('poDialog').close(); render(); toast('PO permanently removed and blocked from Gmail re-import'); } catch (error) { toast(error.message || 'Could not permanently remove PO'); await loadRecords(); } }; $('exportBtn').onclick = exportExcel; $('importBtn').onclick = () => $('importFile').click(); $('importFile').onchange = event => { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = async loaded => { const book = XLSX.read(loaded.target.result, {type: 'array', cellDates: true}), rows = XLSX.utils.sheet_to_json(book.Sheets[book.SheetNames[0]], {defval: ''}), start = records.length, count = importRows(rows), added = records.slice(start); try { await Promise.all(added.map(record => persist(record, false, true))); render(); toast(`${count} PO${count === 1 ? '' : 's'} imported`); } catch (error) { localStorage.setItem(STORAGE_KEY, JSON.stringify(records)); render(); toast('Imported locally; cloud import could not finish'); } }; reader.readAsArrayBuffer(file); event.target.value = ''; }; $('signOutBtn').onclick = signOut; if (secureLoginRequired()) { $('app').classList.add('hidden'); $('loginScreen').classList.remove('hidden'); $('loginForm').onsubmit = async event => { event.preventDefault(); $('loginError').textContent = ''; try { await signIn($('emailInput').value.trim(), $('passwordInput').value); $('signedInAs').textContent = $('emailInput').value.trim(); $('loginScreen').classList.add('hidden'); $('app').classList.remove('hidden'); await loadRecords(); refreshTimer = setInterval(loadRecords, 60000); } catch (error) { $('loginError').textContent = error.message || 'Could not sign in'; } }; return; } if (CONFIG.SIMPLE_PIN) { $('loginScreen').classList.remove('hidden'); $('loginForm').onsubmit = event => { event.preventDefault(); if ($('pinInput').value === CONFIG.SIMPLE_PIN) $('loginScreen').classList.add('hidden'); else $('loginError').textContent = 'Incorrect PIN. Try again.'; }; } $('app').classList.remove('hidden'); loadRecords(); if (cloudEnabled()) refreshTimer = setInterval(loadRecords, 60000); }
+function importRows(rows) { const additions = rows.map(row => ({id: crypto.randomUUID(), customerName: mapped(row, ['Customer Name', 'Customer', 'customerName']), poNumber: mapped(row, ['PO Number', 'PO No', 'poNumber']), poDate: formatImportDate(mapped(row, ['PO Date', 'poDate'])), poReceivedDate: formatImportDate(mapped(row, ['PO Received Date', 'Received Date', 'poReceivedDate'])) || today(), deliveryDate: formatImportDate(mapped(row, ['Appointment Date', 'Delivery Date', 'deliveryDate'])), deliveryCompletedDate: formatImportDate(mapped(row, ['Delivery Completed Date', 'deliveryCompletedDate'])), status: mapped(row, ['Delivery Status', 'Status', 'status']) || 'Received', poValue: mapped(row, ['PO Value (₹)', 'PO Value', 'poValue']) || 0, invoiceNumber: mapped(row, ['Invoice Number', 'invoiceNumber']), invoiceDate: formatImportDate(mapped(row, ['Invoice Date', 'invoiceDate'])), transporter: mapped(row, ['Transporter', 'transporter']), transportAmount: mapped(row, ['Transport Amount (₹)', 'Transport Amount', 'transportAmount']) || 0, trackingNumber: mapped(row, ['LR / Tracking No', 'LR/Tracking No', 'Tracking Number', 'trackingNumber']), assignedTo: mapped(row, ['Assigned To', 'assignedTo']), remarks: mapped(row, ['Remarks', 'remarks']), deliveryNoteUrl: mapped(row, ['Delivery Note URL', 'deliveryNoteUrl'])})).filter(record => record.customerName && record.poNumber); records.push(...additions); return additions.length; }
+function exportExcel() { const exportRows = filtered().map(record => ({'Customer Name': record.customerName, 'PO Number': record.poNumber, 'PO Date': record.poDate, 'PO Received Date': record.poReceivedDate, 'Appointment Date': record.deliveryDate, 'Delivery Completed Date': record.deliveryCompletedDate, 'Delivery Status': record.status, 'Delivery Note URL': record.deliveryNoteUrl || '', 'PO Value (₹)': Number(record.poValue || 0), 'Delivery Location': record.deliveryLocation, 'Invoice Number': record.invoiceNumber, 'Invoice Date': record.invoiceDate, 'Invoice Copy URL': record.invoiceAttachmentUrl || '', Transporter: record.transporter, 'Transport Amount (₹)': Number(record.transportAmount || 0), 'LR / Tracking No': record.trackingNumber, 'Assigned To': record.assignedTo, 'PO Age (Days)': ageDays(record), 'Appointment Lead Time (Days)': delayDays(record), Remarks: record.remarks})); const sheet = XLSX.utils.json_to_sheet(exportRows); sheet['!cols'] = [20, 16, 14, 18, 18, 22, 20, 32, 14, 18, 18, 14, 32, 18, 20, 20, 18, 14, 24, 35].map(width => ({wch: width})); const book = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(book, sheet, 'PO Tracker'); XLSX.writeFile(book, `KSDL_PO_Tracker_${today()}.xlsx`); }
+function initialise() {
+  $('statusFilter').innerHTML = '<option value="">All statuses</option>' + STATUSES.map(status => `<option>${status}</option>`).join('');
+  $('poForm').elements.status.innerHTML = STATUSES.map(status => `<option>${status}</option>`).join('');
+  ['searchInput', 'statusFilter', 'customerFilter', 'dateFieldFilter', 'dateFrom', 'dateTo'].forEach(id => {
+    $(id).addEventListener('input', render);
+    $(id).addEventListener('change', render);
+  });
+  $('clearFilters').onclick = () => {
+    $('searchInput').value = '';
+    $('statusFilter').value = '';
+    $('customerFilter').value = '';
+    $('dateFieldFilter').value = 'poDate';
+    $('dateFrom').value = '';
+    $('dateTo').value = '';
+    render();
+  };
+  $('newPoBtn').onclick = () => openDialog();
+  $('emptyNewBtn').onclick = () => openDialog();
+  $('closeDialog').onclick = () => $('poDialog').close();
+  $('cancelBtn').onclick = () => $('poDialog').close();
+  $('poTableBody').onclick = event => {
+    const id = event.target.dataset.edit;
+    if (id) openDialog(records.find(record => record.id === id));
+  };
+  $('poForm').addEventListener('submit', async event => {
+    event.preventDefault();
+    const form = new FormData(event.target);
+    const id = $('recordId').value;
+    const previous = records.find(record => record.id === id);
+    const record = {...previous, ...Object.fromEntries(fields.map(field => [field, form.get(field)]))};
+    record.id = id || crypto.randomUUID();
+    record.poValue = Number(record.poValue || 0);
+    record.transportAmount = Number(record.transportAmount || 0);
+    const note = form.get('deliveryNote');
+    try {
+      if (note && note.size) {
+        record.deliveryNoteUrl = await uploadDeliveryNote(record.id, note);
+        record.deliveryNoteLink = await signedDeliveryNoteUrl_(record.deliveryNoteUrl);
+        record.status = 'Delivered';
+        if (!record.deliveryCompletedDate) record.deliveryCompletedDate = today();
+      }
+      const index = records.findIndex(item => item.id === id);
+      const isNew = index < 0;
+      if (isNew) records.push(record); else records[index] = record;
+      await persist(record, false, isNew);
+      $('poDialog').close();
+      render();
+      toast(note && note.size ? 'Delivery note uploaded — PO marked Delivered' : 'PO saved');
+    } catch (error) {
+      toast(error.message || 'Could not save PO');
+    }
+  });
+  $('deleteBtn').onclick = async () => {
+    const id = $('recordId').value;
+    const record = records.find(item => item.id === id);
+    if (!record) return;
+    const replacement = prompt(`PO ${record.poNumber} will be permanently removed and blocked from Gmail re-import. Enter the corrected replacement PO number, if any:`, '');
+    if (replacement === null) return;
+    if (!confirm(`Permanently remove PO ${record.poNumber}${replacement.trim() ? ` and mark ${replacement.trim()} as its replacement` : ''}?`)) return;
+    try {
+      await permanentlyRemovePo(record, replacement.trim());
+      records = records.filter(item => item.id !== id);
+      $('poDialog').close();
+      render();
+      toast('PO permanently removed and blocked from Gmail re-import');
+    } catch (error) {
+      toast(error.message || 'Could not permanently remove PO');
+      await loadRecords();
+    }
+  };
+  $('exportBtn').onclick = exportExcel;
+  $('importBtn').onclick = () => $('importFile').click();
+  $('importFile').onchange = event => {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async loaded => {
+      const book = XLSX.read(loaded.target.result, {type: 'array', cellDates: true});
+      const rows = XLSX.utils.sheet_to_json(book.Sheets[book.SheetNames[0]], {defval: ''});
+      const start = records.length;
+      const count = importRows(rows);
+      const added = records.slice(start);
+      try {
+        await Promise.all(added.map(record => persist(record, false, true)));
+        render();
+        toast(`${count} PO${count === 1 ? '' : 's'} imported`);
+      } catch (error) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+        render();
+        toast('Imported locally; cloud import could not finish');
+      }
+    };
+    reader.readAsArrayBuffer(file);
+    event.target.value = '';
+  };
+  $('signOutBtn').onclick = signOut;
+  if (secureLoginRequired()) {
+    $('app').classList.add('hidden');
+    $('loginScreen').classList.remove('hidden');
+    $('loginForm').onsubmit = async event => {
+      event.preventDefault();
+      $('loginError').textContent = '';
+      try {
+        await signIn($('emailInput').value.trim(), $('passwordInput').value);
+        $('signedInAs').textContent = $('emailInput').value.trim();
+        $('loginScreen').classList.add('hidden');
+        $('app').classList.remove('hidden');
+        await loadRecords();
+        refreshTimer = setInterval(loadRecords, 60000);
+      } catch (error) {
+        $('loginError').textContent = error.message || 'Could not sign in';
+      }
+    };
+    return;
+  }
+  if (CONFIG.SIMPLE_PIN) {
+    $('loginScreen').classList.remove('hidden');
+    $('loginForm').onsubmit = event => {
+      event.preventDefault();
+      if ($('pinInput').value === CONFIG.SIMPLE_PIN) $('loginScreen').classList.add('hidden');
+      else $('loginError').textContent = 'Incorrect PIN. Try again.';
+    };
+  }
+  $('app').classList.remove('hidden');
+  loadRecords();
+  if (cloudEnabled()) refreshTimer = setInterval(loadRecords, 60000);
+}
 initialise();
 
 function initialiseDateRangeControls_() {

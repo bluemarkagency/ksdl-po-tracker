@@ -17,7 +17,7 @@
       inTransit: 'In transit', materialOnRoad: 'Material on the road', partiallyDelivered: 'Partially delivered', balancePending: 'Balance still pending',
       searchPlaceholder: 'Search PO, customer, location, invoice or transporter', allOpenStatuses: 'All open statuses', allDates: 'All dates', currentMonth: 'Current month',
       lastMonth: 'Last month', customDates: 'Custom dates', from: 'From', to: 'To', clearFilters: 'Clear filters', openPurchaseOrders: 'Open purchase orders',
-      poCustomer: 'PO / Customer', poDate: 'PO Date', status: 'Status', deliveryLocation: 'Delivery location', poValue: 'PO Value', deliveryDate: 'Delivery date',
+      poCustomer: 'PO / Customer', poDate: 'PO Date', status: 'Status', deliveryLocation: 'Delivery location', poValue: 'PO Value', deliveryDate: 'Appointment date',
       invoice: 'Invoice', transport: 'Transport', assigned: 'Assigned', age: 'Age', noOpenPos: 'No open POs found', noOpenPosHelp: 'There are no POs matching the current search and filters.',
       tripDate: 'Trip date*', transporterOwner: 'Transporter / tempo owner*', selectTransporter: 'Select transporter', vehicleNumber: 'Vehicle number', driverName: 'Driver name',
       driverPhone: 'Driver phone', vehicleCost: 'Vehicle / tempo cost (₹)', optional: 'Optional', invoiceCostHeading: 'Invoice and delivery cost for each PO',
@@ -54,11 +54,15 @@
       manualPoHelp: 'Enter the PO details below. It will be saved as Received and appear in the open PO list immediately.',
       customerName: 'Customer name*', customerPlaceholder: 'Example: DMart', manualPoNumber: 'PO number*', poNumberPlaceholder: 'Enter PO number',
       manualLocation: 'Delivery location*', locationPlaceholder: 'Example: Bopal', manualPoValue: 'PO value (₹)', manualPoDate: 'PO date*',
-      poReceivedDate: 'PO received date*', manualDeliveryDate: 'Delivery date', manualAssignedTo: 'Assigned to', assignedPlaceholder: 'Staff name or email',
+      poReceivedDate: 'PO received date*', manualDeliveryDate: 'Appointment date', manualAssignedTo: 'Assigned to', assignedPlaceholder: 'Staff name or email',
       poCopy: 'PO copy', poCopyHelp: 'Optional PDF, JPG or PNG up to 10 MB.', remarks: 'Remarks', remarksPlaceholder: 'Any special delivery instructions',
       savePo: 'Save PO', savingPo: 'Saving PO…', manualPoSaved: 'Manual PO saved and added to the open PO list.',
       manualDuplicate: 'This PO number already exists.', manualFileTooLarge: 'PO copy must be 10 MB or smaller.',
-      manualFileType: 'PO copy must be a PDF, JPG or PNG file.', couldNotSavePo: 'Could not save the PO.'
+      manualFileType: 'PO copy must be a PDF, JPG or PNG file.', couldNotSavePo: 'Could not save the PO.',
+      appointmentEyebrow: 'DELIVERY APPOINTMENT', appointmentTitle: 'Update appointment date', appointmentDate: 'Appointment date',
+      appointmentHelp: 'Leave blank only when DMart has not confirmed an appointment.', appointmentForPo: 'PO {po} · {location}',
+      editAppointment: 'Edit date', saveAppointment: 'Save appointment', savingAppointment: 'Saving…',
+      appointmentSaved: 'Appointment date updated.', couldNotSaveAppointment: 'Could not update the appointment date.'
     },
     gu: {
       brand: 'KSDL ડિસ્ટ્રિબ્યુશન', pageTitle: 'ડિસ્પેચ અને ઇન્વૉઇસ ચકાસણી', loginSubtitle: 'એકાઉન્ટન્ટ અને સેલ્સ પ્રતિનિધિ માટે. તમારા અધિકૃત બિઝનેસ ઈમેલથી સાઇન ઇન કરો.',
@@ -67,7 +71,7 @@
       inTransit: 'માર્ગમાં', materialOnRoad: 'માલ રસ્તામાં છે', partiallyDelivered: 'આંશિક ડિલિવરી', balancePending: 'બાકી માલ આપવાનો છે',
       searchPlaceholder: 'PO, ગ્રાહક, સ્થળ, ઇન્વૉઇસ અથવા ટ્રાન્સપોર્ટર શોધો', allOpenStatuses: 'બધા ઓપન સ્ટેટસ', allDates: 'બધી તારીખો', currentMonth: 'ચાલુ મહિનો',
       lastMonth: 'ગયા મહિનો', customDates: 'પસંદગીની તારીખો', from: 'થી', to: 'સુધી', clearFilters: 'ફિલ્ટર સાફ કરો', openPurchaseOrders: 'ઓપન પરચેઝ ઓર્ડર',
-      poCustomer: 'PO / ગ્રાહક', poDate: 'PO તારીખ', status: 'સ્થિતિ', deliveryLocation: 'ડિલિવરી સ્થળ', poValue: 'PO મૂલ્ય', deliveryDate: 'ડિલિવરી તારીખ',
+      poCustomer: 'PO / ગ્રાહક', poDate: 'PO તારીખ', status: 'સ્થિતિ', deliveryLocation: 'ડિલિવરી સ્થળ', poValue: 'PO મૂલ્ય', deliveryDate: 'અપોઇન્ટમેન્ટ તારીખ',
       invoice: 'ઇન્વૉઇસ', transport: 'ટ્રાન્સપોર્ટ', assigned: 'જવાબદારી', age: 'ઉંમર', noOpenPos: 'કોઈ ઓપન PO મળ્યો નથી', noOpenPosHelp: 'હાલની શોધ અને ફિલ્ટર મુજબ કોઈ PO નથી.',
       tripDate: 'ટ્રિપ તારીખ*', transporterOwner: 'ટ્રાન્સપોર્ટર / ટેમ્પો માલિક*', selectTransporter: 'ટ્રાન્સપોર્ટર પસંદ કરો', vehicleNumber: 'વાહન નંબર', driverName: 'ડ્રાઇવરનું નામ',
       driverPhone: 'ડ્રાઇવર ફોન', vehicleCost: 'વાહન / ટેમ્પો ખર્ચ (₹)', optional: 'વૈકલ્પિક', invoiceCostHeading: 'દરેક PO માટે ઇન્વૉઇસ અને ડિલિવરી ખર્ચ',
@@ -104,11 +108,15 @@
       manualPoHelp: 'નીચે POની વિગતો દાખલ કરો. તે મળેલ સ્થિતિમાં સાચવાશે અને તરત ઓપન PO યાદીમાં દેખાશે.',
       customerName: 'ગ્રાહકનું નામ*', customerPlaceholder: 'ઉદાહરણ: DMart', manualPoNumber: 'PO નંબર*', poNumberPlaceholder: 'PO નંબર દાખલ કરો',
       manualLocation: 'ડિલિવરી સ્થળ*', locationPlaceholder: 'ઉદાહરણ: Bopal', manualPoValue: 'PO મૂલ્ય (₹)', manualPoDate: 'PO તારીખ*',
-      poReceivedDate: 'PO મળ્યાની તારીખ*', manualDeliveryDate: 'ડિલિવરી તારીખ', manualAssignedTo: 'જવાબદારી', assignedPlaceholder: 'સ્ટાફનું નામ અથવા ઈમેલ',
+      poReceivedDate: 'PO મળ્યાની તારીખ*', manualDeliveryDate: 'અપોઇન્ટમેન્ટ તારીખ', manualAssignedTo: 'જવાબદારી', assignedPlaceholder: 'સ્ટાફનું નામ અથવા ઈમેલ',
       poCopy: 'PO નકલ', poCopyHelp: 'વૈકલ્પિક PDF, JPG અથવા PNG, વધુમાં વધુ 10 MB.', remarks: 'નોંધ', remarksPlaceholder: 'કોઈ ખાસ ડિલિવરી સૂચના',
       savePo: 'PO સાચવો', savingPo: 'PO સાચવાઈ રહ્યો છે…', manualPoSaved: 'મેન્યુઅલ PO સાચવાયો અને ઓપન PO યાદીમાં ઉમેરાયો.',
       manualDuplicate: 'આ PO નંબર પહેલેથી હાજર છે.', manualFileTooLarge: 'PO નકલ 10 MB અથવા તેનાથી નાની હોવી જોઈએ.',
-      manualFileType: 'PO નકલ PDF, JPG અથવા PNG ફાઇલ હોવી જોઈએ.', couldNotSavePo: 'PO સાચવી શકાયો નથી.'
+      manualFileType: 'PO નકલ PDF, JPG અથવા PNG ફાઇલ હોવી જોઈએ.', couldNotSavePo: 'PO સાચવી શકાયો નથી.',
+      appointmentEyebrow: 'ડિલિવરી અપોઇન્ટમેન્ટ', appointmentTitle: 'અપોઇન્ટમેન્ટ તારીખ સુધારો', appointmentDate: 'અપોઇન્ટમેન્ટ તારીખ',
+      appointmentHelp: 'DMart દ્વારા અપોઇન્ટમેન્ટ નક્કી ન થઈ હોય ત્યારે જ ખાલી રાખો.', appointmentForPo: 'PO {po} · {location}',
+      editAppointment: 'તારીખ સુધારો', saveAppointment: 'અપોઇન્ટમેન્ટ સાચવો', savingAppointment: 'સાચવી રહ્યા છે…',
+      appointmentSaved: 'અપોઇન્ટમેન્ટ તારીખ સુધારાઈ.', couldNotSaveAppointment: 'અપોઇન્ટમેન્ટ તારીખ સુધારી શકાયી નથી.'
     },
     hi: {
       brand: 'KSDL डिस्ट्रीब्यूशन', pageTitle: 'डिस्पैच और इनवॉइस जाँच', loginSubtitle: 'अकाउंटेंट और सेल्स प्रतिनिधि के लिए। अपने अधिकृत बिज़नेस ईमेल से साइन इन करें।',
@@ -117,7 +125,7 @@
       inTransit: 'रास्ते में', materialOnRoad: 'सामान रास्ते में है', partiallyDelivered: 'आंशिक डिलीवरी', balancePending: 'बाकी माल देना है',
       searchPlaceholder: 'PO, ग्राहक, स्थान, इनवॉइस या ट्रांसपोर्टर खोजें', allOpenStatuses: 'सभी खुले स्टेटस', allDates: 'सभी तारीखें', currentMonth: 'चालू महीना',
       lastMonth: 'पिछला महीना', customDates: 'अपनी तारीखें', from: 'से', to: 'तक', clearFilters: 'फिल्टर हटाएँ', openPurchaseOrders: 'खुले परचेज़ ऑर्डर',
-      poCustomer: 'PO / ग्राहक', poDate: 'PO तारीख', status: 'स्थिति', deliveryLocation: 'डिलीवरी स्थान', poValue: 'PO मूल्य', deliveryDate: 'डिलीवरी तारीख',
+      poCustomer: 'PO / ग्राहक', poDate: 'PO तारीख', status: 'स्थिति', deliveryLocation: 'डिलीवरी स्थान', poValue: 'PO मूल्य', deliveryDate: 'अपॉइंटमेंट तारीख',
       invoice: 'इनवॉइस', transport: 'ट्रांसपोर्ट', assigned: 'जिम्मेदारी', age: 'आयु', noOpenPos: 'कोई खुला PO नहीं मिला', noOpenPosHelp: 'मौजूदा खोज और फिल्टर से मेल खाने वाला कोई PO नहीं है।',
       tripDate: 'ट्रिप तारीख*', transporterOwner: 'ट्रांसपोर्टर / टेम्पो मालिक*', selectTransporter: 'ट्रांसपोर्टर चुनें', vehicleNumber: 'वाहन नंबर', driverName: 'ड्राइवर का नाम',
       driverPhone: 'ड्राइवर फोन', vehicleCost: 'वाहन / टेम्पो खर्च (₹)', optional: 'वैकल्पिक', invoiceCostHeading: 'हर PO का इनवॉइस और डिलीवरी खर्च',
@@ -154,11 +162,15 @@
       manualPoHelp: 'नीचे PO का विवरण भरें। यह प्राप्त स्थिति में सहेजा जाएगा और तुरंत खुले PO की सूची में दिखेगा।',
       customerName: 'ग्राहक का नाम*', customerPlaceholder: 'उदाहरण: DMart', manualPoNumber: 'PO नंबर*', poNumberPlaceholder: 'PO नंबर दर्ज करें',
       manualLocation: 'डिलीवरी स्थान*', locationPlaceholder: 'उदाहरण: Bopal', manualPoValue: 'PO मूल्य (₹)', manualPoDate: 'PO तारीख*',
-      poReceivedDate: 'PO प्राप्ति तारीख*', manualDeliveryDate: 'डिलीवरी तारीख', manualAssignedTo: 'जिम्मेदारी', assignedPlaceholder: 'स्टाफ का नाम या ईमेल',
+      poReceivedDate: 'PO प्राप्ति तारीख*', manualDeliveryDate: 'अपॉइंटमेंट तारीख', manualAssignedTo: 'जिम्मेदारी', assignedPlaceholder: 'स्टाफ का नाम या ईमेल',
       poCopy: 'PO कॉपी', poCopyHelp: 'वैकल्पिक PDF, JPG या PNG, अधिकतम 10 MB.', remarks: 'टिप्पणी', remarksPlaceholder: 'कोई विशेष डिलीवरी निर्देश',
       savePo: 'PO सहेजें', savingPo: 'PO सहेजा जा रहा है…', manualPoSaved: 'मैन्युअल PO सहेजा गया और खुले PO की सूची में जुड़ गया।',
       manualDuplicate: 'यह PO नंबर पहले से मौजूद है।', manualFileTooLarge: 'PO कॉपी 10 MB या उससे छोटी होनी चाहिए।',
-      manualFileType: 'PO कॉपी PDF, JPG या PNG फाइल होनी चाहिए।', couldNotSavePo: 'PO सहेजा नहीं जा सका।'
+      manualFileType: 'PO कॉपी PDF, JPG या PNG फाइल होनी चाहिए।', couldNotSavePo: 'PO सहेजा नहीं जा सका।',
+      appointmentEyebrow: 'डिलीवरी अपॉइंटमेंट', appointmentTitle: 'अपॉइंटमेंट तारीख बदलें', appointmentDate: 'अपॉइंटमेंट तारीख',
+      appointmentHelp: 'DMart ने अपॉइंटमेंट तय न किया हो तभी इसे खाली रखें।', appointmentForPo: 'PO {po} · {location}',
+      editAppointment: 'तारीख बदलें', saveAppointment: 'अपॉइंटमेंट सहेजें', savingAppointment: 'सहेज रहे हैं…',
+      appointmentSaved: 'अपॉइंटमेंट तारीख अपडेट हो गई।', couldNotSaveAppointment: 'अपॉइंटमेंट तारीख अपडेट नहीं हो सकी।'
     }
   };
   const LOCALES = { en: 'en-IN', gu: 'gu-IN', hi: 'hi-IN' };
@@ -357,6 +369,54 @@
     }
   }
 
+  function closeAppointmentDialog() {
+    if ($('appointmentDialog').open) $('appointmentDialog').close();
+    $('appointmentForm').reset();
+    $('appointmentPoId').value = '';
+    $('appointmentError').textContent = '';
+  }
+  function openAppointmentDialog(poId) {
+    const record = records.find(item => item.id === poId);
+    if (!record) return;
+    $('appointmentPoId').value = record.id;
+    $('appointmentDate').value = record.delivery_date || '';
+    $('appointmentSummary').textContent = t('appointmentForPo', {
+      po: record.po_number || '—',
+      location: record.delivery_location || t('locationPending')
+    });
+    $('appointmentError').textContent = '';
+    $('appointmentDialog').showModal();
+    window.setTimeout(() => $('appointmentDate').focus(), 0);
+  }
+  async function saveAppointmentDate(event) {
+    event.preventDefault();
+    const poId = $('appointmentPoId').value;
+    const record = records.find(item => item.id === poId);
+    if (!record) return;
+    const button = $('saveAppointmentBtn');
+    const error = $('appointmentError');
+    const appointmentDate = $('appointmentDate').value || null;
+    error.textContent = '';
+    try {
+      button.disabled = true;
+      button.textContent = t('savingAppointment');
+      await api('/rest/v1/rpc/update_po_appointment_date', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+        body: JSON.stringify({ po_id: poId, new_appointment_date: appointmentDate })
+      });
+      record.delivery_date = appointmentDate;
+      closeAppointmentDialog();
+      render();
+      toast(t('appointmentSaved'));
+    } catch (err) {
+      error.textContent = err.message || t('couldNotSaveAppointment');
+    } finally {
+      button.disabled = false;
+      button.textContent = t('saveAppointment');
+    }
+  }
+
   function normalizePoNumber(value) { return String(value || '').replace(/\D/g, ''); }
   function tallyDateToIso(value) {
     const match = String(value || '').match(/(\d{1,2})[-\s/]([A-Za-z]{3,9})[-\s/](\d{2,4})/);
@@ -542,7 +602,7 @@
         <td><span class="po-main">${safe(record.po_number || '—')}</span><span class="po-secondary">${safe(record.customer_name || '—')}</span>${attachment}</td>
         <td>${localDate(record.po_date)}<span class="po-secondary">${safe(t('receivedOn', { date: localDate(record.po_received_date) }))}</span></td>
         <td><span class="executive-status ${statusClass(record.status)}">${safe(statusLabel(record.status))}</span></td>
-        <td>${safe(record.delivery_location || '—')}</td><td>${money(record.po_value)}</td><td>${localDate(record.delivery_date)}</td>
+        <td>${safe(record.delivery_location || '—')}</td><td>${money(record.po_value)}</td><td><div class="appointment-cell"><span>${localDate(record.delivery_date)}</span><button class="text-btn appointment-edit-btn" type="button" data-po-id="${record.id}">${safe(t('editAppointment'))}</button></div></td>
         <td>${safe(record.invoice_number || '—')}<span class="po-secondary">${localDate(record.invoice_date)}</span></td>
         <td>${safe(record.transporter || '—')}<span class="po-secondary">${safe(record.tracking_number || '')}${record.transport_amount ? ` · ${money(record.transport_amount)}` : ''}</span></td>
         <td>${safe(record.assigned_to || '—')}</td><td>${age == null ? '—' : safe(t('days', { count: age }))}</td>
@@ -736,6 +796,9 @@
     $('manualPoForm').addEventListener('submit', saveManualPo);
     $('closeManualPoBtn').addEventListener('click', closeManualPoDialog);
     $('cancelManualPoBtn').addEventListener('click', closeManualPoDialog);
+    $('appointmentForm').addEventListener('submit', saveAppointmentDate);
+    $('closeAppointmentBtn').addEventListener('click', closeAppointmentDialog);
+    $('cancelAppointmentBtn').addEventListener('click', closeAppointmentDialog);
     $('openTripDialogBtn').addEventListener('click', openCreateTrip);
     $('closeTripDialogBtn').addEventListener('click', closeTripDialog); $('cancelTripBtn').addEventListener('click', closeTripDialog);
     $('tripPoDetails').addEventListener('change', event => { if (event.target.matches('.po-invoice-file')) handleInvoiceFile(event.target); });
@@ -749,6 +812,10 @@
     });
     ['searchInput', 'statusFilter', 'dateFrom', 'dateTo'].forEach(id => { $(id).addEventListener('input', render); $(id).addEventListener('change', render); });
     $('dateRangeFilter').addEventListener('change', () => { toggleCustomDates(); render(); });
+    $('poTableBody').addEventListener('click', event => {
+      const appointmentButton = event.target.closest('.appointment-edit-btn');
+      if (appointmentButton) openAppointmentDialog(appointmentButton.dataset.poId);
+    });
     $('poTableBody').addEventListener('change', event => { if (!event.target.matches('.po-choice')) return; if (event.target.checked) selectedPoIds.add(event.target.value); else selectedPoIds.delete(event.target.value); render(); });
     $('selectAllPos').addEventListener('change', event => { filteredRecords().forEach(record => event.target.checked ? selectedPoIds.add(record.id) : selectedPoIds.delete(record.id)); render(); });
   }

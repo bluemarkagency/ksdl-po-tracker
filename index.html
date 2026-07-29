@@ -56,7 +56,7 @@
           <option value="custom">Custom dates</option>
         </select>
         <div id="customDateFilters" class="custom-date-filters hidden">
-          <select id="dateFieldFilter" aria-label="Choose filter date"><option value="poDate">PO date</option><option value="deliveryDate">Delivery date</option><option value="deliveryCompletedDate">Delivery completed date</option></select>
+          <select id="dateFieldFilter" aria-label="Choose filter date"><option value="poDate">PO date</option><option value="deliveryDate">Appointment date</option><option value="deliveryCompletedDate">Delivery completed date</option></select>
           <label class="date-filter">From<input id="dateFrom" type="date" aria-label="From date" /></label>
           <label class="date-filter">To<input id="dateTo" type="date" aria-label="To date" /></label>
         </div>
@@ -77,11 +77,11 @@
             <col class="col-action" />
           </colgroup>
           <thead><tr>
-          <th scope="col">PO / Customer</th><th scope="col">PO date</th><th scope="col">Status</th><th scope="col">Delivery date</th><th scope="col">Delivery completed date</th><th scope="col">PO value</th><th scope="col">Delivery location</th><th scope="col">Invoice</th><th scope="col">Transport</th><th scope="col">PO age</th><th scope="col">Action</th>
+          <th scope="col">PO / Customer</th><th scope="col">PO date</th><th scope="col">Status</th><th scope="col">Appointment date</th><th scope="col">Delivery completed date</th><th scope="col">PO value</th><th scope="col">Delivery location</th><th scope="col">Invoice</th><th scope="col">Transport</th><th scope="col">PO age</th><th scope="col">Action</th>
         </tr></thead><tbody id="poTableBody"></tbody></table></div>
         <div id="emptyState" class="empty-state hidden"><h3>No purchase orders found</h3><p>Add your first PO, or import your existing Excel file.</p><button id="emptyNewBtn" class="primary">+ Add PO</button></div>
       </section>
-      <p class="footnote">PO Age = today minus PO received date. Delay = actual delivery date minus PO date.</p>
+      <p class="footnote">PO Age = today minus PO received date. Appointment lead time = appointment date minus PO date.</p>
     </main>
 
     <dialog id="poDialog"><form id="poForm" method="dialog">
@@ -94,7 +94,7 @@
         <label class="span-2">PO copy <small>Optional: PDF, JPG or PNG received through WhatsApp or from the store. This does not change delivery status.</small><input name="poAttachment" type="file" accept="application/pdf,image/jpeg,image/png" /></label>
         <label>PO date*<input name="poDate" type="date" required /></label>
         <label>PO received date*<input name="poReceivedDate" type="date" required /></label>
-        <label>Delivery date<input name="deliveryDate" type="date" /></label>
+        <label>Appointment date<input name="deliveryDate" type="date" /></label>
         <label>Delivery status*<select name="status" required></select></label>
         <label class="span-2">Delivery note <small>PDF, JPG or PNG. Uploading a note marks this PO as Delivered.</small><input name="deliveryNote" type="file" accept="application/pdf,image/jpeg,image/png" /></label>
         <label>PO value (₹)<input name="poValue" type="number" min="0" step="0.01" placeholder="0" /></label>
@@ -111,6 +111,6 @@
       <div class="modal-actions"><button type="button" id="deleteBtn" class="danger hidden">Delete permanently</button><span></span><button type="button" id="cancelBtn">Cancel</button><button class="primary">Save PO</button></div>
     </form></dialog>
     <div id="toast" class="toast" role="status"></div>
-    <script src="config.js"></script><script src="app.js?v=main-responsive-cards-20260728"></script>
+    <script src="config.js"></script><script src="app.js?v=appointment-date-20260729"></script>
   </body>
 </html>

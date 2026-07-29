@@ -7,7 +7,7 @@
     <title>KSDL Dispatch & Invoice Review</title>
     <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="mobile-filters.css" />
-    <link rel="stylesheet" href="logistics.css?v=ios-mobile-fix-20260725" />
+    <link rel="stylesheet" href="logistics.css?v=appointment-date-20260729" />
     <style>
       .trip-plan-dialog{width:min(1120px,calc(100% - 24px))}
       .po-detail-heading{margin-top:20px;padding-top:17px;border-top:1px solid var(--line)}
@@ -86,7 +86,7 @@
         <div class="table-wrap">
           <table>
             <thead><tr>
-              <th><input id="selectAllPos" type="checkbox" aria-label="Select all visible POs" /></th><th data-i18n="poCustomer">PO / Customer</th><th data-i18n="poDate">PO Date</th><th data-i18n="status">Status</th><th data-i18n="deliveryLocation">Delivery location</th><th data-i18n="poValue">PO Value</th><th data-i18n="deliveryDate">Delivery date</th><th data-i18n="invoice">Invoice</th><th data-i18n="transport">Transport</th><th data-i18n="assigned">Assigned</th><th data-i18n="age">Age</th>
+              <th><input id="selectAllPos" type="checkbox" aria-label="Select all visible POs" /></th><th data-i18n="poCustomer">PO / Customer</th><th data-i18n="poDate">PO Date</th><th data-i18n="status">Status</th><th data-i18n="deliveryLocation">Delivery location</th><th data-i18n="poValue">PO Value</th><th data-i18n="deliveryDate">Appointment date</th><th data-i18n="invoice">Invoice</th><th data-i18n="transport">Transport</th><th data-i18n="assigned">Assigned</th><th data-i18n="age">Age</th>
             </tr></thead>
             <tbody id="poTableBody"></tbody>
           </table>
@@ -114,7 +114,7 @@
             <label><span data-i18n="manualPoValue">PO value (₹)</span><input id="manualPoValue" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0" /></label>
             <label><span data-i18n="manualPoDate">PO date*</span><input id="manualPoDate" type="date" required /></label>
             <label><span data-i18n="poReceivedDate">PO received date*</span><input id="manualReceivedDate" type="date" required /></label>
-            <label><span data-i18n="manualDeliveryDate">Delivery date</span><input id="manualDeliveryDate" type="date" /></label>
+            <label><span data-i18n="manualDeliveryDate">Appointment date</span><input id="manualDeliveryDate" type="date" /></label>
             <label><span data-i18n="manualAssignedTo">Assigned to</span><input id="manualAssignedTo" data-i18n-placeholder="assignedPlaceholder" placeholder="Staff name or email" /></label>
             <label class="manual-po-span"><span data-i18n="poCopy">PO copy</span><input id="manualPoFile" type="file" accept="application/pdf,image/jpeg,image/png" /><small data-i18n="poCopyHelp">Optional PDF, JPG or PNG up to 10 MB.</small></label>
             <label class="manual-po-span"><span data-i18n="remarks">Remarks</span><textarea id="manualRemarks" rows="3" data-i18n-placeholder="remarksPlaceholder" placeholder="Any special delivery instructions"></textarea></label>
@@ -123,6 +123,30 @@
           <div class="plan-actions">
             <button id="cancelManualPoBtn" type="button" data-i18n="cancel">Cancel</button>
             <button id="saveManualPoBtn" class="primary" type="submit" data-i18n="savePo">Save PO</button>
+          </div>
+        </form>
+      </dialog>
+
+      <dialog id="appointmentDialog" class="manual-po-dialog appointment-dialog">
+        <form id="appointmentForm">
+          <div class="trip-dialog-head">
+            <div>
+              <span class="eyebrow" data-i18n="appointmentEyebrow">DELIVERY APPOINTMENT</span>
+              <h2 data-i18n="appointmentTitle">Update appointment date</h2>
+              <p id="appointmentSummary"></p>
+            </div>
+            <button id="closeAppointmentBtn" class="icon-btn" type="button" aria-label="Close">×</button>
+          </div>
+          <input id="appointmentPoId" type="hidden" />
+          <label class="appointment-date-field">
+            <span data-i18n="appointmentDate">Appointment date</span>
+            <input id="appointmentDate" type="date" />
+            <small data-i18n="appointmentHelp">Leave blank only when DMart has not confirmed an appointment.</small>
+          </label>
+          <p id="appointmentError" class="error" aria-live="polite"></p>
+          <div class="plan-actions">
+            <button id="cancelAppointmentBtn" type="button" data-i18n="cancel">Cancel</button>
+            <button id="saveAppointmentBtn" class="primary" type="submit" data-i18n="saveAppointment">Save appointment</button>
           </div>
         </form>
       </dialog>
@@ -167,6 +191,6 @@
     <div id="toast" class="toast" role="status"></div>
     <script src="config.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <script src="logistics.js?v=step4-completion-delete-20260727"></script>
+    <script src="logistics.js?v=appointment-date-20260729"></script>
   </body>
 </html>

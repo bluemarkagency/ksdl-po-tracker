@@ -223,7 +223,7 @@
     event.preventDefault(); const error = $('invoiceError'); error.textContent = ''; const amountText = $('editInvoiceAmount').value;
     try {
       await api('/rest/v1/rpc/update_customer_invoice_details', { method: 'POST', headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify({ invoice: $('invoiceId').value, new_invoice_date: $('editInvoiceDate').value || null, new_invoice_amount: amountText === '' ? null : Number(amountText), new_credit_days: Number($('editCreditDays').value || 6), new_delivery_date: $('editDeliveryDate').value || null, new_delivery_completed_date: $('editDeliveryCompletedDate').value || null }) });
-      $('invoiceDialog').close(); await loadData(); toast('Invoice, delivery dates and due date updated.');
+      $('invoiceDialog').close(); await loadData(); toast('Invoice, appointment date, delivery completed date and due date updated.');
     } catch (err) { error.textContent = err.message || 'Could not save invoice.'; }
   }
   function bindEvents() {
