@@ -584,7 +584,7 @@
   }
   function statusClass(status) { return String(status || '').toLowerCase().replaceAll(' ', '-'); }
   function statusLabel(status) {
-    return ({ Received: t('received'), Scheduled: t('scheduled'), 'In Transit': t('inTransit'), 'Partially Delivered': t('partiallyDelivered'), 'Needs Correction': t('needsCorrection'), Planning: t('planning'), Pending: t('pending'), Delivered: t('delivered'), Cancelled: t('cancelled') })[status] || status || '—';
+    return ({ Received: t('received'), Scheduled: t('scheduled'), 'In Transit': t('inTransit'), Dispatched: t('inTransit'), 'Partially Delivered': t('partiallyDelivered'), 'Needs Correction': t('needsCorrection'), Pending: t('pending'), Delivered: t('delivered'), Cancelled: t('cancelled') })[status] || status || '—';
   }
 
   function renderOpenPos() {
@@ -662,7 +662,7 @@
         return `<div class="trip-invoice-row"><div><strong>${safe(link.purchase_orders?.po_number || 'PO')}:</strong> ${safe(invoiceNumber || '—')} · Invoice ${invoiceAmount == null ? '—' : money(invoiceAmount)} · Delivery ${money(link.allocated_cost)}</div>${invoiceCopy}</div>`;
       }).join('');
       const tempoCost = Number(trip.actual_freight || 0);
-      return `<tr class="${needsCorrection ? 'correction-trip' : ''}"><td>${localDate(trip.trip_date)}</td><td><div class="trip-po-list">${chips || safe(t('noPosLinked'))}</div></td><td>${safe(trip.vehicle_number || trip.transporter || '—')}<span class="po-secondary">${safe(trip.driver_name || '')}</span></td><td>${invoices || '—'}</td><td><span class="executive-status ${needsCorrection ? 'needs-correction' : ''}">${safe(needsCorrection ? t('needsCorrection') : statusLabel(trip.status))}</span></td><td>${tempoCost ? money(tempoCost) : '—'}</td><td><div class="trip-actions"><button class="text-btn edit-trip-btn" type="button" data-trip-id="${trip.id}">${safe(t('edit'))}</button><button class="complete-trip-btn" type="button" data-trip-id="${trip.id}">${safe(needsCorrection ? t('correctDelivery') : t('completeDelivery'))}</button><button class="text-btn danger delete-trip-btn" type="button" data-trip-id="${trip.id}">${safe(t('deleteTrip'))}</button></div></td></tr>`;
+      return `<tr class="${needsCorrection ? 'correction-trip' : ''}"><td>${localDate(trip.trip_date)}</td><td><div class="trip-po-list">${chips || safe(t('noPosLinked'))}</div></td><td>${safe(trip.vehicle_number || trip.transporter || '—')}<span class="po-secondary">${safe(trip.driver_name || '')}</span></td><td>${invoices || '—'}</td><td><span class="executive-status ${needsCorrection ? 'needs-correction' : statusClass(trip.status)}">${safe(needsCorrection ? t('needsCorrection') : statusLabel(trip.status))}</span></td><td>${tempoCost ? money(tempoCost) : '—'}</td><td><div class="trip-actions"><button class="text-btn edit-trip-btn" type="button" data-trip-id="${trip.id}">${safe(t('edit'))}</button><button class="complete-trip-btn" type="button" data-trip-id="${trip.id}">${safe(needsCorrection ? t('correctDelivery') : t('completeDelivery'))}</button><button class="text-btn danger delete-trip-btn" type="button" data-trip-id="${trip.id}">${safe(t('deleteTrip'))}</button></div></td></tr>`;
     }).join('');
     $('tripEmptyState').classList.toggle('hidden', trips.length !== 0);
   }
@@ -711,7 +711,7 @@
         await api(`/rest/v1/delivery_trips?id=eq.${encodeURIComponent(tripId)}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify(tripPayload) });
         await Promise.all(details.map(detail => api(`/rest/v1/delivery_trip_pos?trip_id=eq.${encodeURIComponent(tripId)}&purchase_order_id=eq.${encodeURIComponent(detail.record.id)}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify({ allocation_method: 'Manual', allocated_cost: detail.allocatedCost, invoice_number: detail.invoiceNumber, invoice_date: detail.invoiceDate, invoice_amount: detail.invoiceAmount, invoice_attachment_url: detail.invoicePath }) })));
       } else {
-        await api('/rest/v1/delivery_trips', { method: 'POST', headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify({ id: tripId, status: 'Planning', ...tripPayload }) });
+        await api('/rest/v1/delivery_trips', { method: 'POST', headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify({ id: tripId, status: 'Dispatched', ...tripPayload }) });
         const links = details.map(detail => ({ trip_id: tripId, purchase_order_id: detail.record.id, allocation_method: 'Manual', allocated_cost: detail.allocatedCost, invoice_number: detail.invoiceNumber, invoice_date: detail.invoiceDate, invoice_amount: detail.invoiceAmount, invoice_attachment_url: detail.invoicePath, delivery_status: 'Pending' }));
         await api('/rest/v1/delivery_trip_pos', { method: 'POST', headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify(links) });
         selectedPoIds.clear();
