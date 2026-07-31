@@ -459,7 +459,45 @@
   function canonicalInvoiceArticle(value) {
     let name = String(value || '').toUpperCase().replace(/\bMYS\.?\s*SANDAL\b/g, 'MYSORE SANDAL').replace(/^M\s*S\s+/g, 'MYSORE SANDAL ').replace(/\s+/g, ' ').trim();
     if (!/^MYSORE SANDAL\b/.test(name)) name = `MYSORE SANDAL ${name}`;
+    if (/\bSOAP\s+TRIO\b/.test(name) && /450\s*[X×]|450G\b/.test(name)) return 'MYSORE SANDAL SOAP TRIO 450G';
+    if (/\bSOAP\s*\(S\)|\bSOAP\s+SINGLE\b/.test(name) && /150\s*[X×]|150G\b/.test(name)) return 'MYSORE SANDAL SOAP SINGLE 150G';
+    if (/\bGOLD\s+SOAP\b/.test(name) && /125\s*[X×]|125G\b/.test(name)) return 'MYSORE SANDAL GOLD SOAP 125G';
+    if (/\bTALC\b/.test(name) && /300\s*[X×]|300G\b/.test(name)) return 'MYSORE SANDAL TALC 300G';
+    if (/\bBODY\s+WASH\b/.test(name) && /200\s*[X×]|200ML\b/.test(name)) return 'MYSORE SANDAL BODY WASH 200ML';
     return name;
+  }
+  function parseColumnarTallyInvoiceItems(lines) {
+    const flat = lines.join(' ').replace(/\s+/g, ' ').trim();
+    const start = flat.search(/\bDescription\s+of\s+Goods\b/i);
+    if (start < 0) return [];
+    const afterStart = flat.slice(start);
+    const end = afterStart.search(/\bAmount\s+Chargeable\b/i);
+    const goods = end >= 0 ? afterStart.slice(0, end) : afterStart;
+    const products = [];
+    const productPattern = /MYSORE\s+SANDAL\s+[A-Z][A-Z0-9 ()&/.\-]{1,90}?\s+\d+(?:\.\d+)?\s*(?:G|GM|ML)(?=\s|DISCOUNT\b|OUTPUT\b|M\s*S\b|$)/gi;
+    let match;
+    while ((match = productPattern.exec(goods)) !== null) products.push(match[0].replace(/\s+/g, ' ').trim());
+    if (!products.length) return [];
+
+    const hsns = [];
+    (goods.match(/\d{8,}/g) || []).forEach(run => {
+      if (run.length % 8 !== 0) return;
+      for (let offset = 0; offset < run.length; offset += 8) hsns.push(run.slice(offset, offset + 8));
+    });
+    const cbsValues = [...goods.matchAll(/(?<![\d.,])([\d,]+(?:\.\d+)?)\s*CBS\b/gi)].map(result => Number(result[1].replace(/,/g, ''))).filter(value => value > 0);
+    const measurements = [...goods.matchAll(/(?<![\d.,])([\d,]+)\s*(PCS|NOS|EA|BOX|CTN|BTL)\s*([\d,]+\.\d{2})\b/gi)].map(result => ({ quantity: Number(result[1].replace(/,/g, '')), unit: result[2].toUpperCase(), taxableAmount: Number(result[3].replace(/,/g, '')) }));
+    const count = Math.min(products.length, hsns.length, cbsValues.length, measurements.length);
+    return products.slice(0, count).map((product, index) => ({
+      line_number: index + 1,
+      article_name: canonicalInvoiceArticle(product),
+      article_description: product,
+      hsn_sac: hsns[index],
+      quantity: measurements[index].quantity,
+      quantity_cbs: cbsValues[index],
+      unit: measurements[index].unit,
+      rate: Number((measurements[index].taxableAmount / measurements[index].quantity).toFixed(4)),
+      taxable_amount: measurements[index].taxableAmount
+    })).filter(item => item.quantity > 0 && item.quantity_cbs > 0 && item.taxable_amount > 0);
   }
   function parseTallyInvoiceItems(lines) {
     const items = [];
@@ -477,7 +515,8 @@
       const quantity = quantities[0], rate = quantities.length > 1 ? quantities[1] : null;
       items.push({ line_number: Number(match[1]), article_name: canonicalInvoiceArticle(description || rawName), article_description: description || rawName, hsn_sac: match[3], quantity: Number(quantity[1].replace(/,/g, '')), quantity_cbs: Number(cbs[1].replace(/,/g, '')), unit: quantity[2].toUpperCase(), rate: rate ? Number(rate[1].replace(/,/g, '')) : null, taxable_amount: Number(amounts[amounts.length - 1].replace(/,/g, '')) });
     });
-    return items;
+    const columnarItems = parseColumnarTallyInvoiceItems(lines);
+    return columnarItems.length > items.length ? columnarItems : items;
   }
   function parseTallyInvoice(lines, expectedPoNumber = '') {
     const flat = lines.join(' ').replace(/\s+/g, ' ');
@@ -543,7 +582,11 @@
         invoiceStatus(row, 'mismatch', t('wrongInvoice', { actual: parsed.poNumber, expected: record.po_number })); return;
       }
       if (invoicePo && expectedPo === invoicePo && parsed.invoiceNumber && parsed.invoiceDate) {
-        invoiceStatus(row, 'matched', `${t('invoiceMatched', { po: record.po_number })}${details ? ` · ${details}` : ''}`); return;
+        if (/^BMAG\//i.test(parsed.invoiceNumber) && !parsed.items.length) {
+          invoiceStatus(row, 'warning', `Invoice matched, but product lines were not readable for Analytics. Please use the original Tally PDF.`); return;
+        }
+        const analyticsDetail = parsed.items.length ? ` · ${parsed.items.length} product line(s) ready for Analytics` : '';
+        invoiceStatus(row, 'matched', `${t('invoiceMatched', { po: record.po_number })}${details ? ` · ${details}` : ''}${analyticsDetail}`); return;
       }
       invoiceStatus(row, 'warning', t('verifyInvoice'));
     } catch (error) { invoiceStatus(row, 'warning', error.message || t('verifyInvoice')); }
@@ -751,6 +794,10 @@
       });
       for (const detail of details) if (detail.invoiceState === 'reading') throw new Error(t('waitForInvoice', { po: detail.record.po_number }));
       for (const detail of details) if (detail.invoiceState === 'mismatch') throw new Error(t('replaceWrongInvoice', { po: detail.record.po_number }));
+      for (const detail of details) {
+        const isPdf = detail.invoiceFile && (detail.invoiceFile.type === 'application/pdf' || detail.invoiceFile.name.toLowerCase().endsWith('.pdf'));
+        if (isPdf && /^BMAG\//i.test(detail.invoiceNumber) && !detail.invoiceItems.length) throw new Error(`Product lines could not be read from ${detail.invoiceNumber}. Re-select the original Tally PDF before saving so Analytics is updated.`);
+      }
       for (const detail of details) if (!detail.invoiceNumber || !detail.invoiceDate || (!detail.invoiceFile && !detail.existingInvoicePath)) throw new Error(t('uploadVerifyInvoice', { po: detail.record.po_number }));
       for (const detail of details) if (detail.invoiceAmount == null || !Number.isFinite(detail.invoiceAmount) || detail.invoiceAmount <= 0) throw new Error(t('invoiceAmountRequired', { po: detail.record.po_number }));
       await Promise.all(details.map(async detail => { detail.invoicePath = detail.invoiceFile ? await uploadTripInvoice(tripId, detail.record.id, detail.invoiceFile) : detail.existingInvoicePath; }));
@@ -766,8 +813,17 @@
         await api('/rest/v1/delivery_trip_pos', { method: 'POST', headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify(links) });
         selectedPoIds.clear();
       }
-      await Promise.all(details.filter(detail => detail.invoiceItems.length).map(detail => api('/rest/v1/rpc/import_dmart_invoice_items', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ payload: { invoice_number: detail.invoiceNumber, po_number: detail.record.po_number, invoice_date: detail.invoiceDate, delivery_location: normalizeDeliveryLocation(detail.invoiceDestination || detail.record.delivery_location) || null, items: detail.invoiceItems } }) }).catch(error => { console.warn(`Product movement import skipped for ${detail.invoiceNumber}: ${error.message}`); return null; })));
+      const analyticsFailures = [];
+      await Promise.all(details.filter(detail => detail.invoiceItems.length).map(async detail => {
+        try {
+          await api('/rest/v1/rpc/import_dmart_invoice_items', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ payload: { invoice_number: detail.invoiceNumber, po_number: detail.record.po_number, invoice_date: detail.invoiceDate, delivery_location: normalizeDeliveryLocation(detail.invoiceDestination || detail.record.delivery_location) || null, items: detail.invoiceItems } }) });
+        } catch (analyticsError) {
+          console.error(`Analytics sync failed for ${detail.invoiceNumber}: ${analyticsError.message}`);
+          analyticsFailures.push(detail.invoiceNumber);
+        }
+      }));
       closeTripDialog(); await loadData(); toast(editTrip ? t('tripChangesSaved') : t('tripCreated'));
+      if (analyticsFailures.length) toast(`Trip saved, but Analytics sync failed for ${analyticsFailures.join(', ')}. Re-open the trip, select the invoice PDF again and save.`);
     } catch (err) { error.textContent = err.message || t('couldNotSaveTrip'); }
     finally { button.disabled = false; button.textContent = editTrip ? t('saveTripChanges') : t('createTripCount', { count: chosen.length }); }
   }
