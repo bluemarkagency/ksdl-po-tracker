@@ -7,7 +7,7 @@
     <title>KSDL Customer Receivables</title>
     <link rel="stylesheet" href="styles.css?v=delivery-completed-date-20260728" />
     <link rel="stylesheet" href="mobile-filters.css" />
-    <link rel="stylesheet" href="receivables.css?v=roundoff-status-colors-20260728" />
+    <link rel="stylesheet" href="receivables.css?v=invoice-date-filter-20260731" />
   </head>
   <body>
     <section id="loginScreen" class="login-screen hidden">
@@ -40,7 +40,7 @@
         <article><span>Total outstanding</span><strong id="outstandingAmount">₹0</strong><small id="outstandingCount">0 invoices</small></article>
         <article class="attention"><span>Overdue</span><strong id="overdueAmount">₹0</strong><small id="overdueCount">0 invoices</small></article>
         <article><span>Due in next 6 days</span><strong id="dueSoonAmount">₹0</strong><small id="dueSoonCount">0 invoices</small></article>
-        <article><span>Received this month</span><strong id="receivedAmount">₹0</strong><small>From matched payment advice</small></article>
+        <article><span id="receivedLabel">Received this month</span><strong id="receivedAmount">₹0</strong><small id="receivedHelp">From matched payment advice</small></article>
         <article><span>Missing required data</span><strong id="missingCount">0</strong><small>Invoice or delivery completion</small></article>
       </section>
 
@@ -55,7 +55,12 @@
           <label class="search-field">Search<input id="invoiceSearch" placeholder="Invoice, PO or location" /></label>
           <label>Status<select id="invoiceStatus"><option value="">All statuses</option><option>Needs Data</option><option>Open</option><option>Partially Paid</option><option>Paid</option><option>Disputed</option></select></label>
           <label>Age<select id="ageFilter"><option value="">All ages</option><option value="not-due">Not due</option><option value="0-7">0–7 overdue</option><option value="8-15">8–15 overdue</option><option value="16-30">16–30 overdue</option><option value="31-45">31–45 overdue</option><option value="46+">46+ overdue</option></select></label>
+          <label>Invoice date<select id="invoiceDateRange"><option value="">All dates</option><option value="current">Current month</option><option value="last">Last month</option><option value="custom">Custom dates</option></select></label>
           <button id="clearInvoiceFilters" class="text-btn" type="button">Clear</button>
+          <div id="invoiceCustomDates" class="receivable-custom-dates hidden">
+            <label>From<input id="invoiceDateFrom" type="date" /></label>
+            <label>To<input id="invoiceDateTo" type="date" /></label>
+          </div>
         </div>
         <div class="table-wrap"><table class="receivable-table invoice-table"><thead><tr><th>Invoice / PO</th><th>Invoice date</th><th>Delivery completed date</th><th>Due date</th><th>Location</th><th>Invoice value</th><th>Received / TDS</th><th>Outstanding</th><th>Age</th><th>Status</th><th>Action</th></tr></thead><tbody id="invoiceBody"></tbody></table></div>
         <div id="invoiceEmpty" class="empty-state"><h3>No invoices found</h3><p>Synced Gujarat invoices will appear here.</p></div>
@@ -83,6 +88,6 @@
     <div id="toast" class="toast" role="status"></div>
     <script src="config.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <script src="receivables.js?v=appointment-date-20260729"></script>
+    <script src="receivables.js?v=invoice-date-filter-20260731"></script>
   </body>
 </html>

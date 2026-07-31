@@ -116,28 +116,58 @@
     if (days < 0) return 'not-due'; if (days <= 7) return '0-7'; if (days <= 15) return '8-15'; if (days <= 30) return '16-30'; if (days <= 45) return '31-45'; return '46+';
   }
   function outstanding(invoice) { return Number(invoice.outstanding_amount ?? invoice.invoice_amount ?? 0); }
+  function localIsoDate(date) {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  }
+  function invoiceMonthBounds(offset) {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth() + offset, 1);
+    const end = offset === 0 ? now : new Date(now.getFullYear(), now.getMonth() + offset + 1, 0);
+    return { from: localIsoDate(start), to: localIsoDate(end) };
+  }
+  function selectedInvoiceDateBounds() {
+    const range = $('invoiceDateRange').value;
+    if (range === 'current') return invoiceMonthBounds(0);
+    if (range === 'last') return invoiceMonthBounds(-1);
+    if (range === 'custom') return { from: $('invoiceDateFrom').value, to: $('invoiceDateTo').value };
+    return { from: '', to: '' };
+  }
+  function dateFilteredInvoices() {
+    const { from, to } = selectedInvoiceDateBounds();
+    return invoices.filter(invoice => {
+      const invoiceDate = String(invoice.invoice_date || '').slice(0, 10);
+      return (!from || (invoiceDate && invoiceDate >= from)) && (!to || (invoiceDate && invoiceDate <= to));
+    });
+  }
   function filteredInvoices() {
     const query = $('invoiceSearch').value.trim().toLowerCase(), status = $('invoiceStatus').value, age = $('ageFilter').value;
-    return invoices.filter(invoice => {
+    return dateFilteredInvoices().filter(invoice => {
       const po = invoice.purchase_orders || {}, text = [invoice.invoice_number, po.po_number, invoice.delivery_location].join(' ').toLowerCase();
       return (!query || text.includes(query)) && (!status || invoice.payment_status === status) && (!age || ageBucket(invoice) === age);
     });
   }
   function renderSummary() {
-    const open = invoices.filter(item => item.payment_status !== 'Paid'), overdue = open.filter(item => (dayDifference(item.due_date) ?? -1) >= 0);
+    const scopedInvoices = dateFilteredInvoices();
+    const open = scopedInvoices.filter(item => item.payment_status !== 'Paid'), overdue = open.filter(item => (dayDifference(item.due_date) ?? -1) >= 0);
     const dueSoon = open.filter(item => { const days = dayDifference(item.due_date); return days != null && days >= -6 && days < 0; });
     const month = todayIso().slice(0, 7), confirmed = advices.filter(item => item.status === 'Bank Confirmed' && String(item.payment_date || '').startsWith(month));
-    const missing = invoices.filter(item => item.payment_status === 'Needs Data');
+    const invoiceDateFilterActive = Boolean($('invoiceDateRange').value);
+    const missing = scopedInvoices.filter(item => item.payment_status === 'Needs Data');
     $('outstandingAmount').textContent = money(open.reduce((sum, item) => sum + outstanding(item), 0)); $('outstandingCount').textContent = `${open.length} invoices`;
     $('overdueAmount').textContent = money(overdue.reduce((sum, item) => sum + outstanding(item), 0)); $('overdueCount').textContent = `${overdue.length} invoices`;
     $('dueSoonAmount').textContent = money(dueSoon.reduce((sum, item) => sum + outstanding(item), 0)); $('dueSoonCount').textContent = `${dueSoon.length} invoices`;
-    $('receivedAmount').textContent = money(confirmed.reduce((sum, item) => sum + Number(item.total_net_amount || 0), 0));
+    $('receivedAmount').textContent = money(invoiceDateFilterActive
+      ? scopedInvoices.reduce((sum, item) => sum + Number(item.net_received_amount || 0), 0)
+      : confirmed.reduce((sum, item) => sum + Number(item.total_net_amount || 0), 0));
+    $('receivedLabel').textContent = invoiceDateFilterActive ? 'Received for filtered invoices' : 'Received this month';
+    $('receivedHelp').textContent = invoiceDateFilterActive ? 'Matched to invoices in the selected date range' : 'From matched payment advice';
     $('missingCount').textContent = missing.length;
   }
   function renderAging() {
+    const scopedInvoices = dateFilteredInvoices();
     const definitions = [['not-due', 'Not due'], ['0-7', '0–7 days'], ['8-15', '8–15 days'], ['16-30', '16–30 days'], ['31-45', '31–45 days'], ['46+', '46+ days']];
     $('agingGrid').innerHTML = definitions.map(([key, label]) => {
-      const rows = invoices.filter(item => item.payment_status !== 'Paid' && ageBucket(item) === key);
+      const rows = scopedInvoices.filter(item => item.payment_status !== 'Paid' && ageBucket(item) === key);
       return `<article class="aging-bucket ${key === 'not-due' ? '' : 'overdue'}"><span>${label}</span><strong>${money(rows.reduce((sum, item) => sum + outstanding(item), 0))}</strong><small>${rows.length} invoice(s)</small></article>`;
     }).join('');
   }
@@ -164,6 +194,9 @@
     $('invoiceEmpty').classList.toggle('hidden', rows.length > 0);
   }
   function render() { renderSummary(); renderAging(); renderInvoices(); }
+  function toggleInvoiceCustomDates() {
+    $('invoiceCustomDates').classList.toggle('hidden', $('invoiceDateRange').value !== 'custom');
+  }
 
   async function syncMissingInvoiceData() {
     const candidates = invoices.filter(invoice =>
@@ -230,7 +263,9 @@
     $('loginForm').addEventListener('submit', async event => { event.preventDefault(); $('loginError').textContent = ''; try { await signIn($('emailInput').value.trim(), $('passwordInput').value); await start(); } catch (err) { $('loginError').textContent = err.message || 'Sign in failed.'; } });
     $('signOutBtn').addEventListener('click', signOut); $('refreshBtn').addEventListener('click', loadData);
     ['invoiceSearch', 'invoiceStatus', 'ageFilter'].forEach(id => { $(id).addEventListener('input', renderInvoices); $(id).addEventListener('change', renderInvoices); });
-    $('clearInvoiceFilters').addEventListener('click', () => { $('invoiceSearch').value = ''; $('invoiceStatus').value = ''; $('ageFilter').value = ''; renderInvoices(); });
+    $('invoiceDateRange').addEventListener('change', () => { toggleInvoiceCustomDates(); render(); });
+    ['invoiceDateFrom', 'invoiceDateTo'].forEach(id => { $(id).addEventListener('input', render); $(id).addEventListener('change', render); });
+    $('clearInvoiceFilters').addEventListener('click', () => { $('invoiceSearch').value = ''; $('invoiceStatus').value = ''; $('ageFilter').value = ''; $('invoiceDateRange').value = ''; $('invoiceDateFrom').value = ''; $('invoiceDateTo').value = ''; toggleInvoiceCustomDates(); render(); });
     $('invoiceBody').addEventListener('click', event => { const button = event.target.closest('.edit-invoice'); if (button) openInvoice(button.dataset.id); });
     $('invoiceForm').addEventListener('submit', saveInvoice); $('closeInvoiceDialog').addEventListener('click', () => $('invoiceDialog').close()); $('cancelInvoiceBtn').addEventListener('click', () => $('invoiceDialog').close());
     ['editDeliveryCompletedDate', 'editCreditDays'].forEach(id => $(id).addEventListener('input', previewDueDate));

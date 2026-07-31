@@ -574,13 +574,17 @@
     if (range === 'custom') return { from: $('dateFrom').value, to: $('dateTo').value };
     return { from: '', to: '' };
   }
-  function filteredRecords() {
+  function recordMatchesFilters(record) {
     const search = $('searchInput').value.trim().toLowerCase(), status = $('statusFilter').value, { from, to } = selectedBounds();
-    return availableRecords().filter(record => {
-      const poDate = record.po_date || '';
-      const searchable = [record.po_number, record.customer_name, record.delivery_location, record.invoice_number, record.transporter, record.tracking_number, record.assigned_to].join(' ').toLowerCase();
-      return (!status || record.status === status) && (!from || (poDate && poDate >= from)) && (!to || (poDate && poDate <= to)) && (!search || searchable.includes(search));
-    });
+    const poDate = record.po_date || '';
+    const searchable = [record.po_number, record.customer_name, record.delivery_location, record.invoice_number, record.transporter, record.tracking_number, record.assigned_to].join(' ').toLowerCase();
+    return (!status || record.status === status) && (!from || (poDate && poDate >= from)) && (!to || (poDate && poDate <= to)) && (!search || searchable.includes(search));
+  }
+  function filteredRecords() {
+    return availableRecords().filter(recordMatchesFilters);
+  }
+  function filteredOpenRecords() {
+    return records.filter(recordMatchesFilters);
   }
   function statusClass(status) { return String(status || '').toLowerCase().replaceAll(' ', '-'); }
   function statusLabel(status) {
@@ -588,12 +592,14 @@
   }
 
   function renderOpenPos() {
-    const showing = filteredRecords(); const totalValue = showing.reduce((sum, record) => sum + Number(record.po_value || 0), 0);
-    $('openCount').textContent = showing.length; $('openValue').textContent = t('value', { amount: money(totalValue) });
-    $('receivedCount').textContent = showing.filter(record => record.status === 'Received').length;
-    $('scheduledCount').textContent = showing.filter(record => record.status === 'Scheduled').length;
-    $('transitCount').textContent = showing.filter(record => record.status === 'In Transit').length;
-    $('partialCount').textContent = showing.filter(record => record.status === 'Partially Delivered').length;
+    const showing = filteredRecords();
+    const allOpen = filteredOpenRecords();
+    const totalValue = allOpen.reduce((sum, record) => sum + Number(record.po_value || 0), 0);
+    $('openCount').textContent = allOpen.length; $('openValue').textContent = t('value', { amount: money(totalValue) });
+    $('receivedCount').textContent = allOpen.filter(record => record.status === 'Received').length;
+    $('scheduledCount').textContent = allOpen.filter(record => record.status === 'Scheduled').length;
+    $('transitCount').textContent = allOpen.filter(record => record.status === 'In Transit').length;
+    $('partialCount').textContent = allOpen.filter(record => record.status === 'Partially Delivered').length;
     $('resultCount').textContent = t('openPoCount', { count: showing.length });
     $('poTableBody').innerHTML = showing.map(record => {
       const age = ageDays(record), attachment = record.po_attachment_link ? `<a class="po-link" href="${safe(record.po_attachment_link)}" target="_blank" rel="noopener">${safe(t('viewPoCopy'))}</a>` : '';
