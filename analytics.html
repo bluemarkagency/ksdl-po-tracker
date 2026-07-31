@@ -7,7 +7,7 @@
     <title>KSDL DMart Product Analytics</title>
     <link rel="stylesheet" href="styles.css?v=analytics-20260731" />
     <link rel="stylesheet" href="mobile-filters.css" />
-    <link rel="stylesheet" href="analytics.css?v=analytics-20260731" />
+    <link rel="stylesheet" href="analytics.css?v=direct-upload-matrix-20260731" />
   </head>
   <body>
     <section id="loginScreen" class="login-screen hidden">
@@ -76,7 +76,7 @@
       <section class="analytics-card">
         <div class="analytics-section-head"><div><span class="eyebrow">LOCATION PERFORMANCE</span><h2>DMart location comparison</h2><p>Use this to identify strong stores and locations needing article expansion.</p></div><span id="analyticsResultCount" class="result-chip">0 lines</span></div>
         <div class="table-wrap"><table class="analytics-table location-table"><thead><tr><th>Rank</th><th>Location</th><th>Sales value</th><th>Units</th><th>Invoices</th><th>Articles</th><th>Top article</th><th>Contribution</th></tr></thead><tbody id="locationBody"></tbody></table></div>
-        <div id="analyticsEmpty" class="empty-state hidden"><h3>No product movement found</h3><p>Run the historical product importer, or change the current filters.</p></div>
+        <div id="analyticsEmpty" class="empty-state hidden"><h3>No product movement found</h3><p>Upload the original Tally PDF while creating or editing a Dispatch trip, run the historical importer, or change the filters.</p></div>
       </section>
 
       <section class="analytics-card opportunity-board-card">
@@ -106,10 +106,26 @@
         </section>
       </section>
 
+      <section class="analytics-card location-master-card">
+        <div class="analytics-section-head"><div><span class="eyebrow">DATA QUALITY CONTROL</span><h2>Delivery Location Master</h2><p>Every approved spelling points to one official location. A new invoice name that is not recognised appears here for owner review before it remains as a duplicate.</p></div><span id="locationMasterCount" class="result-chip">Checking locations…</span></div>
+        <div id="locationMasterNotice" class="location-master-notice">Loading approved location names and invoice observations…</div>
+        <datalist id="officialLocationOptions"></datalist>
+        <div class="table-wrap"><table class="analytics-table location-review-table"><thead><tr><th>Unrecognised name</th><th>Seen in</th><th>Official location</th><th>Action</th></tr></thead><tbody id="locationReviewBody"></tbody></table></div>
+        <div id="locationReviewEmpty" class="location-review-empty hidden"><strong>All observed locations are standardised.</strong><span>Future unknown invoice names will automatically appear in this section.</span></div>
+        <details class="location-master-details"><summary>View approved locations and aliases</summary><div id="officialLocationGroups" class="official-location-grid"></div></details>
+      </section>
+
+      <section class="analytics-card movement-matrix-card">
+        <div class="analytics-section-head"><div><span class="eyebrow">LOCATION × ARTICLE</span><h2>Movement opportunity matrix</h2><p>Compare carton movement for every article at every location. Darker cells show stronger CBS movement; empty cells highlight possible assortment or replenishment opportunities.</p></div><span id="matrixCoverage" class="result-chip">0% coverage</span></div>
+        <div class="matrix-legend"><span><i class="matrix-swatch low"></i>Low CBS</span><span><i class="matrix-swatch high"></i>High CBS</span><span><i class="matrix-swatch empty"></i>No movement</span></div>
+        <div class="table-wrap"><table class="analytics-table movement-matrix"><thead id="movementMatrixHead"></thead><tbody id="movementMatrixBody"></tbody></table></div>
+        <div id="movementMatrixEmpty" class="empty-state hidden"><h3>No matrix data</h3><p>Select a period containing invoice product movement.</p></div>
+      </section>
+
       <p class="analytics-footnote">This report measures your invoiced dispatch movement to DMart. It does not represent DMart's counter-level consumer sell-through unless DMart provides that data separately.</p>
     </main>
 
     <div id="toast" class="toast" role="status"></div>
-    <script src="config.js"></script><script src="analytics.js?v=modasa-location-cbs-actions-20260731"></script>
+    <script src="config.js"></script><script src="analytics.js?v=location-master-control-20260731"></script>
   </body>
 </html>

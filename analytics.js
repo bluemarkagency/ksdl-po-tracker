@@ -11,6 +11,13 @@
   let session = null;
   let refreshPromise = null;
   let rows = [];
+  let locationAliases = [];
+  let poLocationRows = [];
+  let invoiceLocationRows = [];
+  let locationMasterReady = true;
+  let locationMasterError = '';
+  let locationReviewRows = [];
+  let trackerRole = '';
   let activeOpportunityView = 'location-actions';
 
   const $ = id => document.getElementById(id);
@@ -92,8 +99,8 @@
     show('loginScreen');
   }
   async function ensureAccess() {
-    const role = await api('/rest/v1/rpc/po_tracker_role', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
-    if (!['owner', 'accountant'].includes(role)) throw new Error('Only the owner or accountant can access product analytics.');
+    trackerRole = await api('/rest/v1/rpc/po_tracker_role', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+    if (!['owner', 'accountant'].includes(trackerRole)) throw new Error('Only the owner or accountant can access product analytics.');
   }
 
   function localIsoDate(date) {
@@ -115,6 +122,115 @@
   function locationName(value) {
     const location = String(value || 'Location pending').replace(/\s+/g, ' ').trim();
     return /^modasa(?:\b|[,\-])/i.test(location) ? 'Modasa' : location;
+  }
+  function locationKey(value) {
+    return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  }
+  function titleCaseLocation(value) {
+    return String(value || '').replace(/\s+/g, ' ').trim().split(' ').map(word => {
+      if (/^(rto|ft)$/i.test(word)) return word.toUpperCase();
+      return word ? word[0].toUpperCase() + word.slice(1).toLowerCase() : '';
+    }).join(' ');
+  }
+  function suggestedOfficialLocation(value, officialNames) {
+    const cleaned = String(value || '').replace(/\s+/g, ' ').trim();
+    const withoutSuffix = cleaned.replace(/\s+(?:Ahmedabad|Gujarat)$/i, '').trim();
+    const direct = officialNames.find(name => locationKey(name) === locationKey(withoutSuffix));
+    return direct || titleCaseLocation(withoutSuffix || cleaned);
+  }
+  function observedLocationGroups() {
+    const groups = new Map();
+    const ensure = value => {
+      const name = locationName(value);
+      if (!name || name === 'Location pending') return null;
+      const key = locationKey(name);
+      if (!groups.has(key)) groups.set(key, { key, name, poCount: 0, invoiceCount: 0, analyticsInvoices: new Set() });
+      return groups.get(key);
+    };
+    poLocationRows.forEach(row => {
+      const group = ensure(row.delivery_location);
+      if (group) group.poCount += 1;
+    });
+    invoiceLocationRows.forEach(row => {
+      const group = ensure(row.delivery_location);
+      if (group) group.invoiceCount += 1;
+    });
+    rows.forEach(row => {
+      const group = ensure(row.delivery_location);
+      if (group) group.analyticsInvoices.add(row.invoice_number_normalized || row.invoice_number || row.id);
+    });
+    return [...groups.values()].sort((a, b) => a.name.localeCompare(b.name));
+  }
+  function renderLocationMaster() {
+    const notice = $('locationMasterNotice');
+    const observed = observedLocationGroups();
+    const aliasKeys = new Set(locationAliases.map(alias => alias.alias_key || locationKey(alias.alias_name)));
+    const officialNames = unique(locationAliases.map(alias => alias.canonical_name)).sort((a, b) => a.localeCompare(b));
+    locationReviewRows = observed.filter(group => !aliasKeys.has(group.key));
+
+    $('officialLocationOptions').innerHTML = officialNames.map(name => `<option value="${safe(name)}"></option>`).join('');
+    $('locationMasterCount').textContent = locationMasterReady
+      ? `${officialNames.length} official · ${locationReviewRows.length} to review`
+      : 'Setup required';
+
+    if (!locationMasterReady) {
+      notice.className = 'location-master-notice attention';
+      notice.textContent = `Location Master is not available yet. Run the supplied Location Master SQL once in Supabase. ${locationMasterError}`.trim();
+    } else if (locationReviewRows.length) {
+      notice.className = 'location-master-notice attention';
+      notice.textContent = `${locationReviewRows.length} unrecognised location name(s) need review. Choose an existing official location or type a new official name.`;
+    } else {
+      notice.className = 'location-master-notice ready';
+      notice.textContent = 'All location names found in POs, invoices and product analytics are standardised.';
+    }
+
+    $('locationReviewBody').innerHTML = locationReviewRows.map((group, index) => {
+      const sources = [
+        group.poCount ? `${group.poCount} PO${group.poCount === 1 ? '' : 's'}` : '',
+        group.invoiceCount ? `${group.invoiceCount} invoice record${group.invoiceCount === 1 ? '' : 's'}` : '',
+        group.analyticsInvoices.size ? `${group.analyticsInvoices.size} analytics invoice${group.analyticsInvoices.size === 1 ? '' : 's'}` : ''
+      ].filter(Boolean).join(' · ') || 'Observed data';
+      const suggestion = suggestedOfficialLocation(group.name, officialNames);
+      const ownerAction = trackerRole === 'owner'
+        ? `<button class="location-standardize-btn" type="button" data-location-index="${index}">Standardise</button>`
+        : '<span class="muted">Owner only</span>';
+      return `<tr><td><strong>${safe(group.name)}</strong></td><td>${safe(sources)}</td><td><input class="location-official-input" id="officialLocation-${index}" list="officialLocationOptions" value="${safe(suggestion)}" aria-label="Official location for ${safe(group.name)}"></td><td>${ownerAction}</td></tr>`;
+    }).join('');
+    $('locationReviewEmpty').classList.toggle('hidden', !locationMasterReady || locationReviewRows.length > 0);
+
+    const officialGroups = new Map();
+    locationAliases.forEach(alias => {
+      const official = alias.canonical_name || alias.alias_name;
+      if (!officialGroups.has(official)) officialGroups.set(official, []);
+      officialGroups.get(official).push(alias.alias_name);
+    });
+    $('officialLocationGroups').innerHTML = [...officialGroups.entries()]
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([official, aliases]) => {
+        const alternatives = unique(aliases).filter(alias => locationKey(alias) !== locationKey(official));
+        return `<article class="official-location-card"><strong>${safe(official)}</strong><span>${alternatives.length ? `Also accepts: ${safe(alternatives.join(', '))}` : 'Official spelling only'}</span></article>`;
+      }).join('') || '<div class="location-review-empty"><strong>No approved locations yet.</strong><span>Run the supplied Location Master SQL to create the initial master.</span></div>';
+  }
+  async function standardizeObservedLocation(index, button) {
+    const group = locationReviewRows[index];
+    const input = $(`officialLocation-${index}`);
+    const official = String(input?.value || '').replace(/\s+/g, ' ').trim();
+    if (!group || !official) return toast('Choose or enter the official location name.');
+    button.disabled = true;
+    button.textContent = 'Saving…';
+    try {
+      await api('/rest/v1/rpc/add_delivery_location_alias', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ alias_input: group.name, canonical_input: official })
+      });
+      toast(`${group.name} is now standardised as ${official}.`);
+      await loadData();
+    } catch (error) {
+      button.disabled = false;
+      button.textContent = 'Standardise';
+      toast(error.message || 'Location could not be standardised.');
+    }
   }
   function filteredRows() {
     const search = $('analyticsSearch').value.trim().toLowerCase();
@@ -450,12 +566,57 @@
     setOpportunityView(activeOpportunityView);
   }
 
+  function renderMovementMatrix(items) {
+    const articleGroups = [...movementArticles(items).values()]
+      .sort((a, b) => b.cbs - a.cbs || a.name.localeCompare(b.name));
+    const locationGroups = [...movementLocations(items).values()]
+      .sort((a, b) => b.cbs - a.cbs || a.name.localeCompare(b.name));
+    const lookup = new Map();
+
+    items.forEach(row => {
+      const location = locationName(row.delivery_location);
+      const article = row.article_name || row.article_description || 'Unknown article';
+      const key = `${location}|||${article}`;
+      if (!lookup.has(key)) lookup.set(key, { cbs: 0, pieces: 0 });
+      const cell = lookup.get(key);
+      cell.cbs += Number(row.quantity_cbs || 0);
+      cell.pieces += Number(row.quantity || 0);
+    });
+
+    const possibleCells = locationGroups.length * articleGroups.length;
+    const activeCells = [...lookup.values()].filter(cell => cell.cbs > 0).length;
+    const coverage = possibleCells ? activeCells / possibleCells * 100 : 0;
+    $('matrixCoverage').textContent = `${coverage.toFixed(0)}% coverage`;
+    $('movementMatrixEmpty').classList.toggle('hidden', possibleCells > 0);
+
+    if (!possibleCells) {
+      $('movementMatrixHead').innerHTML = '';
+      $('movementMatrixBody').innerHTML = '';
+      return;
+    }
+
+    const maxCbs = Math.max(...[...lookup.values()].map(cell => cell.cbs), 1);
+    $('movementMatrixHead').innerHTML = `<tr><th>Location</th>${articleGroups.map(article => `<th>${safe(article.name)}</th>`).join('')}</tr>`;
+    $('movementMatrixBody').innerHTML = locationGroups.map(location => {
+      const cells = articleGroups.map(article => {
+        const cell = lookup.get(`${location.name}|||${article.name}`) || { cbs: 0, pieces: 0 };
+        if (cell.cbs <= 0 && cell.pieces <= 0) return '<td><span class="matrix-cell no-movement">No movement</span></td>';
+        if (cell.cbs <= 0) return `<td><span class="matrix-cell cbs-pending"><strong>CBS pending</strong><small>${number(cell.pieces)} PCS</small></span></td>`;
+        const strength = Math.min(cell.cbs / maxCbs, 1);
+        const heat = (.12 + strength * .78).toFixed(2);
+        const text = strength >= .48 ? '#ffffff' : '#124e45';
+        return `<td><span class="matrix-cell" style="--heat:${heat};--heat-text:${text}" title="${safe(location.name)} · ${safe(article.name)}"><strong>${CBS_NUMBER.format(cell.cbs)} CBS</strong><small>${number(cell.pieces)} PCS</small></span></td>`;
+      }).join('');
+      return `<tr><td><span class="location-name">${safe(location.name)}</span><span class="location-subline">${CBS_NUMBER.format(location.cbs)} CBS total</span></td>${cells}</tr>`;
+    }).join('');
+  }
+
   function recommendationCard(title, text, impact) {
     return `<article class="recommendation"><header><h3>${safe(title)}</h3><span class="impact ${safe(impact)}">${safe(impact)}</span></header><p>${safe(text)}</p></article>`;
   }
   function renderRecommendations(items, articles, locations) {
     if (!items.length) {
-      $('recommendationGrid').innerHTML = recommendationCard('Import product movement', 'Run the historical product importer to generate location and article recommendations.', 'medium');
+      $('recommendationGrid').innerHTML = recommendationCard('Add product movement', 'Upload the original Tally PDF while creating or editing a Dispatch trip, or run the historical importer for older invoices.', 'medium');
       return;
     }
     const cards = [];
@@ -573,6 +734,8 @@
     renderTrend(items);
     renderLocations(items, locations);
     renderOpportunityBoard();
+    renderLocationMaster();
+    renderMovementMatrix(items);
   }
   function toggleCustomDates() {
     $('analyticsCustomDates').classList.toggle('hidden', $('analyticsDateRange').value !== 'custom');
@@ -590,11 +753,10 @@
     URL.revokeObjectURL(link.href);
   }
 
-  async function fetchAllInvoiceItems() {
+  async function fetchAllRows(path, pageSize = 1000) {
     const all = [];
-    const pageSize = 1000;
     for (let offset = 0; ; offset += pageSize) {
-      const page = await api('/rest/v1/dmart_invoice_items?select=*&order=invoice_date.desc,line_number.asc', {
+      const page = await api(path, {
         headers: { Range: `${offset}-${offset + pageSize - 1}` }
       });
       const batch = Array.isArray(page) ? page : [];
@@ -603,9 +765,26 @@
     }
     return all;
   }
+  async function fetchLocationAliases() {
+    try {
+      const aliases = await fetchAllRows('/rest/v1/delivery_location_aliases?select=alias_key,alias_name,canonical_name&order=canonical_name.asc,alias_name.asc');
+      locationMasterReady = true;
+      locationMasterError = '';
+      return aliases;
+    } catch (error) {
+      locationMasterReady = false;
+      locationMasterError = error.message || '';
+      return [];
+    }
+  }
   async function loadData() {
     $('connectionStatus').textContent = 'Loading analytics…';
-    rows = await fetchAllInvoiceItems();
+    [rows, locationAliases, poLocationRows, invoiceLocationRows] = await Promise.all([
+      fetchAllRows('/rest/v1/dmart_invoice_items?select=*&order=invoice_date.desc,line_number.asc'),
+      fetchLocationAliases(),
+      fetchAllRows('/rest/v1/purchase_orders?is_archived=eq.false&select=delivery_location'),
+      fetchAllRows('/rest/v1/customer_invoices?select=delivery_location')
+    ]);
     populateFilters();
     render();
     $('connectionStatus').textContent = 'Cloud synced';
@@ -635,6 +814,10 @@
     ['analyticsDateFrom', 'analyticsDateTo'].forEach(id => { $(id).addEventListener('input', render); $(id).addEventListener('change', render); });
     $('clearAnalyticsFilters').addEventListener('click', clearFilters);
     $('exportAnalytics').addEventListener('click', exportCsv);
+    $('locationReviewBody').addEventListener('click', event => {
+      const button = event.target.closest('.location-standardize-btn');
+      if (button) standardizeObservedLocation(Number(button.dataset.locationIndex), button);
+    });
     document.querySelectorAll('.opportunity-tab').forEach(button => button.addEventListener('click', () => setOpportunityView(button.dataset.opportunityView)));
   }
   async function start() {
