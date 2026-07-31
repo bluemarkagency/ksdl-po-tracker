@@ -100,7 +100,8 @@
   }
   async function ensureAccess() {
     trackerRole = await api('/rest/v1/rpc/po_tracker_role', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
-    if (!['owner', 'accountant'].includes(trackerRole)) throw new Error('Only the owner or accountant can access product analytics.');
+    if (!['owner', 'accountant', 'brand_manager'].includes(trackerRole)) throw new Error('Only the owner, accountant or brand manager can access product analytics.');
+    document.querySelectorAll('.operational-nav').forEach(link => link.classList.toggle('hidden', trackerRole === 'brand_manager'));
   }
 
   function localIsoDate(date) {
@@ -181,7 +182,9 @@
       notice.textContent = `${locationReviewRows.length} unrecognised location name(s) need review. Choose an existing official location or type a new official name.`;
     } else {
       notice.className = 'location-master-notice ready';
-      notice.textContent = 'All location names found in POs, invoices and product analytics are standardised.';
+      notice.textContent = trackerRole === 'brand_manager'
+        ? 'All delivery locations in product analytics are standardised.'
+        : 'All location names found in POs, invoices and product analytics are standardised.';
     }
 
     $('locationReviewBody').innerHTML = locationReviewRows.map((group, index) => {
@@ -779,11 +782,12 @@
   }
   async function loadData() {
     $('connectionStatus').textContent = 'Loading analytics…';
+    const analyticsOnly = trackerRole === 'brand_manager';
     [rows, locationAliases, poLocationRows, invoiceLocationRows] = await Promise.all([
       fetchAllRows('/rest/v1/dmart_invoice_items?select=*&order=invoice_date.desc,line_number.asc'),
       fetchLocationAliases(),
-      fetchAllRows('/rest/v1/purchase_orders?is_archived=eq.false&select=delivery_location'),
-      fetchAllRows('/rest/v1/customer_invoices?select=delivery_location')
+      analyticsOnly ? Promise.resolve([]) : fetchAllRows('/rest/v1/purchase_orders?is_archived=eq.false&select=delivery_location'),
+      analyticsOnly ? Promise.resolve([]) : fetchAllRows('/rest/v1/customer_invoices?select=delivery_location')
     ]);
     populateFilters();
     render();

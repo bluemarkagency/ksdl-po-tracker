@@ -14,7 +14,7 @@
       <form id="loginForm" class="login-card">
         <span class="eyebrow">KSDL DISTRIBUTION</span>
         <h1>DMart Product Analytics</h1>
-        <p>Owner or accountant sign-in is required.</p>
+        <p>Owner, accountant or brand manager sign-in is required.</p>
         <label>Email<input id="emailInput" type="email" autocomplete="username" required autofocus /></label>
         <label>Password<input id="passwordInput" type="password" autocomplete="current-password" required /></label>
         <p id="loginError" class="error" aria-live="polite"></p>
@@ -24,13 +24,13 @@
 
     <main id="app" class="app-shell hidden">
       <header class="topbar analytics-topbar">
-        <div><span class="eyebrow">GUJARAT · OWNER INSIGHT</span><h1>DMart Product Movement</h1><p class="page-intro">Article performance across every invoiced DMart location.</p></div>
+        <div><span class="eyebrow">GUJARAT · BRAND &amp; SALES INSIGHT</span><h1>DMart Product Movement</h1><p class="page-intro">Article performance across every invoiced DMart location.</p></div>
         <div class="top-actions">
           <span id="connectionStatus" class="connection-status">Connecting…</span>
           <span id="signedInAs" class="connection-status"></span>
-          <a class="tracker-nav-link" href="index.html">PO Tracker</a>
-          <a class="tracker-nav-link" href="logistics.html">Dispatch</a>
-          <a class="tracker-nav-link" href="receivables.html">Receivables</a>
+          <a class="tracker-nav-link operational-nav" href="index.html">PO Tracker</a>
+          <a class="tracker-nav-link operational-nav" href="logistics.html">Dispatch</a>
+          <a class="tracker-nav-link operational-nav" href="receivables.html">Receivables</a>
           <button id="refreshBtn" type="button">Refresh</button>
           <button id="signOutBtn" class="text-btn" type="button">Sign out</button>
         </div>
@@ -126,6 +126,6 @@
     </main>
 
     <div id="toast" class="toast" role="status"></div>
-    <script src="config.js"></script><script src="analytics.js?v=location-master-control-20260731"></script>
+    <script src="config.js"></script><script src="analytics.js?v=brand-manager-access-20260731"></script>
   </body>
 </html>
