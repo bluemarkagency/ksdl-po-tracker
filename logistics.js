@@ -452,6 +452,28 @@
     }
     return pages.flat();
   }
+  function canonicalInvoiceArticle(value) {
+    let name = String(value || '').toUpperCase().replace(/\bMYS\.?\s*SANDAL\b/g, 'MYSORE SANDAL').replace(/^M\s*S\s+/g, 'MYSORE SANDAL ').replace(/\s+/g, ' ').trim();
+    if (!/^MYSORE SANDAL\b/.test(name)) name = `MYSORE SANDAL ${name}`;
+    return name;
+  }
+  function parseTallyInvoiceItems(lines) {
+    const items = [];
+    lines.forEach((line, index) => {
+      const match = String(line || '').match(/^(\d+)\s+(.+?)\s+(\d{8})\s+(.+)$/);
+      if (!match) return;
+      const tail = match[4];
+      const quantities = Array.from(tail.matchAll(/([\d,]+(?:\.\d+)?)\s+(PCS|NOS|EA|BOX|CTN|BTL)\b/gi));
+      const amounts = tail.match(/\d[\d,]*\.\d{2}/g) || [];
+      if (!quantities.length || !amounts.length) return;
+      const nextLine = String(lines[index + 1] || '').replace(/\s+/g, ' ').trim();
+      const description = /(?:MYSORE|MYS\.?\s*SANDAL|SANDAL)/i.test(nextLine) && !/^DISCOUNT\b/i.test(nextLine) ? nextLine : '';
+      const rawName = match[2].replace(/(?:₹|Rs\.?)\s*[\d,.]+\s*\/-?/gi, '').replace(/\s+/g, ' ').trim();
+      const quantity = quantities[0], rate = quantities.length > 1 ? quantities[1] : null;
+      items.push({ line_number: Number(match[1]), article_name: canonicalInvoiceArticle(description || rawName), article_description: description || rawName, hsn_sac: match[3], quantity: Number(quantity[1].replace(/,/g, '')), unit: quantity[2].toUpperCase(), rate: rate ? Number(rate[1].replace(/,/g, '')) : null, taxable_amount: Number(amounts[amounts.length - 1].replace(/,/g, '')) });
+    });
+    return items;
+  }
   function parseTallyInvoice(lines, expectedPoNumber = '') {
     const flat = lines.join(' ').replace(/\s+/g, ' ');
     const invoiceNumber = flat.match(/\b(BMAG\/\d{2}-\d{2}\/\d{3,8})\b/i)?.[1] || flat.match(/\b([A-Z]{2,10}[A-Z0-9 -]*\/\d{2}-\d{2}\/\d{3,8})\b/i)?.[1]?.replace(/\s+/g, ' ') || '';
@@ -486,7 +508,7 @@
           : null;
     const ewayBill = flat.match(/(?:e-?Way\s+Bill(?:\s+No\.?)?)[^0-9]{0,30}(\d{12})/i)?.[1] || '';
     const vehicleNumber = flat.match(/\b([A-Z]{2}\s?\d{1,2}\s?[A-Z]{1,3}\s?\d{4})\b/i)?.[1]?.replace(/\s+/g, '').toUpperCase() || '';
-    return { invoiceNumber, invoiceDate: tallyDateToIso(invoiceDate), poNumber, destination, invoiceValue, ewayBill, vehicleNumber };
+    return { invoiceNumber, invoiceDate: tallyDateToIso(invoiceDate), poNumber, destination, invoiceValue, ewayBill, vehicleNumber, items: parseTallyInvoiceItems(lines) };
   }
   function invoiceStatus(row, state, message) {
     row.dataset.invoiceState = state;
@@ -508,6 +530,8 @@
       if (parsed.invoiceDate) row.querySelector('.po-invoice-date').value = parsed.invoiceDate;
       if (parsed.invoiceValue != null) row.querySelector('.po-invoice-amount').value = parsed.invoiceValue.toFixed(2);
       if (parsed.vehicleNumber) $('tripVehicle').value = parsed.vehicleNumber;
+      row.dataset.invoiceItems = JSON.stringify(parsed.items || []);
+      row.dataset.invoiceDestination = parsed.destination || record.delivery_location || '';
       const expectedPo = normalizePoNumber(record.po_number), invoicePo = normalizePoNumber(parsed.poNumber);
       const details = [parsed.invoiceNumber, record.delivery_location || parsed.destination, parsed.invoiceValue != null ? money(parsed.invoiceValue) : '', parsed.ewayBill ? `e-Way ${parsed.ewayBill}` : ''].filter(Boolean).join(' · ');
       if (invoicePo && expectedPo && invoicePo !== expectedPo) {
@@ -703,7 +727,9 @@
       const details = chosen.map(record => {
         const row = $('tripPoDetails').querySelector(`tr[data-po-id="${record.id}"]`);
         const invoiceAmountText = row.querySelector('.po-invoice-amount').value;
-        return { record, invoiceState: row.dataset.invoiceState || 'idle', existingInvoicePath: row.dataset.existingInvoice || '', invoiceNumber: row.querySelector('.po-invoice-number').value.trim(), invoiceDate: row.querySelector('.po-invoice-date').value, invoiceAmount: invoiceAmountText === '' ? null : Number(invoiceAmountText), invoiceFile: row.querySelector('.po-invoice-file').files[0], allocatedCost: Number(row.querySelector('.po-allocated-cost').value || 0) };
+        let invoiceItems = [];
+        try { invoiceItems = JSON.parse(row.dataset.invoiceItems || '[]'); } catch (_) { invoiceItems = []; }
+        return { record, invoiceState: row.dataset.invoiceState || 'idle', existingInvoicePath: row.dataset.existingInvoice || '', invoiceNumber: row.querySelector('.po-invoice-number').value.trim(), invoiceDate: row.querySelector('.po-invoice-date').value, invoiceAmount: invoiceAmountText === '' ? null : Number(invoiceAmountText), invoiceFile: row.querySelector('.po-invoice-file').files[0], allocatedCost: Number(row.querySelector('.po-allocated-cost').value || 0), invoiceItems, invoiceDestination: row.dataset.invoiceDestination || record.delivery_location || '' };
       });
       for (const detail of details) if (detail.invoiceState === 'reading') throw new Error(t('waitForInvoice', { po: detail.record.po_number }));
       for (const detail of details) if (detail.invoiceState === 'mismatch') throw new Error(t('replaceWrongInvoice', { po: detail.record.po_number }));
@@ -722,6 +748,7 @@
         await api('/rest/v1/delivery_trip_pos', { method: 'POST', headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify(links) });
         selectedPoIds.clear();
       }
+      await Promise.all(details.filter(detail => detail.invoiceItems.length).map(detail => api('/rest/v1/rpc/import_dmart_invoice_items', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ payload: { invoice_number: detail.invoiceNumber, po_number: detail.record.po_number, invoice_date: detail.invoiceDate, delivery_location: detail.invoiceDestination || detail.record.delivery_location || null, items: detail.invoiceItems } }) }).catch(error => { console.warn(`Product movement import skipped for ${detail.invoiceNumber}: ${error.message}`); return null; })));
       closeTripDialog(); await loadData(); toast(editTrip ? t('tripChangesSaved') : t('tripCreated'));
     } catch (err) { error.textContent = err.message || t('couldNotSaveTrip'); }
     finally { button.disabled = false; button.textContent = editTrip ? t('saveTripChanges') : t('createTripCount', { count: chosen.length }); }
@@ -830,6 +857,7 @@
     $('signedInAs').textContent = session?.user?.email || '';
     const role = await api('/rest/v1/rpc/po_tracker_role', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).catch(() => '');
     $('receivablesNav').classList.toggle('hidden', !['owner', 'accountant'].includes(role));
+    $('analyticsNav').classList.toggle('hidden', !['owner', 'accountant'].includes(role));
     hide('loginScreen'); show('app'); $('tripDate').value = today(); await loadData(); clearInterval(refreshTimer); refreshTimer = setInterval(loadData, 60000);
   }
 
