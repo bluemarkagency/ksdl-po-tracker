@@ -79,15 +79,37 @@
         <div id="analyticsEmpty" class="empty-state hidden"><h3>No product movement found</h3><p>Run the historical product importer, or change the current filters.</p></div>
       </section>
 
-      <section class="analytics-card">
-        <div class="analytics-section-head"><div><span class="eyebrow">LOCATION × ARTICLE</span><h2>Movement opportunity matrix</h2><p>Units dispatched for the leading articles at each DMart location.</p></div></div>
-        <div class="table-wrap"><table id="movementMatrix" class="analytics-table movement-matrix"></table></div>
+      <section class="analytics-card opportunity-board-card">
+        <div class="analytics-section-head"><div><span class="eyebrow">CBS SALES OPPORTUNITIES</span><h2>Location and article action board</h2><p>Cartons are taken only from each invoice's Alt. Quantity (CBS). Pieces remain available as supporting detail.</p></div><span id="opportunityPeriod" class="result-chip">Selected period</span></div>
+        <div id="cbsDataNotice" class="cbs-data-notice hidden">CBS history is waiting to be imported. Run the updated historical product importer after applying the CBS database update.</div>
+        <div class="opportunity-tabs" role="tablist" aria-label="Sales opportunity views">
+          <button class="opportunity-tab active" type="button" role="tab" aria-selected="true" aria-controls="locationActionsPanel" data-opportunity-view="location-actions">Location actions <span id="locationActionCount">0</span></button>
+          <button class="opportunity-tab" type="button" role="tab" aria-selected="false" aria-controls="productTrendsPanel" data-opportunity-view="product-trends">Product trends <span id="productTrendCount">0</span></button>
+          <button class="opportunity-tab" type="button" role="tab" aria-selected="false" aria-controls="missingArticlesPanel" data-opportunity-view="missing-articles">Missing articles <span id="missingArticleCount">0</span></button>
+          <button class="opportunity-tab" type="button" role="tab" aria-selected="false" aria-controls="noOrderPanel" data-opportunity-view="no-order">No-order alerts <span id="noOrderCount">0</span></button>
+        </div>
+        <section id="locationActionsPanel" class="opportunity-panel" role="tabpanel">
+          <div class="panel-intro"><strong>Where should we focus?</strong><span>CBS movement, previous-period comparison and a recommended owner action for every active location.</span></div>
+          <div class="table-wrap"><table class="analytics-table action-table"><thead><tr><th>Location</th><th>Current CBS</th><th>Previous CBS</th><th>Change</th><th>Pieces</th><th>Articles</th><th>Last invoice</th><th>Signal and action</th></tr></thead><tbody id="locationActionBody"></tbody></table></div>
+        </section>
+        <section id="productTrendsPanel" class="opportunity-panel hidden" role="tabpanel">
+          <div class="panel-intro"><strong>Which articles are growing?</strong><span>Carton movement by article, with pieces, location coverage and period-on-period direction.</span></div>
+          <div class="table-wrap"><table class="analytics-table action-table"><thead><tr><th>Article</th><th>Current CBS</th><th>Previous CBS</th><th>Change</th><th>Pieces</th><th>Locations</th><th>Signal</th></tr></thead><tbody id="productTrendBody"></tbody></table></div>
+        </section>
+        <section id="missingArticlesPanel" class="opportunity-panel hidden" role="tabpanel">
+          <div class="panel-intro"><strong>Where can we expand the assortment?</strong><span>Popular articles with no invoice movement at a location during the selected period.</span></div>
+          <div class="table-wrap"><table class="analytics-table action-table"><thead><tr><th>Location</th><th>Current CBS</th><th>Active articles</th><th>Popular articles not invoiced</th><th>Suggested action</th></tr></thead><tbody id="missingArticleBody"></tbody></table></div>
+        </section>
+        <section id="noOrderPanel" class="opportunity-panel hidden" role="tabpanel">
+          <div class="panel-intro"><strong>Which locations need follow-up?</strong><span>Locations ranked by the number of days since their most recent invoice.</span></div>
+          <div class="table-wrap"><table class="analytics-table action-table"><thead><tr><th>Location</th><th>Last invoice</th><th>Days since</th><th>Last invoice movement</th><th>Status</th><th>Suggested action</th></tr></thead><tbody id="noOrderBody"></tbody></table></div>
+        </section>
       </section>
 
       <p class="analytics-footnote">This report measures your invoiced dispatch movement to DMart. It does not represent DMart's counter-level consumer sell-through unless DMart provides that data separately.</p>
     </main>
 
     <div id="toast" class="toast" role="status"></div>
-    <script src="config.js"></script><script src="analytics.js?v=analytics-20260731"></script>
+    <script src="config.js"></script><script src="analytics.js?v=modasa-location-cbs-actions-20260731"></script>
   </body>
 </html>

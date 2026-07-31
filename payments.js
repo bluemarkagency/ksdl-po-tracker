@@ -14,6 +14,10 @@
   const safe = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
   const iso = value => value ? new Date(`${value}T00:00:00`).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
   const today = () => new Date().toISOString().slice(0, 10);
+  const normalizeDeliveryLocation = value => {
+    const location = String(value || '').replace(/\s+/g, ' ').trim();
+    return /^modasa(?:\b|[,\-])/i.test(location) ? 'Modasa' : location;
+  };
   const profileOf = transporter => Array.isArray(transporter?.transporter_payment_profiles) ? transporter.transporter_payment_profiles[0] : transporter?.transporter_payment_profiles;
   function show(id) { $(id).classList.remove('hidden'); } function hide(id) { $(id).classList.add('hidden'); }
   function headers(extra = {}) { return { apikey: PUBLIC_KEY, Authorization: `Bearer ${session?.access_token || PUBLIC_KEY}`, ...extra }; }
@@ -72,7 +76,24 @@
       api('/rest/v1/transport_payment_items?select=delivery_trip_po_id'),
       api('/rest/v1/transport_payment_settlements?select=*,transporters(id,name),transport_payment_items(id,amount,purchase_orders(po_number,delivery_location),delivery_trips(trip_date,vehicle_number))&order=created_at.desc')
     ]);
-    transporters = Array.isArray(master) ? master : []; payables = Array.isArray(delivered) ? delivered : []; settlements = Array.isArray(register) ? register : [];
+    transporters = Array.isArray(master) ? master : [];
+    payables = (Array.isArray(delivered) ? delivered : []).map(item => ({
+      ...item,
+      purchase_orders: item.purchase_orders ? {
+        ...item.purchase_orders,
+        delivery_location: normalizeDeliveryLocation(item.purchase_orders.delivery_location)
+      } : item.purchase_orders
+    }));
+    settlements = (Array.isArray(register) ? register : []).map(settlement => ({
+      ...settlement,
+      transport_payment_items: (settlement.transport_payment_items || []).map(item => ({
+        ...item,
+        purchase_orders: item.purchase_orders ? {
+          ...item.purchase_orders,
+          delivery_location: normalizeDeliveryLocation(item.purchase_orders.delivery_location)
+        } : item.purchase_orders
+      }))
+    }));
     settledLinkIds = new Set((Array.isArray(items) ? items : []).map(item => item.delivery_trip_po_id)); selectedPayableIds = new Set([...selectedPayableIds].filter(id => !settledLinkIds.has(id)));
     await Promise.all(transporters.map(async transporter => { const profile = profileOf(transporter); if (profile?.qr_code_url) profile.qrLink = await signedUrl(profile.qr_code_url).catch(() => ''); }));
     await Promise.all(settlements.map(async settlement => { if (settlement.payment_proof_url) settlement.proofLink = await signedUrl(settlement.payment_proof_url).catch(() => ''); }));

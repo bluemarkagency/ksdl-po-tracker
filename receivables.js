@@ -14,6 +14,10 @@
   const money = value => INR.format(Number(value || 0));
   const todayIso = () => new Date().toISOString().slice(0, 10);
   const dateLabel = value => value ? new Date(`${String(value).slice(0, 10)}T00:00:00`).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+  const normalizeDeliveryLocation = value => {
+    const location = String(value || '').replace(/\s+/g, ' ').trim();
+    return /^modasa(?:\b|[,\-])/i.test(location) ? 'Modasa' : location;
+  };
   const statusClass = value => String(value || '').toLowerCase().replaceAll(' ', '-');
   const show = id => $(id).classList.remove('hidden');
   const hide = id => $(id).classList.add('hidden');
@@ -228,7 +232,15 @@
       api('/rest/v1/customer_invoices?select=*,purchase_orders(id,po_number,delivery_location,delivery_date,delivery_completed_date,status)&order=invoice_date.desc.nullslast,created_at.desc'),
       api('/rest/v1/customer_payment_advices?select=id,status,payment_date,total_net_amount&order=payment_date.desc.nullslast,imported_at.desc')
     ]);
-    invoices = Array.isArray(invoiceRows) ? invoiceRows : []; advices = Array.isArray(adviceRows) ? adviceRows : [];
+    invoices = (Array.isArray(invoiceRows) ? invoiceRows : []).map(invoice => ({
+      ...invoice,
+      delivery_location: normalizeDeliveryLocation(invoice.delivery_location),
+      purchase_orders: invoice.purchase_orders ? {
+        ...invoice.purchase_orders,
+        delivery_location: normalizeDeliveryLocation(invoice.purchase_orders.delivery_location)
+      } : invoice.purchase_orders
+    }));
+    advices = Array.isArray(adviceRows) ? adviceRows : [];
     $('connectionStatus').textContent = 'Cloud synced'; render();
     if (runBackgroundSync && await syncMissingInvoiceData()) {
       await loadData(false);

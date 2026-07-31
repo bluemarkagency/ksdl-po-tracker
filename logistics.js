@@ -205,6 +205,10 @@
   const isoDate = date => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
   const today = () => isoDate(new Date());
   const ageDays = record => record.po_received_date ? Math.max(0, Math.floor((new Date() - new Date(`${record.po_received_date}T00:00:00`)) / 86400000)) : null;
+  const normalizeDeliveryLocation = value => {
+    const location = String(value || '').replace(/\s+/g, ' ').trim();
+    return /^modasa(?:\b|[,\-])/i.test(location) ? 'Modasa' : location;
+  };
 
   function show(id) { $(id).classList.remove('hidden'); }
   function hide(id) { $(id).classList.add('hidden'); }
@@ -339,7 +343,7 @@
         po_date: $('manualPoDate').value,
         po_received_date: $('manualReceivedDate').value,
         delivery_date: $('manualDeliveryDate').value || null,
-        delivery_location: $('manualLocation').value.trim(),
+        delivery_location: normalizeDeliveryLocation($('manualLocation').value),
         po_value: Number($('manualPoValue').value || 0),
         assigned_to: $('manualAssignedTo').value.trim() || null,
         remarks: $('manualRemarks').value.trim() || null,
@@ -464,13 +468,14 @@
       if (!match) return;
       const tail = match[4];
       const quantities = Array.from(tail.matchAll(/([\d,]+(?:\.\d+)?)\s+(PCS|NOS|EA|BOX|CTN|BTL)\b/gi));
+      const cbs = tail.match(/(?<![\d.,])([\d,]+(?:\.\d+)?)\s*CBS\b/i);
       const amounts = tail.match(/\d[\d,]*\.\d{2}/g) || [];
-      if (!quantities.length || !amounts.length) return;
+      if (!quantities.length || !amounts.length || !cbs) return;
       const nextLine = String(lines[index + 1] || '').replace(/\s+/g, ' ').trim();
       const description = /(?:MYSORE|MYS\.?\s*SANDAL|SANDAL)/i.test(nextLine) && !/^DISCOUNT\b/i.test(nextLine) ? nextLine : '';
       const rawName = match[2].replace(/(?:₹|Rs\.?)\s*[\d,.]+\s*\/-?/gi, '').replace(/\s+/g, ' ').trim();
       const quantity = quantities[0], rate = quantities.length > 1 ? quantities[1] : null;
-      items.push({ line_number: Number(match[1]), article_name: canonicalInvoiceArticle(description || rawName), article_description: description || rawName, hsn_sac: match[3], quantity: Number(quantity[1].replace(/,/g, '')), unit: quantity[2].toUpperCase(), rate: rate ? Number(rate[1].replace(/,/g, '')) : null, taxable_amount: Number(amounts[amounts.length - 1].replace(/,/g, '')) });
+      items.push({ line_number: Number(match[1]), article_name: canonicalInvoiceArticle(description || rawName), article_description: description || rawName, hsn_sac: match[3], quantity: Number(quantity[1].replace(/,/g, '')), quantity_cbs: Number(cbs[1].replace(/,/g, '')), unit: quantity[2].toUpperCase(), rate: rate ? Number(rate[1].replace(/,/g, '')) : null, taxable_amount: Number(amounts[amounts.length - 1].replace(/,/g, '')) });
     });
     return items;
   }
@@ -554,9 +559,22 @@
     if (poResult.status === 'rejected') {
       records = []; trips = []; render(); setConnectionStatus('couldNotLoad'); toast(poResult.reason?.message || t('couldNotLoad')); return;
     }
-    records = (Array.isArray(poResult.value) ? poResult.value : []).filter(record => OPEN_STATUSES.includes(record.status));
+    records = (Array.isArray(poResult.value) ? poResult.value : [])
+      .map(record => ({ ...record, delivery_location: normalizeDeliveryLocation(record.delivery_location) }))
+      .filter(record => OPEN_STATUSES.includes(record.status));
     tripStorageReady = tripResult.status === 'fulfilled';
-    trips = tripStorageReady && Array.isArray(tripResult.value) ? tripResult.value.filter(trip => !CLOSED_TRIP_STATUSES.includes(trip.status) || (trip.delivery_trip_pos || []).some(link => link.delivery_status === 'Needs Correction')) : [];
+    trips = tripStorageReady && Array.isArray(tripResult.value) ? tripResult.value
+      .map(trip => ({
+        ...trip,
+        delivery_trip_pos: (trip.delivery_trip_pos || []).map(link => ({
+          ...link,
+          purchase_orders: link.purchase_orders ? {
+            ...link.purchase_orders,
+            delivery_location: normalizeDeliveryLocation(link.purchase_orders.delivery_location)
+          } : link.purchase_orders
+        }))
+      }))
+      .filter(trip => !CLOSED_TRIP_STATUSES.includes(trip.status) || (trip.delivery_trip_pos || []).some(link => link.delivery_status === 'Needs Correction')) : [];
     transporters = transporterResult.status === 'fulfilled' && Array.isArray(transporterResult.value) ? transporterResult.value : [];
     renderTransporterOptions();
     await Promise.all(records.map(async record => {
@@ -729,7 +747,7 @@
         const invoiceAmountText = row.querySelector('.po-invoice-amount').value;
         let invoiceItems = [];
         try { invoiceItems = JSON.parse(row.dataset.invoiceItems || '[]'); } catch (_) { invoiceItems = []; }
-        return { record, invoiceState: row.dataset.invoiceState || 'idle', existingInvoicePath: row.dataset.existingInvoice || '', invoiceNumber: row.querySelector('.po-invoice-number').value.trim(), invoiceDate: row.querySelector('.po-invoice-date').value, invoiceAmount: invoiceAmountText === '' ? null : Number(invoiceAmountText), invoiceFile: row.querySelector('.po-invoice-file').files[0], allocatedCost: Number(row.querySelector('.po-allocated-cost').value || 0), invoiceItems, invoiceDestination: row.dataset.invoiceDestination || record.delivery_location || '' };
+        return { record, invoiceState: row.dataset.invoiceState || 'idle', existingInvoicePath: row.dataset.existingInvoice || '', invoiceNumber: row.querySelector('.po-invoice-number').value.trim(), invoiceDate: row.querySelector('.po-invoice-date').value, invoiceAmount: invoiceAmountText === '' ? null : Number(invoiceAmountText), invoiceFile: row.querySelector('.po-invoice-file').files[0], allocatedCost: Number(row.querySelector('.po-allocated-cost').value || 0), invoiceItems, invoiceDestination: normalizeDeliveryLocation(row.dataset.invoiceDestination || record.delivery_location || '') };
       });
       for (const detail of details) if (detail.invoiceState === 'reading') throw new Error(t('waitForInvoice', { po: detail.record.po_number }));
       for (const detail of details) if (detail.invoiceState === 'mismatch') throw new Error(t('replaceWrongInvoice', { po: detail.record.po_number }));
@@ -748,7 +766,7 @@
         await api('/rest/v1/delivery_trip_pos', { method: 'POST', headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify(links) });
         selectedPoIds.clear();
       }
-      await Promise.all(details.filter(detail => detail.invoiceItems.length).map(detail => api('/rest/v1/rpc/import_dmart_invoice_items', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ payload: { invoice_number: detail.invoiceNumber, po_number: detail.record.po_number, invoice_date: detail.invoiceDate, delivery_location: detail.invoiceDestination || detail.record.delivery_location || null, items: detail.invoiceItems } }) }).catch(error => { console.warn(`Product movement import skipped for ${detail.invoiceNumber}: ${error.message}`); return null; })));
+      await Promise.all(details.filter(detail => detail.invoiceItems.length).map(detail => api('/rest/v1/rpc/import_dmart_invoice_items', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ payload: { invoice_number: detail.invoiceNumber, po_number: detail.record.po_number, invoice_date: detail.invoiceDate, delivery_location: normalizeDeliveryLocation(detail.invoiceDestination || detail.record.delivery_location) || null, items: detail.invoiceItems } }) }).catch(error => { console.warn(`Product movement import skipped for ${detail.invoiceNumber}: ${error.message}`); return null; })));
       closeTripDialog(); await loadData(); toast(editTrip ? t('tripChangesSaved') : t('tripCreated'));
     } catch (err) { error.textContent = err.message || t('couldNotSaveTrip'); }
     finally { button.disabled = false; button.textContent = editTrip ? t('saveTripChanges') : t('createTripCount', { count: chosen.length }); }

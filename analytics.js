@@ -7,9 +7,11 @@
   const SESSION_KEY = 'ksdl-po-tracker-session';
   const INR = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
   const NUMBER = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 });
+  const CBS_NUMBER = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 });
   let session = null;
   let refreshPromise = null;
   let rows = [];
+  let activeOpportunityView = 'location-actions';
 
   const $ = id => document.getElementById(id);
   const safe = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
@@ -111,7 +113,8 @@
     return { from: '', to: '' };
   }
   function locationName(value) {
-    return String(value || 'Location pending').replace(/\s+/g, ' ').trim();
+    const location = String(value || 'Location pending').replace(/\s+/g, ' ').trim();
+    return /^modasa(?:\b|[,\-])/i.test(location) ? 'Modasa' : location;
   }
   function filteredRows() {
     const search = $('analyticsSearch').value.trim().toLowerCase();
@@ -126,6 +129,18 @@
         && (!article || row.article_name === article)
         && (!from || (date && date >= from))
         && (!to || (date && date <= to))
+        && (!search || searchable.includes(search));
+    });
+  }
+  function nonDateFilteredRows() {
+    const search = $('analyticsSearch').value.trim().toLowerCase();
+    const location = $('analyticsLocation').value;
+    const article = $('analyticsArticle').value;
+    return rows.filter(row => {
+      const rowLocation = locationName(row.delivery_location);
+      const searchable = [row.article_name, row.article_description, rowLocation, row.invoice_number, row.po_number].join(' ').toLowerCase();
+      return (!location || rowLocation === location)
+        && (!article || row.article_name === article)
         && (!search || searchable.includes(search));
     });
   }
@@ -218,29 +233,221 @@
     }).join('');
     $('analyticsEmpty').classList.toggle('hidden', locations.length > 0);
   }
-  function renderMatrix(items, articles, locations) {
-    const topArticles = articles.slice(0, 8);
-    const topLocations = locations.slice(0, 12);
-    const values = new Map();
-    let maxUnits = 0;
-    items.forEach(row => {
-      const key = `${locationName(row.delivery_location)}|||${row.article_name}`;
-      const units = (values.get(key) || 0) + Number(row.quantity || 0);
-      values.set(key, units);
-      maxUnits = Math.max(maxUnits, units);
-    });
-    if (!topArticles.length || !topLocations.length) {
-      $('movementMatrix').innerHTML = '<tbody><tr><td>No movement data available.</td></tr></tbody>';
-      return;
+  function parseLocalDate(value) {
+    const parts = String(value || '').slice(0, 10).split('-').map(Number);
+    return parts.length === 3 && parts.every(Number.isFinite)
+      ? new Date(parts[0], parts[1] - 1, parts[2])
+      : null;
+  }
+  function addDays(date, days) {
+    const result = new Date(date);
+    result.setDate(result.getDate() + days);
+    return result;
+  }
+  function formatShortDate(value) {
+    const date = value instanceof Date ? value : parseLocalDate(value);
+    return date ? date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: '2-digit' }) : '—';
+  }
+  function actionPeriods(baseItems) {
+    const selected = selectedDateBounds();
+    const range = $('analyticsDateRange').value;
+    const dates = baseItems.map(row => String(row.invoice_date || '').slice(0, 10)).filter(Boolean).sort();
+    let from = selected.from;
+    let to = selected.to;
+
+    if (!from && !to && dates.length) {
+      const latest = parseLocalDate(dates[dates.length - 1]);
+      from = localIsoDate(new Date(latest.getFullYear(), latest.getMonth(), 1));
+      to = localIsoDate(new Date(latest.getFullYear(), latest.getMonth() + 1, 0));
+    } else {
+      if (!from && dates.length) from = dates[0];
+      if (!to && dates.length) to = dates[dates.length - 1];
     }
-    const head = `<thead><tr><th>Location</th>${topArticles.map(article => `<th>${safe(article.name)}</th>`).join('')}</tr></thead>`;
-    const body = `<tbody>${topLocations.map(location => `<tr><td><strong>${safe(location.name)}</strong></td>${topArticles.map(article => {
-      const units = values.get(`${location.name}|||${article.name}`) || 0;
-      const intensity = units ? Math.min(.12 + units / Math.max(maxUnits, 1) * .76, .88) : .04;
-      const text = intensity > .5 ? '#fff' : '#23423c';
-      return `<td><span class="matrix-cell" style="--heat:${intensity.toFixed(2)};--heat-text:${text}">${units ? number(units) : '—'}</span></td>`;
-    }).join('')}</tr>`).join('')}</tbody>`;
-    $('movementMatrix').innerHTML = head + body;
+
+    const start = parseLocalDate(from);
+    const end = parseLocalDate(to);
+    if (!start || !end) return { current: [], previous: [], base: baseItems, label: 'Selected period' };
+
+    let previousStart;
+    let previousEnd;
+    if (range === 'current') {
+      previousStart = new Date(start.getFullYear(), start.getMonth() - 1, 1);
+      const previousMonthEnd = new Date(start.getFullYear(), start.getMonth(), 0).getDate();
+      previousEnd = new Date(start.getFullYear(), start.getMonth() - 1, Math.min(end.getDate(), previousMonthEnd));
+    } else if (range === 'last' || (!selected.from && !selected.to)) {
+      previousStart = new Date(start.getFullYear(), start.getMonth() - 1, 1);
+      previousEnd = new Date(start.getFullYear(), start.getMonth(), 0);
+    } else {
+      const duration = Math.max(1, Math.round((end - start) / 86400000) + 1);
+      previousEnd = addDays(start, -1);
+      previousStart = addDays(previousEnd, -(duration - 1));
+    }
+
+    const current = baseItems.filter(row => {
+      const date = String(row.invoice_date || '').slice(0, 10);
+      return date >= localIsoDate(start) && date <= localIsoDate(end);
+    });
+    const previous = baseItems.filter(row => {
+      const date = String(row.invoice_date || '').slice(0, 10);
+      return date >= localIsoDate(previousStart) && date <= localIsoDate(previousEnd);
+    });
+    return {
+      current,
+      previous,
+      base: baseItems,
+      label: `${formatShortDate(start)}–${formatShortDate(end)} vs ${formatShortDate(previousStart)}–${formatShortDate(previousEnd)}`
+    };
+  }
+  function movementLocations(items) {
+    const groups = new Map();
+    items.forEach(row => {
+      const name = locationName(row.delivery_location);
+      if (!groups.has(name)) groups.set(name, { name, cbs: 0, pieces: 0, articles: new Set(), lastDate: '' });
+      const group = groups.get(name);
+      group.cbs += Number(row.quantity_cbs || 0);
+      group.pieces += Number(row.quantity || 0);
+      group.articles.add(row.article_name || row.article_description || 'Unknown article');
+      const date = String(row.invoice_date || '').slice(0, 10);
+      if (date > group.lastDate) group.lastDate = date;
+    });
+    return groups;
+  }
+  function movementArticles(items) {
+    const groups = new Map();
+    items.forEach(row => {
+      const name = row.article_name || row.article_description || 'Unknown article';
+      if (!groups.has(name)) groups.set(name, { name, cbs: 0, pieces: 0, locations: new Set() });
+      const group = groups.get(name);
+      group.cbs += Number(row.quantity_cbs || 0);
+      group.pieces += Number(row.quantity || 0);
+      group.locations.add(locationName(row.delivery_location));
+    });
+    return groups;
+  }
+  function changeDetails(current, previous) {
+    if (previous <= 0 && current > 0) return { text: 'New', className: 'new' };
+    if (previous <= 0) return { text: '—', className: 'neutral' };
+    const value = (current - previous) / previous * 100;
+    return { text: `${value >= 0 ? '+' : ''}${value.toFixed(1)}%`, className: value >= 10 ? 'positive' : value <= -10 ? 'negative' : 'neutral' };
+  }
+  function signalChip(label, className) {
+    return `<span class="action-signal ${safe(className)}">${safe(label)}</span>`;
+  }
+  function emptyActionRow(columns, title, message) {
+    return `<tr><td colspan="${columns}"><div class="action-empty"><strong>${safe(title)}</strong><span>${safe(message)}</span></div></td></tr>`;
+  }
+  function renderLocationActions(periods) {
+    const current = movementLocations(periods.current);
+    const previous = movementLocations(periods.previous);
+    const names = unique([...current.keys(), ...previous.keys()]);
+    const averageCbs = names.length ? sum(names, name => current.get(name)?.cbs || 0) / names.length : 0;
+    const results = names.map(name => {
+      const now = current.get(name) || { name, cbs: 0, pieces: 0, articles: new Set(), lastDate: '' };
+      const before = previous.get(name) || { cbs: 0 };
+      let signal = 'Investigate';
+      let signalClass = 'investigate';
+      let action = 'Review PO frequency and article availability.';
+      if (now.cbs <= 0 && before.cbs > 0) {
+        signal = 'Recover'; signalClass = 'recover'; action = 'No CBS this period. Follow up on the next PO and appointment.';
+      } else if (now.articles.size <= 1 && now.cbs > 0) {
+        signal = 'Cross-sell'; signalClass = 'cross-sell'; action = 'Good movement but a narrow assortment. Propose another popular article.';
+      } else if (before.cbs <= 0 && now.cbs > 0) {
+        signal = 'New'; signalClass = 'new'; action = 'New movement. Watch the next order and maintain availability.';
+      } else if (now.cbs >= before.cbs * 1.15 && now.cbs > 0) {
+        signal = 'Grow'; signalClass = 'grow'; action = 'Movement is rising. Protect stock and explore a larger next order.';
+      } else if (before.cbs > 0 && now.cbs < before.cbs * .75) {
+        signal = 'Recover'; signalClass = 'recover'; action = 'CBS has declined. Check missing articles, PO frequency and appointments.';
+      } else if (now.cbs >= averageCbs && now.cbs > 0) {
+        signal = 'Protect'; signalClass = 'protect'; action = 'Strong location. Maintain stock and avoid dispatch delays.';
+      }
+      return { name, now, before, change: changeDetails(now.cbs, before.cbs), signal, signalClass, action };
+    }).sort((a, b) => b.now.cbs - a.now.cbs || a.name.localeCompare(b.name));
+
+    $('locationActionBody').innerHTML = results.map(result => `<tr><td><strong>${safe(result.name)}</strong></td><td><strong>${CBS_NUMBER.format(result.now.cbs)} CBS</strong></td><td>${CBS_NUMBER.format(result.before.cbs)} CBS</td><td><span class="change-pill ${result.change.className}">${result.change.text}</span></td><td>${number(result.now.pieces)} PCS</td><td>${result.now.articles.size}</td><td>${formatShortDate(result.now.lastDate)}</td><td><div class="signal-action">${signalChip(result.signal, result.signalClass)}<span>${safe(result.action)}</span></div></td></tr>`).join('') || emptyActionRow(8, 'No location movement', 'Change the filters or complete the CBS historical import.');
+    $('locationActionCount').textContent = results.length;
+  }
+  function renderProductTrends(periods) {
+    const current = movementArticles(periods.current);
+    const previous = movementArticles(periods.previous);
+    const names = unique([...current.keys(), ...previous.keys()]);
+    const results = names.map(name => {
+      const now = current.get(name) || { name, cbs: 0, pieces: 0, locations: new Set() };
+      const before = previous.get(name) || { cbs: 0 };
+      const change = changeDetails(now.cbs, before.cbs);
+      let signal = 'Stable', signalClass = 'protect';
+      if (before.cbs <= 0 && now.cbs > 0) { signal = 'New'; signalClass = 'new'; }
+      else if (before.cbs > 0 && now.cbs >= before.cbs * 1.1) { signal = 'Growing'; signalClass = 'grow'; }
+      else if (before.cbs > 0 && now.cbs <= before.cbs * .9) { signal = 'Declining'; signalClass = 'recover'; }
+      return { name, now, before, change, signal, signalClass };
+    }).sort((a, b) => b.now.cbs - a.now.cbs || a.name.localeCompare(b.name));
+
+    $('productTrendBody').innerHTML = results.map(result => `<tr><td><strong>${safe(result.name)}</strong></td><td><strong>${CBS_NUMBER.format(result.now.cbs)} CBS</strong></td><td>${CBS_NUMBER.format(result.before.cbs)} CBS</td><td><span class="change-pill ${result.change.className}">${result.change.text}</span></td><td>${number(result.now.pieces)} PCS</td><td>${result.now.locations.size}</td><td>${signalChip(result.signal, result.signalClass)}</td></tr>`).join('') || emptyActionRow(7, 'No product trend', 'Select a period containing CBS movement.');
+    $('productTrendCount').textContent = results.length;
+  }
+  function renderMissingArticles(periods) {
+    const articles = [...movementArticles(periods.current).values()].sort((a, b) => b.cbs - a.cbs).slice(0, 5);
+    const locations = [...movementLocations(periods.current).values()];
+    const results = locations.map(location => {
+      const missing = articles.filter(article => !location.articles.has(article.name)).map(article => article.name);
+      return { location, missing };
+    }).filter(result => result.missing.length).sort((a, b) => b.location.cbs - a.location.cbs);
+
+    $('missingArticleBody').innerHTML = results.map(result => `<tr><td><strong>${safe(result.location.name)}</strong></td><td>${CBS_NUMBER.format(result.location.cbs)} CBS</td><td>${result.location.articles.size}</td><td><div class="article-tags">${result.missing.slice(0, 3).map(name => `<span>${safe(name)}</span>`).join('')}</div></td><td>Check listing or replenishment and discuss adding ${safe(result.missing[0])} to the next PO.</td></tr>`).join('') || emptyActionRow(5, 'No clear assortment gap', 'The leading articles are already represented at the filtered locations.');
+    $('missingArticleCount').textContent = results.length;
+  }
+  function renderNoOrderAlerts(periods) {
+    const invoices = new Map();
+    periods.base.forEach(row => {
+      const location = locationName(row.delivery_location);
+      const date = String(row.invoice_date || '').slice(0, 10);
+      const invoice = row.invoice_number_normalized || row.invoice_number || date;
+      const key = `${location}|||${invoice}`;
+      if (!invoices.has(key)) invoices.set(key, { location, date, cbs: 0, pieces: 0 });
+      const entry = invoices.get(key);
+      entry.cbs += Number(row.quantity_cbs || 0);
+      entry.pieces += Number(row.quantity || 0);
+    });
+    const latest = new Map();
+    invoices.forEach(invoice => {
+      if (!latest.has(invoice.location) || invoice.date > latest.get(invoice.location).date) latest.set(invoice.location, invoice);
+    });
+    const today = parseLocalDate(localIsoDate(new Date()));
+    const results = [...latest.values()].map(invoice => {
+      const date = parseLocalDate(invoice.date);
+      const days = date ? Math.max(0, Math.floor((today - date) / 86400000)) : 0;
+      let status = 'Recent', statusClass = 'protect', action = 'No immediate follow-up required.';
+      if (days > 30) { status = 'Urgent'; statusClass = 'recover'; action = 'Contact the location or buyer and verify listing, stock and pending PO.'; }
+      else if (days > 15) { status = 'Follow up'; statusClass = 'investigate'; action = 'Check the next PO date and whether an appointment is pending.'; }
+      else if (days > 7) { status = 'Watch'; statusClass = 'cross-sell'; action = 'Monitor for the next order and keep key articles ready.'; }
+      return { ...invoice, days, status, statusClass, action };
+    }).sort((a, b) => b.days - a.days || a.location.localeCompare(b.location));
+    const alertCount = results.filter(result => result.days > 15).length;
+
+    $('noOrderBody').innerHTML = results.map(result => `<tr><td><strong>${safe(result.location)}</strong></td><td>${formatShortDate(result.date)}</td><td><strong>${result.days} day${result.days === 1 ? '' : 's'}</strong></td><td>${CBS_NUMBER.format(result.cbs)} CBS / ${number(result.pieces)} PCS</td><td>${signalChip(result.status, result.statusClass)}</td><td>${safe(result.action)}</td></tr>`).join('') || emptyActionRow(6, 'No invoice history', 'No matching invoice movement is available for these filters.');
+    $('noOrderCount').textContent = alertCount;
+  }
+  function setOpportunityView(view) {
+    activeOpportunityView = view;
+    const panels = { 'location-actions': 'locationActionsPanel', 'product-trends': 'productTrendsPanel', 'missing-articles': 'missingArticlesPanel', 'no-order': 'noOrderPanel' };
+    document.querySelectorAll('.opportunity-tab').forEach(button => {
+      const active = button.dataset.opportunityView === view;
+      button.classList.toggle('active', active);
+      button.setAttribute('aria-selected', String(active));
+    });
+    Object.entries(panels).forEach(([key, id]) => $(id).classList.toggle('hidden', key !== view));
+  }
+  function renderOpportunityBoard() {
+    const base = nonDateFilteredRows();
+    const periods = actionPeriods(base);
+    const missingCbs = base.filter(row => Number(row.quantity || 0) > 0 && Number(row.quantity_cbs || 0) <= 0).length;
+    $('opportunityPeriod').textContent = periods.label;
+    $('cbsDataNotice').classList.toggle('hidden', missingCbs === 0);
+    if (missingCbs) $('cbsDataNotice').textContent = `${number(missingCbs)} invoice line(s) still need CBS. Re-run the updated historical product importer to complete this section.`;
+    renderLocationActions(periods);
+    renderProductTrends(periods);
+    renderMissingArticles(periods);
+    renderNoOrderAlerts(periods);
+    setOpportunityView(activeOpportunityView);
   }
 
   function recommendationCard(title, text, impact) {
@@ -365,7 +572,7 @@
     renderArticleRanking(items, articles);
     renderTrend(items);
     renderLocations(items, locations);
-    renderMatrix(items, articles, locations);
+    renderOpportunityBoard();
   }
   function toggleCustomDates() {
     $('analyticsCustomDates').classList.toggle('hidden', $('analyticsDateRange').value !== 'custom');
@@ -373,8 +580,8 @@
   function exportCsv() {
     const items = filteredRows();
     if (!items.length) return toast('No product movement is available to export.');
-    const headings = ['Invoice Date', 'Invoice Number', 'PO Number', 'Location', 'Article', 'Description', 'HSN/SAC', 'Quantity', 'Unit', 'Rate', 'Taxable Amount'];
-    const body = items.map(row => [row.invoice_date, row.invoice_number, row.po_number, locationName(row.delivery_location), row.article_name, row.article_description, row.hsn_sac, row.quantity, row.unit, row.rate, row.taxable_amount]);
+    const headings = ['Invoice Date', 'Invoice Number', 'PO Number', 'Location', 'Article', 'Description', 'HSN/SAC', 'CBS (Alt. Quantity)', 'Pieces', 'Unit', 'Rate', 'Taxable Amount'];
+    const body = items.map(row => [row.invoice_date, row.invoice_number, row.po_number, locationName(row.delivery_location), row.article_name, row.article_description, row.hsn_sac, row.quantity_cbs, row.quantity, row.unit, row.rate, row.taxable_amount]);
     const csv = [headings, ...body].map(cells => cells.map(value => `"${String(value ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
     const link = document.createElement('a');
     link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
@@ -428,6 +635,7 @@
     ['analyticsDateFrom', 'analyticsDateTo'].forEach(id => { $(id).addEventListener('input', render); $(id).addEventListener('change', render); });
     $('clearAnalyticsFilters').addEventListener('click', clearFilters);
     $('exportAnalytics').addEventListener('click', exportCsv);
+    document.querySelectorAll('.opportunity-tab').forEach(button => button.addEventListener('click', () => setOpportunityView(button.dataset.opportunityView)));
   }
   async function start() {
     await ensureAccess();
