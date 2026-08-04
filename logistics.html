@@ -7,7 +7,7 @@
     <title>KSDL Dispatch & Invoice Review</title>
     <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="mobile-filters.css" />
-    <link rel="stylesheet" href="logistics.css?v=appointment-date-20260729" />
+    <link rel="stylesheet" href="logistics.css?v=po-edit-20260804" />
     <style>
       .trip-plan-dialog{width:min(1120px,calc(100% - 24px))}
       .po-detail-heading{margin-top:20px;padding-top:17px;border-top:1px solid var(--line)}
@@ -87,7 +87,7 @@
         <div class="table-wrap">
           <table>
             <thead><tr>
-              <th><input id="selectAllPos" type="checkbox" aria-label="Select all visible POs" /></th><th data-i18n="poCustomer">PO / Customer</th><th data-i18n="poDate">PO Date</th><th data-i18n="status">Status</th><th data-i18n="deliveryLocation">Delivery location</th><th data-i18n="poValue">PO Value</th><th data-i18n="deliveryDate">Appointment date</th><th data-i18n="invoice">Invoice</th><th data-i18n="transport">Transport</th><th data-i18n="assigned">Assigned</th><th data-i18n="age">Age</th>
+              <th><input id="selectAllPos" type="checkbox" aria-label="Select all visible POs" /></th><th data-i18n="poCustomer">PO / Customer</th><th data-i18n="poDate">PO Date</th><th data-i18n="status">Status</th><th data-i18n="deliveryLocation">Delivery location</th><th data-i18n="poValue">PO Value</th><th data-i18n="deliveryDate">Appointment date</th><th data-i18n="invoice">Invoice</th><th data-i18n="transport">Transport</th><th data-i18n="age">Age</th><th data-i18n="action">Action</th>
             </tr></thead>
             <tbody id="poTableBody"></tbody>
           </table>
@@ -102,9 +102,9 @@
         <form id="manualPoForm">
           <div class="trip-dialog-head">
             <div>
-              <span class="eyebrow" data-i18n="manualPoEyebrow">MANUAL PURCHASE ORDER</span>
-              <h2 data-i18n="manualPoTitle">Create a new PO</h2>
-              <p data-i18n="manualPoHelp">Enter the PO details below. It will be saved as Received and appear in the open PO list immediately.</p>
+              <span id="manualPoDialogEyebrow" class="eyebrow" data-i18n="manualPoEyebrow">MANUAL PURCHASE ORDER</span>
+              <h2 id="manualPoDialogTitle" data-i18n="manualPoTitle">Create a new PO</h2>
+              <p id="manualPoDialogHelp" data-i18n="manualPoHelp">Enter the PO details below. It will be saved as Received and appear in the open PO list immediately.</p>
             </div>
             <button id="closeManualPoBtn" class="icon-btn" type="button" aria-label="Close">×</button>
           </div>
@@ -192,6 +192,6 @@
     <div id="toast" class="toast" role="status"></div>
     <script src="config.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <script src="logistics.js?v=direct-upload-analytics-20260731"></script>
+    <script src="logistics.js?v=po-edit-20260804"></script>
   </body>
 </html>

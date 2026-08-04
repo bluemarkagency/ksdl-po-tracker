@@ -14,6 +14,7 @@
   let locationAliases = [];
   let poLocationRows = [];
   let invoiceLocationRows = [];
+  let locationFollowupRows = [];
   let locationMasterReady = true;
   let locationMasterError = '';
   let locationReviewRows = [];
@@ -278,6 +279,9 @@
   }
   function groupLocations(items) {
     const groups = new Map();
+    const followupByLocation = new Map(
+      locationFollowupRows.map(row => [locationKey(locationName(row.delivery_location)), row])
+    );
     items.forEach(row => {
       const key = locationName(row.delivery_location);
       if (!groups.has(key)) groups.set(key, { name: key, sales: 0, units: 0, invoices: new Set(), articles: new Map() });
@@ -290,6 +294,7 @@
     });
     return [...groups.values()].map(group => ({
       ...group,
+      followup: followupDetails_(followupByLocation.get(locationKey(group.name))),
       topArticle: [...group.articles.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || '—'
     })).sort((a, b) => b.sales - a.sales);
   }
@@ -346,11 +351,76 @@
   function renderLocations(items, locations) {
     const totalSales = sum(items, row => row.taxable_amount);
     const maxSales = locations[0]?.sales || 1;
-    $('locationBody').innerHTML = locations.map((location, index) => {
+    const followupFilter = $('locationFollowupFilter').value;
+    const showing = locations
+      .filter(location => {
+        if (followupFilter === 'due') return location.followup.level === 'due';
+        if (followupFilter === 'attention') return ['due', 'approaching'].includes(location.followup.level);
+        return true;
+      })
+      .sort((left, right) => {
+        if (followupFilter === 'all') return right.sales - left.sales || left.name.localeCompare(right.name);
+        return Number(right.followup.daysSincePo || 0) - Number(left.followup.daysSincePo || 0)
+          || left.name.localeCompare(right.name);
+      });
+    $('locationBody').innerHTML = showing.map((location, index) => {
       const contribution = totalSales > 0 ? location.sales / totalSales * 100 : 0;
-      return `<tr><td>${index + 1}</td><td><span class="location-name">${safe(location.name)}</span><span class="location-subline">${location.articles.size} active article(s)</span></td><td><strong>${money(location.sales)}</strong></td><td>${number(location.units)}</td><td>${location.invoices.size}</td><td>${location.articles.size}</td><td>${safe(location.topArticle)}</td><td class="contribution">${contribution.toFixed(1)}%<span class="contribution-bar"><span style="width:${Math.max(location.sales / maxSales * 100, 2).toFixed(1)}%"></span></span></td></tr>`;
+      const followup = location.followup;
+      return `<tr class="followup-row ${safe(followup.level)}"><td>${index + 1}</td><td><span class="location-name">${safe(location.name)}</span><span class="location-subline">${location.articles.size} active article(s)</span></td><td><strong>${money(location.sales)}</strong></td><td>${number(location.units)}</td><td>${location.invoices.size}</td><td>${location.articles.size}</td><td>${formatShortDate(followup.lastPoDate)}</td><td><strong>${formatDayCount_(followup.daysSincePo)}</strong></td><td>${formatAverageDays_(followup.avgPoGap)}</td><td>${formatShortDate(followup.lastInvoiceDate)}</td><td>${formatAverageDays_(followup.avgInvoiceGap)}</td><td>${formatAverageDays_(followup.avgPoToInvoice)}</td><td><div class="followup-action"><span class="followup-chip ${safe(followup.level)}">${safe(followup.label)}</span><small>${safe(followup.action)}</small></div></td><td>${safe(location.topArticle)}</td><td class="contribution">${contribution.toFixed(1)}%<span class="contribution-bar"><span style="width:${Math.max(location.sales / maxSales * 100, 2).toFixed(1)}%"></span></span></td></tr>`;
     }).join('');
-    $('analyticsEmpty').classList.toggle('hidden', locations.length > 0);
+    const emptyState = $('analyticsEmpty');
+    const emptyTitle = emptyState.querySelector('h3');
+    const emptyHelp = emptyState.querySelector('p');
+    if (!showing.length && locations.length && followupFilter !== 'all') {
+      emptyTitle.textContent = 'No locations need follow-up';
+      emptyHelp.textContent = 'All locations are currently within their normal PO cycle.';
+    } else {
+      emptyTitle.textContent = 'No product movement found';
+      emptyHelp.textContent = 'Upload the original Tally PDF while creating or editing a Dispatch trip, run the historical importer, or change the filters.';
+    }
+    emptyState.classList.toggle('hidden', showing.length > 0);
+  }
+
+  function followupDetails_(row) {
+    if (!row?.last_po_date) {
+      return {
+        level: 'needs-data', label: 'Needs PO data', action: 'Check whether this location is linked correctly in the PO tracker.',
+        lastPoDate: '', daysSincePo: null, avgPoGap: null,
+        lastInvoiceDate: row?.last_invoice_date || '', avgInvoiceGap: row?.avg_days_between_invoices,
+        avgPoToInvoice: row?.avg_po_to_invoice_days
+      };
+    }
+    const daysSincePo = Number(row.days_since_last_po || 0);
+    const averageCycle = Number(row.avg_days_between_pos || row.avg_days_between_invoices || 15);
+    const dueAt = Math.max(7, averageCycle);
+    const approachingAt = Math.max(5, dueAt * .75);
+    let level = 'recent';
+    let label = 'Recent';
+    let action = `Normal PO cycle is about ${Math.round(averageCycle)} days. No reminder is required yet.`;
+    if (daysSincePo >= dueAt) {
+      level = 'due';
+      label = 'Follow up now';
+      action = `Last PO was ${daysSincePo} days ago versus an average ${Math.round(averageCycle)}-day cycle. Ask sales staff to contact this store.`;
+    } else if (daysSincePo >= approachingAt) {
+      level = 'approaching';
+      label = 'Approaching';
+      action = `The next PO is approaching. Ask sales staff to confirm stock and the expected order date.`;
+    }
+    return {
+      level, label, action,
+      lastPoDate: row.last_po_date,
+      daysSincePo,
+      avgPoGap: row.avg_days_between_pos,
+      lastInvoiceDate: row.last_invoice_date,
+      avgInvoiceGap: row.avg_days_between_invoices,
+      avgPoToInvoice: row.avg_po_to_invoice_days
+    };
+  }
+  function formatDayCount_(value) {
+    return value == null || value === '' ? '—' : `${NUMBER.format(Number(value))} days`;
+  }
+  function formatAverageDays_(value) {
+    return value == null || value === '' ? '—' : `${Number(value).toFixed(1)} days`;
   }
   function parseLocalDate(value) {
     const parts = String(value || '').slice(0, 10).split('-').map(Number);
@@ -780,14 +850,28 @@
       return [];
     }
   }
+  async function fetchLocationFollowup() {
+    try {
+      const result = await api('/rest/v1/rpc/location_po_followup_summary', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}'
+      });
+      return Array.isArray(result) ? result : [];
+    } catch (error) {
+      console.warn('Location follow-up metrics are not ready:', error);
+      return [];
+    }
+  }
   async function loadData() {
     $('connectionStatus').textContent = 'Loading analytics…';
     const analyticsOnly = trackerRole === 'brand_manager';
-    [rows, locationAliases, poLocationRows, invoiceLocationRows] = await Promise.all([
+    [rows, locationAliases, poLocationRows, invoiceLocationRows, locationFollowupRows] = await Promise.all([
       fetchAllRows('/rest/v1/dmart_invoice_items?select=*&order=invoice_date.desc,line_number.asc'),
       fetchLocationAliases(),
       analyticsOnly ? Promise.resolve([]) : fetchAllRows('/rest/v1/purchase_orders?is_archived=eq.false&select=delivery_location'),
-      analyticsOnly ? Promise.resolve([]) : fetchAllRows('/rest/v1/customer_invoices?select=delivery_location')
+      analyticsOnly ? Promise.resolve([]) : fetchAllRows('/rest/v1/customer_invoices?select=delivery_location'),
+      fetchLocationFollowup()
     ]);
     populateFilters();
     render();
@@ -800,6 +884,7 @@
     $('analyticsDateTo').value = '';
     $('analyticsLocation').value = '';
     $('analyticsArticle').value = '';
+    $('locationFollowupFilter').value = 'all';
     toggleCustomDates();
     render();
   }
@@ -813,7 +898,7 @@
     $('signOutBtn').addEventListener('click', signOut);
     $('refreshBtn').addEventListener('click', loadData);
     $('analyticsSearch').addEventListener('input', render);
-    ['analyticsLocation', 'analyticsArticle'].forEach(id => $(id).addEventListener('change', render));
+    ['analyticsLocation', 'analyticsArticle', 'locationFollowupFilter'].forEach(id => $(id).addEventListener('change', render));
     $('analyticsDateRange').addEventListener('change', () => { toggleCustomDates(); render(); });
     ['analyticsDateFrom', 'analyticsDateTo'].forEach(id => { $(id).addEventListener('input', render); $(id).addEventListener('change', render); });
     $('clearAnalyticsFilters').addEventListener('click', clearFilters);

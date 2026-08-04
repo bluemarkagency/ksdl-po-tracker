@@ -7,7 +7,7 @@
     <title>KSDL DMart Product Analytics</title>
     <link rel="stylesheet" href="styles.css?v=analytics-20260731" />
     <link rel="stylesheet" href="mobile-filters.css" />
-    <link rel="stylesheet" href="analytics.css?v=direct-upload-matrix-20260731" />
+    <link rel="stylesheet" href="analytics.css?v=location-followup-20260804" />
   </head>
   <body>
     <section id="loginScreen" class="login-screen hidden">
@@ -74,8 +74,8 @@
       </section>
 
       <section class="analytics-card">
-        <div class="analytics-section-head"><div><span class="eyebrow">LOCATION PERFORMANCE</span><h2>DMart location comparison</h2><p>Use this to identify strong stores and locations needing article expansion.</p></div><span id="analyticsResultCount" class="result-chip">0 lines</span></div>
-        <div class="table-wrap"><table class="analytics-table location-table"><thead><tr><th>Rank</th><th>Location</th><th>Sales value</th><th>Units</th><th>Invoices</th><th>Articles</th><th>Top article</th><th>Contribution</th></tr></thead><tbody id="locationBody"></tbody></table></div>
+        <div class="analytics-section-head"><div><span class="eyebrow">LOCATION PERFORMANCE</span><h2>DMart location comparison and PO follow-up</h2><p>Average PO and invoice gaps use the full tracker history to show each store's normal ordering cycle. Use Days since PO and Follow-up to decide which locations your sales staff should contact.</p></div><div class="location-followup-tools"><label><span>Show locations</span><select id="locationFollowupFilter"><option value="all">All locations</option><option value="attention">Follow-up list</option><option value="due">Due now</option></select></label><span id="analyticsResultCount" class="result-chip">0 lines</span></div></div>
+        <div class="table-wrap"><table class="analytics-table location-table followup-location-table"><thead><tr><th>Rank</th><th>Location</th><th>Sales value</th><th>Units</th><th>Invoices</th><th>Articles</th><th>Last PO</th><th>Days since PO</th><th>Avg PO gap</th><th>Last invoice</th><th>Avg invoice gap</th><th>Avg PO → invoice</th><th>Follow-up</th><th>Top article</th><th>Contribution</th></tr></thead><tbody id="locationBody"></tbody></table></div>
         <div id="analyticsEmpty" class="empty-state hidden"><h3>No product movement found</h3><p>Upload the original Tally PDF while creating or editing a Dispatch trip, run the historical importer, or change the filters.</p></div>
       </section>
 
@@ -126,6 +126,6 @@
     </main>
 
     <div id="toast" class="toast" role="status"></div>
-    <script src="config.js"></script><script src="analytics.js?v=brand-manager-access-20260731"></script>
+    <script src="config.js"></script><script src="analytics.js?v=location-followup-20260804"></script>
   </body>
 </html>

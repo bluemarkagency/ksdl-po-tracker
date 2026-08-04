@@ -85,3 +85,7 @@
   .plan-actions{display:grid;grid-template-columns:1fr;width:100%}
   .plan-actions button{width:100%;min-width:0}
 }
+
+/* Open PO table: Assigned was removed and a compact PO edit action added. */
+.table-wrap table{min-width:1180px}
+.po-edit-btn{min-width:58px;white-space:nowrap}

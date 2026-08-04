@@ -62,7 +62,9 @@
       appointmentEyebrow: 'DELIVERY APPOINTMENT', appointmentTitle: 'Update appointment date', appointmentDate: 'Appointment date',
       appointmentHelp: 'Leave blank only when DMart has not confirmed an appointment.', appointmentForPo: 'PO {po} · {location}',
       editAppointment: 'Edit date', saveAppointment: 'Save appointment', savingAppointment: 'Saving…',
-      appointmentSaved: 'Appointment date updated.', couldNotSaveAppointment: 'Could not update the appointment date.'
+      appointmentSaved: 'Appointment date updated.', couldNotSaveAppointment: 'Could not update the appointment date.',
+      editPoEyebrow: 'EDIT PURCHASE ORDER', editPoTitle: 'Edit PO details', editPoHelp: 'Update the PO information below. Dispatch, invoice and delivery records will not be changed.',
+      savePoChanges: 'Save changes', poUpdated: 'PO details updated.'
     },
     gu: {
       brand: 'KSDL ડિસ્ટ્રિબ્યુશન', pageTitle: 'ડિસ્પેચ અને ઇન્વૉઇસ ચકાસણી', loginSubtitle: 'એકાઉન્ટન્ટ અને સેલ્સ પ્રતિનિધિ માટે. તમારા અધિકૃત બિઝનેસ ઈમેલથી સાઇન ઇન કરો.',
@@ -116,7 +118,9 @@
       appointmentEyebrow: 'ડિલિવરી અપોઇન્ટમેન્ટ', appointmentTitle: 'અપોઇન્ટમેન્ટ તારીખ સુધારો', appointmentDate: 'અપોઇન્ટમેન્ટ તારીખ',
       appointmentHelp: 'DMart દ્વારા અપોઇન્ટમેન્ટ નક્કી ન થઈ હોય ત્યારે જ ખાલી રાખો.', appointmentForPo: 'PO {po} · {location}',
       editAppointment: 'તારીખ સુધારો', saveAppointment: 'અપોઇન્ટમેન્ટ સાચવો', savingAppointment: 'સાચવી રહ્યા છે…',
-      appointmentSaved: 'અપોઇન્ટમેન્ટ તારીખ સુધારાઈ.', couldNotSaveAppointment: 'અપોઇન્ટમેન્ટ તારીખ સુધારી શકાયી નથી.'
+      appointmentSaved: 'અપોઇન્ટમેન્ટ તારીખ સુધારાઈ.', couldNotSaveAppointment: 'અપોઇન્ટમેન્ટ તારીખ સુધારી શકાયી નથી.',
+      editPoEyebrow: 'પરચેઝ ઓર્ડર સુધારો', editPoTitle: 'PO વિગતો સુધારો', editPoHelp: 'નીચે POની માહિતી સુધારો. ડિસ્પેચ, ઇન્વૉઇસ અને ડિલિવરી રેકોર્ડ બદલાશે નહીં.',
+      savePoChanges: 'ફેરફાર સાચવો', poUpdated: 'PO વિગતો સુધારાઈ.'
     },
     hi: {
       brand: 'KSDL डिस्ट्रीब्यूशन', pageTitle: 'डिस्पैच और इनवॉइस जाँच', loginSubtitle: 'अकाउंटेंट और सेल्स प्रतिनिधि के लिए। अपने अधिकृत बिज़नेस ईमेल से साइन इन करें।',
@@ -170,7 +174,9 @@
       appointmentEyebrow: 'डिलीवरी अपॉइंटमेंट', appointmentTitle: 'अपॉइंटमेंट तारीख बदलें', appointmentDate: 'अपॉइंटमेंट तारीख',
       appointmentHelp: 'DMart ने अपॉइंटमेंट तय न किया हो तभी इसे खाली रखें।', appointmentForPo: 'PO {po} · {location}',
       editAppointment: 'तारीख बदलें', saveAppointment: 'अपॉइंटमेंट सहेजें', savingAppointment: 'सहेज रहे हैं…',
-      appointmentSaved: 'अपॉइंटमेंट तारीख अपडेट हो गई।', couldNotSaveAppointment: 'अपॉइंटमेंट तारीख अपडेट नहीं हो सकी।'
+      appointmentSaved: 'अपॉइंटमेंट तारीख अपडेट हो गई।', couldNotSaveAppointment: 'अपॉइंटमेंट तारीख अपडेट नहीं हो सकी।',
+      editPoEyebrow: 'परचेज़ ऑर्डर संपादित करें', editPoTitle: 'PO विवरण संपादित करें', editPoHelp: 'नीचे PO की जानकारी बदलें। डिस्पैच, इनवॉइस और डिलीवरी रिकॉर्ड नहीं बदलेंगे।',
+      savePoChanges: 'बदलाव सहेजें', poUpdated: 'PO विवरण अपडेट हो गया।'
     }
   };
   const LOCALES = { en: 'en-IN', gu: 'gu-IN', hi: 'hi-IN' };
@@ -192,6 +198,7 @@
   let trips = [];
   let transporters = [];
   let selectedPoIds = new Set();
+  let editingPoId = null;
   let editingTripId = null;
   let completingTripId = null;
   let tripStorageReady = true;
@@ -224,6 +231,7 @@
     if ($('connectionStatus')) $('connectionStatus').textContent = t(connectionMessageKey);
     renderTransporterOptions();
     render();
+    syncManualPoDialogText_();
   }
   function setConnectionStatus(key) { connectionMessageKey = key; $('connectionStatus').textContent = t(key); }
   function headers(extra = {}) { return { apikey: PUBLIC_KEY, Authorization: `Bearer ${session?.access_token || PUBLIC_KEY}`, ...extra }; }
@@ -312,13 +320,44 @@
     if ($('manualPoDialog').open) $('manualPoDialog').close();
     $('manualPoForm').reset();
     $('manualPoError').textContent = '';
+    editingPoId = null;
+    syncManualPoDialogText_();
+  }
+  function syncManualPoDialogText_() {
+    if (!$('manualPoDialogEyebrow')) return;
+    const editing = Boolean(editingPoId);
+    $('manualPoDialogEyebrow').textContent = t(editing ? 'editPoEyebrow' : 'manualPoEyebrow');
+    $('manualPoDialogTitle').textContent = t(editing ? 'editPoTitle' : 'manualPoTitle');
+    $('manualPoDialogHelp').textContent = t(editing ? 'editPoHelp' : 'manualPoHelp');
+    $('saveManualPoBtn').textContent = t(editing ? 'savePoChanges' : 'savePo');
   }
   function openManualPoDialog() {
+    editingPoId = null;
     $('manualPoForm').reset();
     $('manualPoDate').value = today();
     $('manualReceivedDate').value = today();
     $('manualAssignedTo').value = session?.user?.email || '';
     $('manualPoError').textContent = '';
+    syncManualPoDialogText_();
+    $('manualPoDialog').showModal();
+    window.setTimeout(() => $('manualCustomer').focus(), 0);
+  }
+  function openEditPoDialog(poId) {
+    const record = records.find(item => item.id === poId);
+    if (!record) return;
+    editingPoId = record.id;
+    $('manualPoForm').reset();
+    $('manualCustomer').value = record.customer_name || '';
+    $('manualPoNumber').value = record.po_number || '';
+    $('manualLocation').value = record.delivery_location || '';
+    $('manualPoValue').value = Number(record.po_value || 0) || '';
+    $('manualPoDate').value = record.po_date || '';
+    $('manualReceivedDate').value = record.po_received_date || record.po_date || '';
+    $('manualDeliveryDate').value = record.delivery_date || '';
+    $('manualAssignedTo').value = record.assigned_to || '';
+    $('manualRemarks').value = record.remarks || '';
+    $('manualPoError').textContent = '';
+    syncManualPoDialogText_();
     $('manualPoDialog').showModal();
     window.setTimeout(() => $('manualCustomer').focus(), 0);
   }
@@ -328,11 +367,17 @@
     const button = $('saveManualPoBtn');
     error.textContent = '';
     const poNumber = $('manualPoNumber').value.trim();
-    const poId = crypto.randomUUID();
+    const editingRecord = editingPoId
+      ? records.find(item => item.id === editingPoId)
+      : null;
+    const poId = editingRecord?.id || crypto.randomUUID();
     try {
       button.disabled = true;
       button.textContent = t('savingPo');
-      const duplicate = await api(`/rest/v1/purchase_orders?po_number=eq.${encodeURIComponent(poNumber)}&select=id&limit=1`);
+      const duplicatePath = editingRecord
+        ? `/rest/v1/purchase_orders?po_number=eq.${encodeURIComponent(poNumber)}&id=neq.${encodeURIComponent(poId)}&select=id&limit=1`
+        : `/rest/v1/purchase_orders?po_number=eq.${encodeURIComponent(poNumber)}&select=id&limit=1`;
+      const duplicate = await api(duplicatePath);
       if (Array.isArray(duplicate) && duplicate.length) throw new Error(t('manualDuplicate'));
       const poCopyPath = await uploadManualPoCopy(poId, $('manualPoFile').files?.[0]);
       const now = new Date().toISOString();
@@ -354,22 +399,43 @@
         review_status: 'Draft',
         updated_at: now
       };
-      await api('/rest/v1/purchase_orders', { method: 'POST', headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify(payload) });
-      try {
-        await api(`/rest/v1/purchase_orders?id=eq.${encodeURIComponent(poId)}`, {
-          method: 'PATCH',
+      if (editingRecord) {
+        await api('/rest/v1/rpc/update_open_purchase_order', {
+          method: 'POST',
           headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' },
-          body: JSON.stringify({ review_status: 'Submitted', submitted_at: now, updated_at: now })
+          body: JSON.stringify({
+            target_po_id: poId,
+            new_customer_name: payload.customer_name,
+            new_po_number: payload.po_number,
+            new_po_date: payload.po_date,
+            new_po_received_date: payload.po_received_date,
+            new_appointment_date: payload.delivery_date,
+            new_delivery_location: payload.delivery_location,
+            new_po_value: payload.po_value,
+            new_assigned_to: payload.assigned_to,
+            new_remarks: payload.remarks,
+            new_po_attachment_url: poCopyPath || null
+          })
         });
-      } catch (_) { /* Draft PO remains usable if review submission is unavailable. */ }
+      } else {
+        await api('/rest/v1/purchase_orders', { method: 'POST', headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify(payload) });
+        try {
+          await api(`/rest/v1/purchase_orders?id=eq.${encodeURIComponent(poId)}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+            body: JSON.stringify({ review_status: 'Submitted', submitted_at: now, updated_at: now })
+          });
+        } catch (_) { /* Draft PO remains usable if review submission is unavailable. */ }
+      }
+      const successMessage = editingRecord ? t('poUpdated') : t('manualPoSaved');
       closeManualPoDialog();
       await loadData();
-      toast(t('manualPoSaved'));
+      toast(successMessage);
     } catch (err) {
       error.textContent = err.message || t('couldNotSavePo');
     } finally {
       button.disabled = false;
-      button.textContent = t('savePo');
+      button.textContent = t(editingPoId ? 'savePoChanges' : 'savePo');
     }
   }
 
@@ -696,7 +762,7 @@
         <td>${safe(record.delivery_location || '—')}</td><td>${money(record.po_value)}</td><td><div class="appointment-cell"><span>${localDate(record.delivery_date)}</span><button class="text-btn appointment-edit-btn" type="button" data-po-id="${record.id}">${safe(t('editAppointment'))}</button></div></td>
         <td>${safe(record.invoice_number || '—')}<span class="po-secondary">${localDate(record.invoice_date)}</span></td>
         <td>${safe(record.transporter || '—')}<span class="po-secondary">${safe(record.tracking_number || '')}${record.transport_amount ? ` · ${money(record.transport_amount)}` : ''}</span></td>
-        <td>${safe(record.assigned_to || '—')}</td><td>${age == null ? '—' : safe(t('days', { count: age }))}</td>
+        <td>${age == null ? '—' : safe(t('days', { count: age }))}</td><td><button class="text-btn po-edit-btn" type="button" data-po-id="${record.id}">${safe(t('edit'))}</button></td>
       </tr>`;
     }).join('');
     $('emptyState').classList.toggle('hidden', showing.length !== 0);
@@ -921,7 +987,9 @@
     $('dateRangeFilter').addEventListener('change', () => { toggleCustomDates(); render(); });
     $('poTableBody').addEventListener('click', event => {
       const appointmentButton = event.target.closest('.appointment-edit-btn');
+      const editButton = event.target.closest('.po-edit-btn');
       if (appointmentButton) openAppointmentDialog(appointmentButton.dataset.poId);
+      else if (editButton) openEditPoDialog(editButton.dataset.poId);
     });
     $('poTableBody').addEventListener('change', event => { if (!event.target.matches('.po-choice')) return; if (event.target.checked) selectedPoIds.add(event.target.value); else selectedPoIds.delete(event.target.value); render(); });
     $('selectAllPos').addEventListener('change', event => { filteredRecords().forEach(record => event.target.checked ? selectedPoIds.add(record.id) : selectedPoIds.delete(record.id)); render(); });
