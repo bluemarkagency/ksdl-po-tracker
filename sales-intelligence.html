@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#124e45" />
+    <title>KSDL Sales Intelligence</title>
+    <link rel="stylesheet" href="styles.css?v=sales-intelligence-20260804" />
+    <link rel="stylesheet" href="mobile-filters.css" />
+    <link rel="stylesheet" href="sales-intelligence.css?v=sales-intelligence-20260804" />
+  </head>
+  <body>
+    <section id="loginScreen" class="login-screen hidden">
+      <form id="loginForm" class="login-card">
+        <span class="eyebrow">KSDL DISTRIBUTION</span>
+        <h1>Sales Intelligence</h1>
+        <p>Owner, accountant or brand manager sign-in is required.</p>
+        <label>Email<input id="emailInput" type="email" autocomplete="username" required autofocus /></label>
+        <label>Password<input id="passwordInput" type="password" autocomplete="current-password" required /></label>
+        <p id="loginError" class="error" aria-live="polite"></p>
+        <button>Sign in</button>
+      </form>
+    </section>
+
+    <main id="app" class="app-shell hidden">
+      <header class="topbar intelligence-topbar">
+        <div>
+          <span class="eyebrow">GUJARAT · PREDICTIVE SALES</span>
+          <h1>Sales Intelligence</h1>
+          <p class="page-intro">Expected POs, CBS demand and the next best sales action for every DMart location.</p>
+        </div>
+        <div class="top-actions">
+          <span id="connectionStatus" class="connection-status">Connecting…</span>
+          <span id="signedInAs" class="connection-status"></span>
+          <a class="tracker-nav-link" href="analytics.html">Product Analytics</a>
+          <a class="tracker-nav-link operational-nav" href="index.html">PO Tracker</a>
+          <a class="tracker-nav-link operational-nav" href="logistics.html">Dispatch</a>
+          <button id="refreshBtn" type="button">Refresh</button>
+          <button id="signOutBtn" class="text-btn" type="button">Sign out</button>
+        </div>
+      </header>
+
+      <section class="intelligence-note">
+        <div><strong>Private and free</strong><span>Predictions are calculated from your PO and invoice history. No business data is sent to an external AI service.</span></div>
+        <span id="dataAsOf" class="result-chip">Waiting for data</span>
+      </section>
+
+      <section class="intelligence-filter-card" aria-label="Sales Intelligence filters">
+        <label class="intelligence-search">Search location or article<input id="intelligenceSearch" placeholder="Example: Bopal or Sandal Talc" /></label>
+        <label>Action horizon<select id="forecastHorizon"><option value="7">Next 7 days</option><option value="14" selected>Next 14 days</option><option value="30">Next 30 days</option></select></label>
+        <label>Location<select id="intelligenceLocation"><option value="">All locations</option></select></label>
+        <label>Confidence<select id="confidenceFilter"><option value="">All confidence</option><option value="High">High</option><option value="Medium">Medium</option><option value="Early estimate">Early estimate</option></select></label>
+        <button id="clearIntelligenceFilters" class="text-btn" type="button">Clear</button>
+      </section>
+
+      <section class="summary-grid intelligence-summary" aria-label="Predictive sales summary">
+        <article class="attention"><span>Call today</span><strong id="callTodayCount">0</strong><small>Locations overdue for a PO</small></article>
+        <article><span>POs expected</span><strong id="expectedPoCount">0</strong><small id="expectedPoHorizon">Next 14 days</small></article>
+        <article><span>30-day CBS forecast</span><strong id="forecastCbs">0</strong><small>Invoice Alt. Quantity</small></article>
+        <article><span>Expected sales value</span><strong id="forecastValue">₹0</strong><small>30-day taxable estimate</small></article>
+        <article class="attention"><span>At-risk locations</span><strong id="riskLocationCount">0</strong><small>CBS decline or overdue cycle</small></article>
+      </section>
+
+      <section class="intelligence-card priority-card">
+        <div class="section-head">
+          <div><span class="eyebrow">TODAY'S SALES FOLLOW-UP</span><h2>Location call priority</h2><p>Expected PO timing is based on each location's historic ordering gap. Overdue locations appear first.</p></div>
+          <span id="priorityCount" class="result-chip">0 locations</span>
+        </div>
+        <div class="table-wrap"><table class="intelligence-table priority-table"><thead><tr><th>Priority</th><th>Location</th><th>Last PO</th><th>Normal cycle</th><th>Expected next PO</th><th>Timing</th><th>Expected value</th><th>Probability</th><th>Confidence</th><th>Recommended action</th></tr></thead><tbody id="priorityBody"></tbody></table></div>
+        <div id="priorityEmpty" class="empty-state hidden"><h3>No locations match</h3><p>Clear filters or wait for more PO history.</p></div>
+      </section>
+
+      <section class="intelligence-card">
+        <div class="section-head">
+          <div><span class="eyebrow">30-DAY DEMAND FORECAST</span><h2>Article CBS requirement</h2><p>A weighted forecast using the latest three 30-day invoice periods. CBS comes only from invoice Alt. Quantity.</p></div>
+          <span id="articleForecastCount" class="result-chip">0 articles</span>
+        </div>
+        <div class="table-wrap"><table class="intelligence-table article-forecast-table"><thead><tr><th>Article</th><th>Last 30 days</th><th>Previous 30 days</th><th>Forecast CBS</th><th>Forecast pieces</th><th>Expected value</th><th>Trend</th><th>Locations</th><th>Confidence</th><th>Stock / sales action</th></tr></thead><tbody id="articleForecastBody"></tbody></table></div>
+        <div id="articleForecastEmpty" class="empty-state hidden"><h3>No article forecast</h3><p>Invoice product movement is required to calculate demand.</p></div>
+      </section>
+
+      <section class="intelligence-card">
+        <div class="section-head">
+          <div><span class="eyebrow">GROWTH OPPORTUNITIES</span><h2>Location × article recommendations</h2><p>Leading articles missing or dormant at a location are converted into specific conversations for sales staff.</p></div>
+          <span id="growthCount" class="result-chip">0 actions</span>
+        </div>
+        <div id="growthGrid" class="growth-grid"></div>
+        <div id="growthEmpty" class="empty-state hidden"><h3>No clear growth gap</h3><p>More invoice history may be needed to identify cross-sell opportunities.</p></div>
+      </section>
+
+      <section class="intelligence-card">
+        <div class="section-head">
+          <div><span class="eyebrow">LOCATION RISK &amp; RECOVERY</span><h2>Locations losing momentum</h2><p>Compares the latest 30-day CBS movement with the preceding 30 days and combines it with PO-cycle timing.</p></div>
+          <span id="riskCount" class="result-chip">0 risks</span>
+        </div>
+        <div class="table-wrap"><table class="intelligence-table risk-table"><thead><tr><th>Location</th><th>Latest 30 days</th><th>Previous 30 days</th><th>Change</th><th>Days since PO</th><th>Risk</th><th>Recovery action</th></tr></thead><tbody id="riskBody"></tbody></table></div>
+        <div id="riskEmpty" class="empty-state hidden"><h3>No major decline detected</h3><p>Current locations are within the configured movement and PO-cycle thresholds.</p></div>
+      </section>
+
+      <details class="method-card">
+        <summary>How these predictions are calculated</summary>
+        <div class="method-grid">
+          <article><strong>Next PO date</strong><span>Last PO date plus the location's average gap between consecutive POs.</span></article>
+          <article><strong>Confidence</strong><span>Based on PO count and how consistent the past ordering gaps have been.</span></article>
+          <article><strong>CBS forecast</strong><span>50% latest 30 days, 30% previous 30 days and 20% the earlier 30 days.</span></article>
+          <article><strong>Important limitation</strong><span>This measures your invoiced dispatch movement, not DMart consumer sell-through or store stock.</span></article>
+        </div>
+      </details>
+
+      <p class="intelligence-footnote">Predictions are decision support, not guaranteed orders. Confirm requirements with each DMart store before committing inventory or transport.</p>
+    </main>
+
+    <div id="toast" class="toast" role="status"></div>
+    <script src="config.js"></script>
+    <script src="sales-intelligence.js?v=sales-intelligence-20260804"></script>
+  </body>
+</html>
