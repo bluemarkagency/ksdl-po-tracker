@@ -64,7 +64,9 @@
     return text.replace(/^\/+/, '');
   }
   async function signedInvoiceUrl(value) {
-    const path = storagePath(value); if (!path) throw new Error('Invoice copy path is missing.');
+    const original = String(value || '').trim();
+    if (/^https:\/\//i.test(original) && !original.includes('/storage/v1/object/')) return original;
+    const path = storagePath(original); if (!path) throw new Error('Invoice copy path is missing.');
     const data = await api(`/storage/v1/object/sign/${NOTE_BUCKET}/${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ expiresIn: 600 }) });
     if (!data?.signedURL) throw new Error('Could not open the private invoice copy.');
     return `${BASE_URL}/storage/v1${data.signedURL}`;

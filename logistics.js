@@ -284,7 +284,9 @@
     return text.includes(marker) ? text.split(marker)[1].split('?')[0] : text;
   }
   async function signedFileUrl(value) {
-    const path = filePath(value); if (!path) return '';
+    const original = String(value || '').trim();
+    if (/^https:\/\//i.test(original) && !original.includes('/storage/v1/object/')) return original;
+    const path = filePath(original); if (!path) return '';
     const data = await api(`/storage/v1/object/sign/${NOTE_BUCKET}/${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ expiresIn: 3600 }) });
     return data?.signedURL ? `${BASE_URL}/storage/v1${data.signedURL}` : '';
   }
