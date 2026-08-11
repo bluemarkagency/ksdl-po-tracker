@@ -15,6 +15,8 @@
   let trackerRole = '';
   let locationCycles = [];
   let invoiceRows = [];
+  let purchaseOrders = [];
+  const CHANNELS = window.KSDLChannelInsights;
 
   const $ = id => document.getElementById(id);
   const safe = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
@@ -468,10 +470,96 @@
   function renderDataDate() {
     const dates = [
       ...locationCycles.map(row => row.last_po_date),
-      ...invoiceRows.map(row => row.invoice_date)
+      ...invoiceRows.map(row => row.invoice_date),
+      ...purchaseOrders.map(row => row.po_date || row.po_received_date)
     ].filter(Boolean).sort();
     $('dataAsOf').textContent = dates.length ? `Data through ${shortDate(dates[dates.length - 1])}` : 'Waiting for data';
   }
+
+  function intelligenceBandMarkup(channel, primaryLabel, primaryValue, primaryHelp, secondaryLabel, secondaryValue, metrics) {
+    return `
+      <header><div><h3>${safe(channel)}</h3><p>${channel === 'Store' ? 'DMart location decisions' : 'Blinkit, Zepto, BigBasket and other accounts'}</p></div><span class="channel-growth ${metrics.attention ? 'down' : ''}">${safe(metrics.headline)}</span></header>
+      <div class="channel-band-primary">
+        <div><span>${safe(primaryLabel)}</span><strong>${safe(primaryValue)}</strong><small>${safe(primaryHelp)}</small></div>
+        <div><span>${safe(secondaryLabel)}</span><strong>${safe(secondaryValue)}</strong><small>${safe(metrics.secondaryHelp)}</small></div>
+      </div>
+      <div class="channel-metric-row">
+        ${metrics.items.map(item => `<div class="channel-metric"><span>${safe(item.label)}</span><strong>${safe(item.value)}</strong></div>`).join('')}
+      </div>`;
+  }
+
+  function renderChannelIntelligence(allPredictions) {
+    if (!CHANNELS) return;
+    const horizon = Number($('forecastHorizon').value || 14);
+    const analysis = CHANNELS.analyse(purchaseOrders, 30, localIsoDate(new Date()));
+    const forecasts = articleForecasts(invoiceRows);
+    const storeCalls = allPredictions.filter(item => Number(item.open_po_count || 0) === 0 && item.timing != null && item.timing <= 0);
+    const storeExpected = allPredictions.filter(item => Number(item.open_po_count || 0) === 0 && item.timing != null && item.timing <= horizon);
+    const storeRisks = riskLocations(allPredictions);
+    const storeForecastCbs = sum(forecasts, item => item.forecastCbs);
+    const storeExpectedValue = sum(storeExpected, item => item.expectedValue);
+    const ecomRows = purchaseOrders.map(row => CHANNELS.normalize(row)).filter(row => row.channel === 'E-commerce' && !row.cancelled);
+    const ecomOpen = ecomRows.filter(row => row.open);
+    const today = localIsoDate(new Date());
+    const upcomingAppointments = ecomOpen.filter(row => {
+      const timing = row.delivery_date ? CHANNELS.differenceDays(row.delivery_date, today) : null;
+      return timing != null && timing >= 0 && timing <= horizon;
+    });
+    const missingAppointments = ecomOpen.filter(row => !row.delivery_date);
+    const ecomQueue = CHANNELS.ecomActions(purchaseOrders, horizon, today);
+    const ecomDue = ecomQueue.filter(item => ['Urgent', 'High'].includes(item.priority)).length;
+
+    $('storeIntelligenceBand').innerHTML = intelligenceBandMarkup(
+      'Store', '30-day CBS forecast', `${cbs(storeForecastCbs)} CBS`, 'Detailed invoice Alt. Quantity',
+      'Expected PO value', money(storeExpectedValue), {
+        headline: `${storeCalls.length} call${storeCalls.length === 1 ? '' : 's'} due`, attention: storeCalls.length > 0,
+        secondaryHelp: `Next ${horizon} days`,
+        items: [
+          { label: 'Overdue locations', value: number(storeCalls.length) },
+          { label: 'POs expected', value: number(storeExpected.length) },
+          { label: 'At-risk locations', value: number(storeRisks.length) },
+          { label: 'Open POs', value: number(analysis.byChannel.Store.openCount) }
+        ]
+      }
+    );
+    $('ecomIntelligenceBand').innerHTML = intelligenceBandMarkup(
+      'E-commerce', 'Open PO value', money(analysis.byChannel['E-commerce'].openValue), `${ecomOpen.length} open PO(s)`,
+      'Latest 30-day value', money(analysis.byChannel['E-commerce'].value), {
+        headline: `${ecomDue} action${ecomDue === 1 ? '' : 's'} due`, attention: ecomDue > 0,
+        secondaryHelp: 'Invoice amount when available, otherwise PO value',
+        items: [
+          { label: `Appointments ≤${horizon}d`, value: number(upcomingAppointments.length) },
+          { label: 'Missing appointments', value: number(missingAppointments.length) },
+          { label: 'Urgent / high', value: number(ecomDue) },
+          { label: 'Active customers', value: number(analysis.customers.filter(item => item.channel === 'E-commerce').length) }
+        ]
+      }
+    );
+
+    const storeQueue = allPredictions
+      .filter(item => Number(item.open_po_count || 0) === 0 && item.timing != null && item.timing <= horizon)
+      .map(item => ({
+        priority: item.timing <= 0 ? 'High' : 'Plan',
+        score: item.timing <= 0 ? 88 + Math.abs(item.timing) : 70 - item.timing,
+        channel: 'Store', customer: 'DMart', location: item.delivery_location,
+        signal: item.timing <= 0 ? 'PO cycle overdue' : 'PO expected soon',
+        evidence: item.timing <= 0
+          ? `${Math.abs(item.timing)} day(s) beyond the ${Math.round(item.averageGap)}-day average cycle`
+          : `Next PO expected in ${item.timing} day(s); expected value ${money(item.expectedValue)}`,
+        action: item.action
+      }));
+    const channelFocus = $('intelligenceChannelFocus').value;
+    const search = searchText();
+    const queue = [...storeQueue, ...ecomQueue]
+      .filter(item => !channelFocus || item.channel === channelFocus)
+      .filter(item => !search || [item.channel, item.customer, item.location, item.signal, item.evidence, item.action].join(' ').toLowerCase().includes(search))
+      .sort((left, right) => right.score - left.score || left.customer.localeCompare(right.customer))
+      .slice(0, 30);
+    $('channelActionBody').innerHTML = queue.map(item => `<tr><td><span class="channel-priority ${className(item.priority)}">${safe(item.priority)}</span></td><td><span class="channel-chip ${item.channel === 'E-commerce' ? 'ecommerce' : ''}">${safe(item.channel)}</span></td><td><span class="channel-account">${safe(item.customer)}</span><span class="channel-account-sub">${safe(item.location)}</span></td><td><strong>${safe(item.signal)}</strong></td><td>${safe(item.evidence)}</td><td class="channel-action-text">${safe(item.action)}</td></tr>`).join('');
+    $('channelActionCount').textContent = `${queue.length} action${queue.length === 1 ? '' : 's'}`;
+    $('channelActionEmpty').classList.toggle('hidden', queue.length > 0);
+  }
+
   function render() {
     const allPredictions = locationCycles.map(cyclePrediction);
     const predictions = filteredPredictions();
@@ -491,6 +579,7 @@
     $('forecastCbs').textContent = `${cbs(sum(forecasts, item => item.forecastCbs))} CBS`;
     $('forecastValue').textContent = money(sum(forecasts, item => item.forecastValue));
     $('riskLocationCount').textContent = risks.length;
+    renderChannelIntelligence(allPredictions);
     renderDataDate();
   }
 
@@ -506,14 +595,16 @@
   }
   async function loadData() {
     $('connectionStatus').textContent = 'Loading predictions…';
-    [locationCycles, invoiceRows] = await Promise.all([
+    [locationCycles, invoiceRows, purchaseOrders] = await Promise.all([
       api('/rest/v1/rpc/sales_intelligence_location_cycles', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}'
       }),
-      fetchAllRows('/rest/v1/dmart_invoice_items?select=invoice_number,invoice_number_normalized,po_number,invoice_date,delivery_location,article_name,article_description,quantity,quantity_cbs,taxable_amount&order=invoice_date.desc,line_number.asc')
+      fetchAllRows('/rest/v1/dmart_invoice_items?select=invoice_number,invoice_number_normalized,po_number,invoice_date,delivery_location,article_name,article_description,quantity,quantity_cbs,taxable_amount&order=invoice_date.desc,line_number.asc'),
+      fetchAllRows('/rest/v1/purchase_orders?is_archived=eq.false&select=id,customer_name,po_number,po_date,po_received_date,delivery_date,delivery_completed_date,status,po_value,invoice_number,invoice_date,invoice_amount,delivery_location&order=po_date.desc')
     ]);
     locationCycles = Array.isArray(locationCycles) ? locationCycles : [];
     invoiceRows = Array.isArray(invoiceRows) ? invoiceRows : [];
+    purchaseOrders = Array.isArray(purchaseOrders) ? purchaseOrders : [];
     populateFilters();
     render();
     $('connectionStatus').textContent = 'Cloud synced';
@@ -523,6 +614,7 @@
     $('forecastHorizon').value = '14';
     $('intelligenceLocation').value = '';
     $('confidenceFilter').value = '';
+    $('intelligenceChannelFocus').value = '';
     render();
   }
   function bindEvents() {
@@ -539,7 +631,7 @@
     $('signOutBtn').addEventListener('click', signOut);
     $('refreshBtn').addEventListener('click', () => loadData().catch(error => toast(error.message)));
     $('intelligenceSearch').addEventListener('input', render);
-    ['forecastHorizon', 'intelligenceLocation', 'confidenceFilter'].forEach(id => $(id).addEventListener('change', render));
+    ['forecastHorizon', 'intelligenceLocation', 'confidenceFilter', 'intelligenceChannelFocus'].forEach(id => $(id).addEventListener('change', render));
     $('clearIntelligenceFilters').addEventListener('click', clearFilters);
   }
   async function start() {

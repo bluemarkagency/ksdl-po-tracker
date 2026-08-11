@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="mobile-filters.css" />
     <link rel="stylesheet" href="sales-intelligence.css?v=sales-intelligence-20260804" />
     <link rel="stylesheet" href="owner-suite.css?v=owner-suite-20260811" />
+    <link rel="stylesheet" href="channel-insights.css?v=channel-insights-20260811" />
   </head>
   <body class="owner-suite sales-intelligence-page">
     <section id="loginScreen" class="login-screen hidden">
@@ -28,7 +29,7 @@
         <div class="owner-heading"><div class="owner-brand-mark" aria-hidden="true">BM</div><div>
           <span class="owner-context">Gujarat predictive sales</span>
           <h1>Sales Intelligence</h1>
-          <p class="page-intro">Expected POs, CBS demand and the next best sales action for every DMart location.</p>
+          <p class="page-intro">One action desk for DMart stores and E-commerce accounts, followed by the existing DMart predictive reports.</p>
         </div></div>
         <div class="top-actions owner-header-actions">
           <span id="connectionStatus" class="connection-status">Connecting…</span>
@@ -62,11 +63,38 @@
 
       <nav class="report-section-nav" aria-label="Sales Intelligence sections">
         <span>Jump to</span>
+        <a href="#channelActionDesk">Channel action desk</a>
         <a href="#callPriority">Call priority</a>
         <a href="#demandForecast">CBS forecast</a>
         <a href="#growthOpportunities">Growth opportunities</a>
         <a href="#riskRecovery">Risk &amp; recovery</a>
       </nav>
+
+      <section id="channelActionDesk" class="channel-insights-card report-anchor" aria-label="Store and E-commerce action desk">
+        <div class="channel-insights-head">
+          <div><span class="eyebrow">DECISION DESK</span><h2>Store and E-commerce action queue</h2><p>DMart actions use store ordering cycles. E-commerce actions use account cadence, open POs and confirmed appointments. Highest-priority work appears first.</p></div>
+          <label class="channel-period-control">Show channel<select id="intelligenceChannelFocus"><option value="">All channels</option><option value="Store">Store only</option><option value="E-commerce">E-commerce only</option></select></label>
+        </div>
+        <div class="channel-comparison">
+          <article id="storeIntelligenceBand" class="channel-band"></article>
+          <article id="ecomIntelligenceBand" class="channel-band ecommerce"></article>
+        </div>
+        <div class="channel-subsection">
+          <div class="channel-subsection-head"><h3>Next best actions</h3><span id="channelActionCount">0 actions</span></div>
+          <div class="table-wrap"><table class="channel-table channel-action-queue"><thead><tr><th>Priority</th><th>Channel</th><th>Customer / location</th><th>Signal</th><th>Evidence</th><th>Recommended staff action</th></tr></thead><tbody id="channelActionBody"></tbody></table></div>
+          <div id="channelActionEmpty" class="empty-state hidden"><h3>No immediate channel action</h3><p>There are no open appointment issues or overdue ordering cycles in the selected horizon.</p></div>
+        </div>
+        <div class="channel-subsection">
+          <div class="channel-subsection-head"><h3>How the team should use each channel</h3><span>Different business models need different follow-up</span></div>
+          <div class="channel-action-grid">
+            <article class="channel-action"><small>Store · DMart</small><strong>Win location by location</strong><p>Use PO cycle, CBS movement, missing articles and shelf/listing conversations. Follow up with the specific store when its normal ordering cycle is overdue.</p></article>
+            <article class="channel-action"><small>E-commerce</small><strong>Win account and appointment execution</strong><p>Track customer cadence, secure appointments early, protect fill rate and close GRN quickly. Escalate accounts whose PO value or frequency is declining.</p></article>
+            <article class="channel-action"><small>Brand manager</small><strong>Compare growth without mixing signals</strong><p>Use business value and delivery execution to compare channels. Use article/CBS decisions only where detailed invoice lines exist.</p></article>
+          </div>
+        </div>
+      </section>
+
+      <div class="existing-report-divider"><strong>Existing Store sales intelligence</strong><span>DMart location calls, CBS forecasts, growth opportunities and risk reports are unchanged below.</span></div>
 
       <section class="summary-grid intelligence-summary" aria-label="Predictive sales summary">
         <article class="attention"><span>Call today</span><strong id="callTodayCount">0</strong><small>Locations overdue for a PO</small></article>
@@ -127,6 +155,7 @@
 
     <div id="toast" class="toast" role="status"></div>
     <script src="config.js"></script>
-    <script src="sales-intelligence.js?v=sales-intelligence-20260804"></script>
+    <script src="channel-insights.js?v=channel-insights-20260811"></script>
+    <script src="sales-intelligence.js?v=channel-insights-20260811"></script>
   </body>
 </html>

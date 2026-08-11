@@ -11,6 +11,7 @@
   let session = null;
   let refreshPromise = null;
   let rows = [];
+  let purchaseOrders = [];
   let locationAliases = [];
   let poLocationRows = [];
   let invoiceLocationRows = [];
@@ -20,6 +21,7 @@
   let locationReviewRows = [];
   let trackerRole = '';
   let activeOpportunityView = 'location-actions';
+  const CHANNELS = window.KSDLChannelInsights;
 
   const $ = id => document.getElementById(id);
   const safe = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
@@ -796,6 +798,91 @@
     $('recommendationGrid').innerHTML = cards.slice(0, 6).join('');
   }
 
+  function channelGrowthMarkup(value, hasComparison) {
+    if (!hasComparison) return '<span class="channel-growth neutral">All history</span>';
+    if (value == null) return '<span class="channel-growth new">New in period</span>';
+    const className = value > 1 ? '' : value < -1 ? 'down' : 'neutral';
+    const prefix = value > 0 ? '+' : '';
+    return `<span class="channel-growth ${className}">${prefix}${Number(value || 0).toFixed(0)}% vs prior</span>`;
+  }
+
+  function channelBandMarkup(channel, metrics, customers, days) {
+    const isStore = channel === 'Store';
+    const accountText = isStore ? 'DMart store deliveries' : `${customers.length} E-commerce customer${customers.length === 1 ? '' : 's'}`;
+    const completion = metrics.averageCompletionDays == null ? '—' : `${metrics.averageCompletionDays.toFixed(1)} days`;
+    const appointment = metrics.appointmentRate == null ? 'Needs data' : `${metrics.appointmentRate.toFixed(0)}%`;
+    return `
+      <header><div><h3>${channel}</h3><p>${accountText}</p></div>${channelGrowthMarkup(metrics.growth, Number(days) > 0)}</header>
+      <div class="channel-band-primary">
+        <div><span>Business value</span><strong>${money(metrics.value)}</strong><small>Invoice amount when available, otherwise PO value</small></div>
+        <div><span>Average order</span><strong>${money(metrics.averageOrder)}</strong><small>${number(metrics.poCount)} PO(s) in period</small></div>
+      </div>
+      <div class="channel-metric-row">
+        <div class="channel-metric"><span>Delivered</span><strong>${metrics.deliveryRate.toFixed(0)}%</strong></div>
+        <div class="channel-metric"><span>Open POs</span><strong>${number(metrics.openCount)}</strong></div>
+        <div class="channel-metric"><span>Avg completion</span><strong>${completion}</strong></div>
+        <div class="channel-metric"><span>Appointment hit</span><strong>${appointment}</strong></div>
+      </div>`;
+  }
+
+  function channelActionCard(type, title, text) {
+    return `<article class="channel-action"><small>${safe(type)}</small><strong>${safe(title)}</strong><p>${safe(text)}</p></article>`;
+  }
+
+  function renderChannelAnalytics() {
+    if (!CHANNELS) return;
+    const days = Number($('channelAnalyticsPeriod').value || 30);
+    const analysis = CHANNELS.analyse(purchaseOrders, days, localIsoDate(new Date()));
+    const storeCustomers = analysis.customers.filter(customer => customer.channel === 'Store');
+    const ecomCustomers = analysis.customers.filter(customer => customer.channel === 'E-commerce');
+    $('storeChannelBand').innerHTML = channelBandMarkup('Store', analysis.byChannel.Store, storeCustomers, days);
+    $('ecomChannelBand').innerHTML = channelBandMarkup('E-commerce', analysis.byChannel['E-commerce'], ecomCustomers, days);
+
+    $('channelCustomerCount').textContent = `${analysis.customers.length} customer${analysis.customers.length === 1 ? '' : 's'}`;
+    $('channelCustomerBody').innerHTML = analysis.customers.map(customer => {
+      const completion = customer.averageCompletionDays == null ? '—' : `${customer.averageCompletionDays.toFixed(1)} days`;
+      const appointment = customer.appointmentRate == null ? 'Needs data' : `${customer.appointmentRate.toFixed(0)}%`;
+      const growth = !days ? 'All history' : customer.growth == null ? 'New' : `${customer.growth >= 0 ? '+' : ''}${customer.growth.toFixed(0)}%`;
+      return `<tr><td><span class="channel-account">${safe(customer.customer)}</span><span class="channel-account-sub">Last PO ${formatShortDate(customer.lastPoDate)}</span></td><td><span class="channel-chip ${customer.channel === 'E-commerce' ? 'ecommerce' : ''}">${safe(customer.channel)}</span></td><td>${number(customer.poCount)}</td><td><strong>${money(customer.value)}</strong></td><td>${money(customer.averageOrder)}</td><td>${customer.deliveryRate.toFixed(0)}%</td><td><strong>${number(customer.openCount)}</strong><span class="channel-account-sub">${money(customer.openValue)}</span></td><td>${completion}</td><td>${appointment}</td><td>${safe(growth)}</td></tr>`;
+    }).join('') || '<tr><td colspan="10"><div class="action-empty"><strong>No channel data</strong><span>POs will appear here after they are added to the main tracker.</span></div></td></tr>';
+
+    const store = analysis.byChannel.Store;
+    const ecom = analysis.byChannel['E-commerce'];
+    const actions = [];
+    const totalValue = store.value + ecom.value;
+    const ecomShare = totalValue ? ecom.value / totalValue * 100 : 0;
+    actions.push(channelActionCard('Channel mix', 'Keep channel decisions separate', `E-commerce contributes ${ecomShare.toFixed(0)}% of tracked business value in this period. Compare its customer cadence and appointments separately from DMart store-level CBS movement.`));
+
+    const executionCandidates = [
+      { name: 'Store', ...store },
+      { name: 'E-commerce', ...ecom }
+    ].filter(item => item.averageCompletionDays != null);
+    if (executionCandidates.length === 2) {
+      const slower = executionCandidates.sort((a, b) => b.averageCompletionDays - a.averageCompletionDays)[0];
+      actions.push(channelActionCard('Delivery execution', `Improve ${slower.name} completion speed`, `${slower.name} averages ${slower.averageCompletionDays.toFixed(1)} days from PO to completion. Review appointments, invoice readiness and transport planning for the slowest orders.`));
+    } else {
+      actions.push(channelActionCard('Delivery execution', 'Complete delivery dates consistently', 'Delivery-completed dates are needed to compare Store and E-commerce lead time accurately. Ask staff to close every delivered PO on the same day.'));
+    }
+
+    const cadence = CHANNELS.cadenceGroups(purchaseOrders, 'E-commerce')
+      .map(group => ({ ...group, timing: group.nextExpectedDate ? CHANNELS.differenceDays(group.nextExpectedDate, localIsoDate(new Date())) : null }))
+      .filter(group => !group.openCount && group.timing != null && group.timing <= 0)
+      .sort((a, b) => a.timing - b.timing)[0];
+    if (cadence) {
+      actions.push(channelActionCard('Sales follow-up', `Contact ${cadence.customer}`, `${cadence.location} is ${Math.abs(cadence.timing)} day(s) beyond its average PO cycle. Ask for the next order and check whether fill rate or appointment issues reduced ordering.`));
+    } else {
+      const openLeader = analysis.customers.filter(customer => customer.channel === 'E-commerce').sort((a, b) => b.openValue - a.openValue)[0];
+      actions.push(channelActionCard('Sales follow-up', openLeader?.openCount ? `Protect ${openLeader.customer} open orders` : 'Maintain E-commerce cadence', openLeader?.openCount ? `${openLeader.openCount} open PO(s) worth ${money(openLeader.openValue)} need appointment, invoice and dispatch follow-through.` : 'No E-commerce account is currently beyond its normal PO cycle. Focus on timely appointments and complete GRN closure.'));
+    }
+
+    const ecomLeader = ecomCustomers[0];
+    if (ecomLeader && ecom.value > 0) {
+      const share = ecomLeader.value / ecom.value * 100;
+      actions.push(channelActionCard('Account concentration', share >= 60 ? 'Reduce E-commerce concentration risk' : 'Protect the leading E-commerce account', `${ecomLeader.customer} contributes ${share.toFixed(0)}% of E-commerce value. ${share >= 60 ? 'Build Blinkit, Zepto and BigBasket more evenly.' : 'Preserve service while developing the remaining accounts.'}`));
+    }
+    $('channelAnalyticsActions').innerHTML = actions.slice(0, 4).join('');
+  }
+
   function render() {
     const items = filteredRows();
     const articles = groupArticles(items);
@@ -809,6 +896,7 @@
     renderOpportunityBoard();
     renderLocationMaster();
     renderMovementMatrix(items);
+    renderChannelAnalytics();
   }
   function toggleCustomDates() {
     $('analyticsCustomDates').classList.toggle('hidden', $('analyticsDateRange').value !== 'custom');
@@ -866,13 +954,14 @@
   async function loadData() {
     $('connectionStatus').textContent = 'Loading analytics…';
     const analyticsOnly = trackerRole === 'brand_manager';
-    [rows, locationAliases, poLocationRows, invoiceLocationRows, locationFollowupRows] = await Promise.all([
+    [rows, locationAliases, purchaseOrders, invoiceLocationRows, locationFollowupRows] = await Promise.all([
       fetchAllRows('/rest/v1/dmart_invoice_items?select=*&order=invoice_date.desc,line_number.asc'),
       fetchLocationAliases(),
-      analyticsOnly ? Promise.resolve([]) : fetchAllRows('/rest/v1/purchase_orders?is_archived=eq.false&select=delivery_location'),
+      fetchAllRows('/rest/v1/purchase_orders?is_archived=eq.false&select=id,customer_name,po_number,po_date,po_received_date,delivery_date,delivery_completed_date,status,po_value,invoice_number,invoice_date,invoice_amount,delivery_location&order=po_date.desc'),
       analyticsOnly ? Promise.resolve([]) : fetchAllRows('/rest/v1/customer_invoices?select=delivery_location'),
       fetchLocationFollowup()
     ]);
+    poLocationRows = purchaseOrders;
     populateFilters();
     render();
     $('connectionStatus').textContent = 'Cloud synced';
@@ -903,6 +992,7 @@
     ['analyticsDateFrom', 'analyticsDateTo'].forEach(id => { $(id).addEventListener('input', render); $(id).addEventListener('change', render); });
     $('clearAnalyticsFilters').addEventListener('click', clearFilters);
     $('exportAnalytics').addEventListener('click', exportCsv);
+    $('channelAnalyticsPeriod').addEventListener('change', renderChannelAnalytics);
     $('locationReviewBody').addEventListener('click', event => {
       const button = event.target.closest('.location-standardize-btn');
       if (button) standardizeObservedLocation(Number(button.dataset.locationIndex), button);
