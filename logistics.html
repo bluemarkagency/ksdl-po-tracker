@@ -78,6 +78,17 @@
 
     <dialog id="poDialog"><form method="dialog"><div class="dialog-head"><div><span id="poDialogCustomer" class="customer-tag">Customer</span><h2 id="poDialogNumber">PO</h2></div><button class="icon-button" value="cancel" aria-label="Close">×</button></div><div id="poDialogContent" class="dialog-content"></div><div class="dialog-actions"><button value="cancel">Close</button></div></form></dialog>
 
+    <dialog id="managePoDialog" class="manage-po-dialog">
+      <form method="dialog">
+        <div class="dialog-head">
+          <div><span class="section-label">PURCHASE ORDER ACTIONS</span><h2 id="managePoTitle">Manage PO</h2><p id="managePoSummary"></p></div>
+          <button class="icon-button" value="cancel" aria-label="Close">×</button>
+        </div>
+        <div id="managePoActions" class="manage-po-actions"></div>
+        <div class="dialog-actions"><button value="cancel">Close</button></div>
+      </form>
+    </dialog>
+
     <dialog id="manualPoDialog">
       <form id="manualPoForm">
         <div class="dialog-head"><div><span class="section-label">MANUAL PURCHASE ORDER</span><h2>Create a new PO</h2><p>Use this for a PO received by WhatsApp, printed copy or directly from a store.</p></div><button id="closeManualPoDialog" class="icon-button" type="button" aria-label="Close">×</button></div>
