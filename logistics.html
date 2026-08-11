@@ -3,195 +3,144 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#124e45" />
-    <title>KSDL Dispatch & Invoice Review</title>
-    <link rel="stylesheet" href="styles.css" />
-    <link rel="stylesheet" href="mobile-filters.css" />
-    <link rel="stylesheet" href="logistics.css?v=multi-customer-live-20260811" />
-    <style>
-      .trip-plan-dialog{width:min(1120px,calc(100% - 24px))}
-      .po-detail-heading{margin-top:20px;padding-top:17px;border-top:1px solid var(--line)}
-      .po-detail-heading p{margin:4px 0 10px;color:var(--muted);font-size:.82rem}
-      .po-detail-wrap{overflow:auto;border:1px solid var(--line);border-radius:9px}
-      .po-detail-table{width:100%;min-width:900px;border-collapse:collapse}
-      .po-detail-table th,.po-detail-table td{padding:9px;border-top:1px solid var(--line);vertical-align:top}
-      .po-detail-table input{width:100%;min-width:120px}
-      .cost-check{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px;padding:11px;background:#f3f8f6;border-radius:9px}
-      .cost-check span{color:var(--muted);font-size:.82rem}.cost-check strong{color:var(--ink)}
-      .cost-check .cost-mismatch{color:#b42318;font-weight:800}.cost-check .cost-balanced{color:var(--green);font-weight:800}
-    </style>
+    <meta name="theme-color" content="#123f3a" />
+    <title>Blue Mark Agency · Dispatch &amp; Invoice Review</title>
+    <link rel="stylesheet" href="logistics-base.css" />
+    <link rel="stylesheet" href="logistics-live.css" />
+    <link rel="stylesheet" href="logistics.css" />
   </head>
   <body>
-    <section id="loginScreen" class="login-screen hidden">
-      <form id="loginForm" class="login-card">
-        <span class="eyebrow" data-i18n="brand">KSDL DISTRIBUTION</span>
-        <h1 data-i18n="pageTitle">Dispatch & Invoice Review</h1>
-        <p data-i18n="loginSubtitle">For the accountant and sales representative. Sign in with your authorised business email.</p>
-        <label><span data-i18n="language">Language</span><select id="loginLanguageSelect" class="language-select"><option value="en">English</option><option value="gu">ગુજરાતી</option><option value="hi">हिन्दी</option></select></label>
-        <label><span data-i18n="email">Email</span><input id="emailInput" type="email" autocomplete="username" required autofocus /></label>
-        <label><span data-i18n="password">Password</span><input id="passwordInput" type="password" autocomplete="current-password" required /></label>
-        <p id="loginError" class="error" aria-live="polite"></p>
-        <button data-i18n="signIn">Sign in</button>
+    <section id="loginView" class="live-login hidden">
+      <form id="loginForm" class="live-login-card">
+        <div class="brand-mark">BM</div>
+        <p class="brand-name">Blue Mark Agency</p>
+        <h1>Dispatch &amp; Invoice Review</h1>
+        <p>Sign in with your authorised Blue Mark Agency login.</p>
+        <label>Email<input id="email" type="email" autocomplete="username" required autofocus /></label>
+        <label>Password<input id="password" type="password" autocomplete="current-password" required /></label>
+        <p id="loginError" class="live-error" aria-live="polite"></p>
+        <button class="primary-button" type="submit">Sign in</button>
       </form>
     </section>
 
-    <main id="app" class="app-shell hidden">
+    <main id="appView" class="app-shell hidden">
       <header class="topbar">
-        <div><span class="eyebrow" data-i18n="brand">KSDL DISTRIBUTION</span><h1 data-i18n="pageTitle">Dispatch & Invoice Review</h1></div>
-        <div class="top-actions">
-          <span id="connectionStatus" class="connection-status">Connecting…</span>
-          <span id="signedInAs" class="connection-status"></span>
-          <label class="top-language"><span data-i18n="language">Language</span><select id="languageSelect" class="language-select" aria-label="Language"><option value="en">English</option><option value="gu">ગુજરાતી</option><option value="hi">हिन्दी</option></select></label>
-          <a id="receivablesNav" class="tracker-nav-link hidden" href="receivables.html">Receivables</a>
-          <a id="analyticsNav" class="tracker-nav-link hidden" href="analytics.html">Analytics</a>
-          <button id="refreshBtn" type="button" data-i18n="refresh">Refresh</button>
-          <button id="signOutBtn" class="text-btn" type="button" data-i18n="signOut">Sign out</button>
-        </div>
+        <div class="brand-block"><div class="brand-mark" aria-hidden="true">BM</div><div><p class="brand-name">Blue Mark Agency</p><h1>Dispatch &amp; Invoice Review</h1></div></div>
+        <div class="top-actions live-top-actions"><span id="connectionStatus" class="live-data-badge">Connecting…</span><span id="currentUser" class="live-user"></span><button id="refreshButton" class="quiet-button" type="button">Refresh</button><button id="signOutButton" class="quiet-button" type="button">Sign out</button></div>
       </header>
 
-      <section class="summary-grid" aria-label="Open PO summary">
-        <article><span data-i18n="totalOpenPos">Total open POs</span><strong id="openCount">0</strong><small id="openValue">₹0 value</small></article>
-        <article><span data-i18n="received">Received</span><strong id="receivedCount">0</strong><small data-i18n="waitingPlanning">Waiting for planning</small></article>
-        <article><span data-i18n="scheduled">Scheduled</span><strong id="scheduledCount">0</strong><small data-i18n="plannedDispatch">Planned for dispatch</small></article>
-        <article><span data-i18n="inTransit">In transit</span><strong id="transitCount">0</strong><small data-i18n="materialOnRoad">Material on the road</small></article>
-        <article class="attention"><span data-i18n="partiallyDelivered">Partially delivered</span><strong id="partialCount">0</strong><small data-i18n="balancePending">Balance still pending</small></article>
+      <section class="customer-bar" aria-label="Customer selection">
+        <div><span class="section-label">CUSTOMER VIEW</span><div id="customerSwitcher" class="customer-switcher"></div></div>
+        <div class="last-refresh"><span>Last refreshed</span><strong id="lastRefreshTime">—</strong></div>
       </section>
 
-      <section class="toolbar executive-toolbar">
-        <label class="search"><span>⌕</span><input id="searchInput" placeholder="Search PO, customer, location, invoice or transporter" data-i18n-placeholder="searchPlaceholder" /></label>
-        <select id="statusFilter" aria-label="Filter by status">
-          <option value="" data-i18n="allOpenStatuses">All open statuses</option>
-          <option value="Received" data-i18n="received">Received</option><option value="Scheduled" data-i18n="scheduled">Scheduled</option><option value="In Transit" data-i18n="inTransit">In Transit</option><option value="Partially Delivered" data-i18n="partiallyDelivered">Partially Delivered</option>
-        </select>
-        <select id="dateRangeFilter" aria-label="Filter by PO date">
-          <option value="" data-i18n="allDates">All dates</option>
-          <option value="current" data-i18n="currentMonth">Current month</option>
-          <option value="last" data-i18n="lastMonth">Last month</option>
-          <option value="custom" data-i18n="customDates">Custom dates</option>
-        </select>
-        <div id="customDateFilters" class="custom-date-filters hidden">
-          <label class="date-filter"><span data-i18n="from">From</span><input id="dateFrom" type="date" /></label>
-          <label class="date-filter"><span data-i18n="to">To</span><input id="dateTo" type="date" /></label>
+      <section class="kpi-grid uat-kpis" aria-label="Dispatch summary">
+        <article><span>Available POs</span><strong id="availableKpi">0</strong><small>Ready for dispatch</small></article>
+        <article class="confirmed"><span>Today’s appointments</span><strong id="todayKpi">0</strong><small id="todayLabel">—</small></article>
+        <article><span>Active trips</span><strong id="activeTripKpi">0</strong><small>In transit or awaiting GRN</small></article>
+        <article class="attention"><span>Awaiting GRN</span><strong id="awaitingGrnKpi">0</strong><small>Blinkit / Zepto receipt pending</small></article>
+      </section>
+
+      <section class="schedule-board" aria-labelledby="scheduleTitle">
+        <div class="schedule-heading"><div><span class="section-label">APPOINTMENT-BASED PLAN</span><h2 id="scheduleTitle">Delivery schedule</h2><p>Schedule controls do not change the complete open PO list below.</p></div><button id="showAllSchedule" class="quiet-button" type="button">Show all available POs</button></div>
+        <div class="schedule-tabs" role="group" aria-label="Delivery schedule periods">
+          <button class="schedule-tab active" type="button" data-schedule="Today"><span>Today</span><strong id="todayCount">0</strong><small id="todayDate">—</small></button>
+          <button class="schedule-tab" type="button" data-schedule="Tomorrow"><span>Tomorrow</span><strong id="tomorrowCount">0</strong><small id="tomorrowDate">—</small></button>
+          <button class="schedule-tab" type="button" data-schedule="Next7"><span>Next 7 days</span><strong id="next7Count">0</strong><small>Confirmed slots</small></button>
+          <button class="schedule-tab attention" type="button" data-schedule="Awaiting"><span>Awaiting appointment</span><strong id="awaitingCount">0</strong><small>Follow up required</small></button>
         </div>
-        <button id="clearFilters" class="text-btn" type="button" data-i18n="clearFilters">Clear filters</button>
+        <div class="agenda-heading"><strong id="agendaTitle">Today’s delivery plan</strong><span id="agendaCount">0 POs</span></div>
+        <div id="agendaList" class="agenda-list"></div><div id="agendaEmpty" class="agenda-empty hidden">No available POs in this period.</div>
       </section>
 
+      <section class="toolbar compact-toolbar uat-toolbar" aria-label="Available PO filters">
+        <label class="search-field"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="poSearch" type="search" placeholder="Search PO, customer or location" /></label>
+        <label class="safe-only"><input id="confirmedOnly" type="checkbox" /> Confirmed appointments only</label>
+      </section>
+      <div class="open-list-heading"><span class="section-label">AVAILABLE FOR DISPATCH</span><h2>Open purchase orders</h2><p>Use Edit to correct imported details or change the confirmed appointment for any customer.</p></div>
       <section class="table-card">
-        <div class="table-title">
-          <div><h2 data-i18n="openPurchaseOrders">Open purchase orders</h2><p id="resultCount">0 records</p></div>
-          <div class="table-title-actions">
-            <button id="openManualPoBtn" class="text-btn manual-po-button" type="button" data-i18n="createManualPo">+ Create manual PO</button>
-            <button id="openTripDialogBtn" class="primary" type="button" disabled>Create new trip (0)</button>
-          </div>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead><tr>
-              <th><input id="selectAllPos" type="checkbox" aria-label="Select all visible POs" /></th><th data-i18n="poCustomer">PO / Customer</th><th data-i18n="poDate">PO Date</th><th data-i18n="status">Status</th><th data-i18n="deliveryLocation">Delivery location</th><th data-i18n="poValue">PO Value</th><th data-i18n="deliveryDate">Appointment date</th><th data-i18n="invoice">Invoice</th><th data-i18n="transport">Transport</th><th data-i18n="age">Age</th><th data-i18n="action">Action</th>
-            </tr></thead>
-            <tbody id="poTableBody"></tbody>
-          </table>
-        </div>
-        <div id="emptyState" class="empty-state hidden">
-          <h3 data-i18n="noOpenPos">No open POs found</h3>
-          <p data-i18n="noOpenPosHelp">There are no POs matching the current search and filters.</p>
-        </div>
+        <div class="table-scroll"><table class="orders-table dispatch-table"><thead><tr><th><input id="selectAll" type="checkbox" aria-label="Select all visible POs" /></th><th>PO / Customer</th><th>PO date</th><th>Status</th><th>Confirmed appointment</th><th>Delivery location</th><th>PO value</th><th>Invoice</th><th>Action</th></tr></thead><tbody id="poTableBody"></tbody></table></div>
+        <div id="poEmpty" class="empty-state hidden"><strong>No available POs</strong><span>Try another customer or filter.</span></div>
+        <div id="selectionBar" class="selection-bar hidden" aria-live="polite"><div><strong id="selectedCount">0 POs selected</strong><span id="selectedValue">₹0 selected value</span></div><div class="selection-actions"><button id="clearSelection" class="quiet-button" type="button">Clear selection</button><button id="createTripButton" class="primary-button" type="button">Create trip</button></div></div>
       </section>
 
-      <dialog id="manualPoDialog" class="manual-po-dialog">
-        <form id="manualPoForm">
-          <div class="trip-dialog-head">
-            <div>
-              <span id="manualPoDialogEyebrow" class="eyebrow" data-i18n="manualPoEyebrow">MANUAL PURCHASE ORDER</span>
-              <h2 id="manualPoDialogTitle" data-i18n="manualPoTitle">Create a new PO</h2>
-              <p id="manualPoDialogHelp" data-i18n="manualPoHelp">Enter the PO details below. It will be saved as Received and appear in the open PO list immediately.</p>
-            </div>
-            <button id="closeManualPoBtn" class="icon-btn" type="button" aria-label="Close">×</button>
-          </div>
-          <div class="manual-po-grid">
-            <label><span data-i18n="customerName">Customer name*</span><input id="manualCustomer" autocomplete="organization" required data-i18n-placeholder="customerPlaceholder" placeholder="Example: DMart" /></label>
-            <label><span data-i18n="manualPoNumber">PO number*</span><input id="manualPoNumber" required inputmode="numeric" data-i18n-placeholder="poNumberPlaceholder" placeholder="Enter PO number" /></label>
-            <label><span data-i18n="manualLocation">Delivery location*</span><input id="manualLocation" required data-i18n-placeholder="locationPlaceholder" placeholder="Example: Bopal" /></label>
-            <label><span data-i18n="manualPoValue">PO value (₹)</span><input id="manualPoValue" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0" /></label>
-            <label><span data-i18n="manualPoDate">PO date*</span><input id="manualPoDate" type="date" required /></label>
-            <label><span data-i18n="poReceivedDate">PO received date*</span><input id="manualReceivedDate" type="date" required /></label>
-            <label><span data-i18n="manualDeliveryDate">Appointment date</span><input id="manualDeliveryDate" type="date" /></label>
-            <label><span data-i18n="manualAssignedTo">Assigned to</span><input id="manualAssignedTo" data-i18n-placeholder="assignedPlaceholder" placeholder="Staff name or email" /></label>
-            <label class="manual-po-span"><span data-i18n="poCopy">PO copy</span><input id="manualPoFile" type="file" accept="application/pdf,image/jpeg,image/png" /><small data-i18n="poCopyHelp">Optional PDF, JPG or PNG up to 10 MB.</small></label>
-            <label class="manual-po-span"><span data-i18n="remarks">Remarks</span><textarea id="manualRemarks" rows="3" data-i18n-placeholder="remarksPlaceholder" placeholder="Any special delivery instructions"></textarea></label>
-          </div>
-          <p id="manualPoError" class="error" aria-live="polite"></p>
-          <div class="plan-actions">
-            <button id="cancelManualPoBtn" type="button" data-i18n="cancel">Cancel</button>
-            <button id="saveManualPoBtn" class="primary" type="submit" data-i18n="savePo">Save PO</button>
-          </div>
-        </form>
-      </dialog>
-
-      <dialog id="appointmentDialog" class="manual-po-dialog appointment-dialog">
-        <form id="appointmentForm">
-          <div class="trip-dialog-head">
-            <div>
-              <span class="eyebrow" data-i18n="appointmentEyebrow">DELIVERY APPOINTMENT</span>
-              <h2 data-i18n="appointmentTitle">Update appointment date</h2>
-              <p id="appointmentSummary"></p>
-            </div>
-            <button id="closeAppointmentBtn" class="icon-btn" type="button" aria-label="Close">×</button>
-          </div>
-          <input id="appointmentPoId" type="hidden" />
-          <label class="appointment-date-field">
-            <span data-i18n="appointmentDate">Appointment date</span>
-            <input id="appointmentDate" type="date" />
-            <small data-i18n="appointmentHelp">Leave blank only when DMart has not confirmed an appointment.</small>
-          </label>
-          <p id="appointmentError" class="error" aria-live="polite"></p>
-          <div class="plan-actions">
-            <button id="cancelAppointmentBtn" type="button" data-i18n="cancel">Cancel</button>
-            <button id="saveAppointmentBtn" class="primary" type="submit" data-i18n="saveAppointment">Save appointment</button>
-          </div>
-        </form>
-      </dialog>
-
-      <dialog id="tripPlanDialog" class="trip-plan-dialog">
-        <form id="tripPlanForm">
-          <div class="trip-dialog-head"><div><span id="tripDialogEyebrow" class="eyebrow">PLAN FOR DELIVERY</span><h2 id="tripDialogTitle">Create new trip</h2><p id="selectedPoSummary">Selected POs will appear here.</p></div><button id="closeTripDialogBtn" class="icon-btn" type="button" aria-label="Close">×</button></div>
-          <div class="plan-grid">
-            <label><span data-i18n="tripDate">Trip date*</span><input id="tripDate" type="date" required /></label>
-            <label><span data-i18n="transporterOwner">Transporter / tempo owner*</span><select id="tripTransporter" required><option value="" data-i18n="selectTransporter">Select transporter</option></select></label>
-            <label><span data-i18n="vehicleNumber">Vehicle number</span><input id="tripVehicle" placeholder="GJ-01-AB-1234" /></label>
-            <label><span data-i18n="driverName">Driver name</span><input id="tripDriver" /></label>
-            <label><span data-i18n="driverPhone">Driver phone</span><input id="tripDriverPhone" inputmode="tel" /></label>
-            <label><span data-i18n="vehicleCost">Vehicle / tempo cost (₹)</span><input id="tripFreight" type="number" min="0" step="0.01" placeholder="Optional" data-i18n-placeholder="optional" /></label>
-          </div>
-          <div class="po-detail-heading"><div><h3 data-i18n="invoiceCostHeading">Invoice and delivery cost for each PO</h3><p data-i18n="invoiceCostHelp">Upload each Tally invoice PDF. The invoice number and date will be filled automatically and checked against the selected PO.</p></div></div>
-          <div class="po-detail-wrap"><table class="po-detail-table"><thead><tr><th data-i18n="poLocation">PO / location</th><th data-i18n="invoiceNumber">Invoice number*</th><th data-i18n="invoiceDate">Invoice date*</th><th data-i18n="invoiceAmount">Invoice amount (₹)</th><th data-i18n="invoiceCopy">Invoice copy</th><th data-i18n="allocatedCost">Allocated cost (₹)</th></tr></thead><tbody id="tripPoDetails"></tbody></table></div>
-          <p id="tripPlanError" class="error" aria-live="polite"></p>
-          <div class="plan-actions"><button id="cancelTripBtn" type="button" data-i18n="cancel">Cancel</button><button id="createTripBtn" class="primary" disabled>Create trip with 0 POs</button></div>
-        </form>
-      </dialog>
-
-      <dialog id="completeTripDialog" class="complete-trip-dialog">
-        <form id="completeTripForm">
-          <div class="trip-dialog-head"><div><span class="eyebrow" data-i18n="deliveryCompleted">DELIVERY COMPLETED</span><h2 data-i18n="completeDelivery">Complete delivery</h2><p id="completeTripSummary">Upload the delivery slip and final cost separately for every PO.</p></div><button id="closeCompleteTripBtn" class="icon-btn" type="button" aria-label="Close">×</button></div>
-          <div class="complete-po-wrap"><table class="complete-po-table"><thead><tr><th data-i18n="poLocation">PO / location</th><th data-i18n="finalTransportCost">Final transport cost (₹)</th><th data-i18n="signedDeliverySlip">Delivery confirmation</th></tr></thead><tbody id="completeTripPoDetails"></tbody></table></div>
-          <div class="complete-total"><span data-i18n="finalTotalCost">Final total transport cost</span><strong id="completeTripTotal">₹0</strong></div>
-          <p class="completion-note" data-i18n="completionNote">The total is calculated automatically. DMart requires a signed slip; Blinkit, Zepto and BigBasket will be confirmed from their GRN email.</p>
-          <p id="completeTripError" class="error" aria-live="polite"></p>
-          <div class="plan-actions"><button id="cancelCompleteTripBtn" type="button" data-i18n="cancel">Cancel</button><button id="completeTripBtn" class="primary" type="submit" data-i18n="completeDelivery">Complete delivery</button></div>
-        </form>
-      </dialog>
-
-      <section class="table-card in-trip-card">
-        <div class="table-title"><div><span class="eyebrow" data-i18n="step4">STEP 4</span><h2 data-i18n="posInTrip">POs in trip</h2><p id="tripCount">0 active trips</p><p class="review-hint" data-i18n="reviewHint">Open the PO and invoice copies here to verify that the correct documents are attached.</p></div></div>
-        <div class="table-wrap"><table class="trip-table"><thead><tr><th data-i18n="tripDatePlain">Trip date</th><th data-i18n="poLocationCopy">PO / location / PO copy</th><th data-i18n="tempoDriver">Tempo / driver</th><th data-i18n="invoiceAndCopy">Invoice / invoice copy</th><th data-i18n="status">Status</th><th data-i18n="tempoCost">Tempo cost</th><th data-i18n="action">Action</th></tr></thead><tbody id="inTripBody"></tbody></table></div>
-        <div id="tripEmptyState" class="empty-state"><h3 data-i18n="noPosInTrip">No POs are in a trip</h3><p data-i18n="noPosInTripHelp">Tick POs above and create the first delivery plan.</p></div>
+      <section class="in-trip-card" aria-labelledby="tripsTitle">
+        <div class="live-trip-heading"><div><span class="section-label">STEP 4 · ACTIVE DISPATCHES</span><h2 id="tripsTitle">POs in Trip</h2><p>Review invoices, edit the trip, complete delivery, or wait for customer GRN confirmation.</p></div><div class="uat-trip-controls"><select id="tripFilter" aria-label="Filter trips"><option value="Active">Active trips</option><option value="Delivered">Delivered</option><option value="All">All trips</option></select><strong id="tripCount" class="live-trip-count">0 trips</strong></div></div>
+        <div id="tripList"></div><div id="tripEmpty" class="agenda-empty hidden">No trips for this view.</div>
       </section>
-      <p class="footnote" data-i18n="footerNote">This shared page lets the accountant verify documents and the sales representative plan and complete trips.</p>
     </main>
 
+    <dialog id="poDialog"><form method="dialog"><div class="dialog-head"><div><span id="poDialogCustomer" class="customer-tag">Customer</span><h2 id="poDialogNumber">PO</h2></div><button class="icon-button" value="cancel" aria-label="Close">×</button></div><div id="poDialogContent" class="dialog-content"></div><div class="dialog-actions"><button value="cancel">Close</button></div></form></dialog>
+
+    <dialog id="editPoDialog">
+      <form id="editPoForm">
+        <div class="dialog-head"><div><span class="section-label">EDIT PURCHASE ORDER</span><h2 id="editPoTitle">Update imported PO</h2><p>PO number is locked so future Gmail revisions, appointments and GRNs continue matching correctly.</p></div><button id="closeEditPoDialog" class="icon-button" type="button" aria-label="Close">×</button></div>
+        <input id="editPoId" type="hidden" />
+        <div class="edit-po-grid">
+          <label>Customer name*<input id="editPoCustomer" required autocomplete="organization" /></label>
+          <label>PO number<input id="editPoNumber" readonly aria-readonly="true" /></label>
+          <label>PO date*<input id="editPoDate" type="date" required /></label>
+          <label>PO received date*<input id="editPoReceivedDate" type="date" required /></label>
+          <label class="appointment-field">Confirmed appointment date<input id="editPoAppointment" type="date" /><small>Leave blank when no appointment is confirmed.</small></label>
+          <label>Delivery location*<input id="editPoLocation" required /></label>
+          <label>PO value (₹)<input id="editPoValue" type="number" min="0" step="0.01" inputmode="decimal" /></label>
+          <label>Status<input id="editPoStatus" readonly aria-readonly="true" /></label>
+          <label class="wide-field">Remarks<textarea id="editPoRemarks" rows="3" placeholder="Optional operational note"></textarea></label>
+        </div>
+        <p id="editPoError" class="live-error" aria-live="polite"></p>
+        <div class="dialog-actions"><button id="cancelEditPoButton" type="button">Cancel</button><button id="saveEditPoButton" class="primary-button" type="submit">Save PO changes</button></div>
+      </form>
+    </dialog>
+
+    <dialog id="appointmentDialog" class="uat-appointment-dialog">
+      <form id="appointmentForm">
+        <div class="dialog-head">
+          <div>
+            <span class="section-label">DELIVERY APPOINTMENT</span>
+            <h2>Update appointment date</h2>
+            <p id="appointmentSummary"></p>
+          </div>
+          <button id="closeAppointmentDialog" class="icon-button" type="button" aria-label="Close">×</button>
+        </div>
+        <input id="appointmentPoId" type="hidden" />
+        <label class="appointment-date-input">
+          Appointment date
+          <input id="appointmentDate" type="date" />
+          <small>Leave blank when the customer has not confirmed an appointment.</small>
+        </label>
+        <p id="appointmentError" class="live-error" aria-live="polite"></p>
+        <div class="dialog-actions">
+          <button id="cancelAppointmentButton" type="button">Cancel</button>
+          <button id="saveAppointmentButton" class="primary-button" type="submit">Save appointment</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="tripDialog">
+      <form id="tripForm">
+        <div class="dialog-head"><div><span class="section-label">PLAN DELIVERY</span><h2 id="tripDialogTitle">Create a new trip</h2><p id="tripSummary"></p></div><button id="closeTripDialog" class="icon-button" type="button" aria-label="Close">×</button></div>
+        <div class="trip-form-grid"><label>Trip date*<input id="tripDate" type="date" required /></label><label>Transporter<select id="tripTransporter"><option value="">Choose transporter</option></select></label><label>Vehicle number<input id="tripVehicle" placeholder="GJ-01-AB-1234" /></label><label>Driver name<input id="tripDriver" placeholder="Driver name" /></label><label>Driver phone<input id="tripPhone" inputmode="tel" placeholder="+91" /></label><label>Estimated tempo cost (₹)<input id="tripCost" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Optional" /></label></div>
+        <div id="tripPoList" class="trip-po-list"></div>
+        <p class="dialog-note">Upload the correct Tally invoice for every selected PO. The file is stored securely and linked to the owner tracker.</p>
+        <p id="tripError" class="live-error" aria-live="polite"></p>
+        <div class="dialog-actions"><button id="cancelTripButton" type="button">Cancel</button><button id="saveTripButton" class="primary-button" type="submit">Save trip</button></div>
+      </form>
+    </dialog>
+
+    <dialog id="completeDialog">
+      <form id="completeForm">
+        <div class="dialog-head"><div><span class="section-label">COMPLETE DELIVERY</span><h2>Complete trip</h2><p id="completeSummary"></p></div><button id="closeCompleteDialog" class="icon-button" type="button" aria-label="Close">×</button></div>
+        <div class="cost-only-card"><label>Calculated final transport cost (₹)<input id="finalTripCost" type="number" min="0" step="0.01" inputmode="decimal" readonly aria-readonly="true" /></label></div>
+        <div id="completePoList" class="trip-po-list"></div>
+        <p id="completionRule" class="dialog-note"></p>
+        <p id="completeError" class="live-error" aria-live="polite"></p>
+        <div class="dialog-actions"><button id="cancelCompleteButton" type="button">Cancel</button><button id="saveCompleteButton" class="primary-button" type="submit">Save completion</button></div>
+      </form>
+    </dialog>
+
     <div id="toast" class="toast" role="status"></div>
-    <script src="config.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <script src="logistics.js?v=multi-customer-live-20260811"></script>
+    <script src="config.js"></script>
+    <script src="logistics.js"></script>
   </body>
 </html>

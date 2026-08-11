@@ -1,0 +1,25 @@
+.live-login { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 18px; background: var(--bg); }
+.live-login-card { width: min(390px, 100%); padding: 26px; border: 1px solid var(--line); border-radius: 14px; background: white; box-shadow: var(--shadow); }
+.live-login-card .brand-mark { margin-bottom: 12px; }.live-login-card h1 { margin: 3px 0 5px; }.live-login-card > p { color: var(--muted); }.live-login-card label { display: block; margin-top: 14px; color: #43514e; font-size: 12px; font-weight: 760; }.live-login-card input { margin-top: 5px; }.live-login-card .primary-button { width: 100%; margin-top: 9px; }
+.live-error { min-height: 20px; margin: 8px 0; color: var(--red) !important; font-size: 12px; }
+.live-data-badge { padding: 6px 9px; border: 1px solid #bdd8ce; border-radius: 99px; background: #edf7f3; color: var(--green); font-size: 11px; font-weight: 800; }.live-data-badge.error { border-color: #e3bcbc; background: #fff1f1; color: var(--red); }.live-user { color: var(--muted); font-size: 11px; }
+.read-only-banner { display: flex; align-items: center; gap: 9px; margin-bottom: 12px; padding: 8px 11px; border: 1px solid #d8ccb0; border-radius: 8px; background: #fff9ec; color: #765b32; font-size: 11px; }.read-only-banner strong { color: #64420d; }
+.last-refresh { text-align: right; }.last-refresh span, .last-refresh strong { display: block; }.last-refresh span { color: var(--muted); font-size: 10px; }.last-refresh strong { font-size: 12px; }
+.live-owner-toolbar { grid-template-columns: minmax(260px, 1fr) 165px 190px auto; }
+.live-source-label { padding: 5px 8px; border-radius: 99px; background: var(--mint); color: var(--green); font-size: 10px; font-weight: 800; }
+.live-orders-table { min-width: 1240px; }
+.live-customer-empty { opacity: .62; }.live-customer-empty strong { background: #f2f3f2; }
+.live-status-note { display: block; margin-top: 3px; color: var(--muted); font-size: 10px; }
+.live-trip-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }.live-trip-heading h2 { margin: 3px 0; }.live-trip-heading p { margin: 0; color: var(--muted); font-size: 12px; }
+.live-trip-count { flex: 0 0 auto; padding: 6px 9px; border-radius: 99px; background: var(--mint); color: var(--green); font-size: 11px; }
+.live-trip-row { grid-template-columns: 1.15fr 1.55fr 1fr .8fr auto; }.live-trip-row.simulated { border-style: dashed; border-color: #c49a52; background: #fffaf0; }.live-trip-row .trip-po-stack { display: grid; gap: 5px; }.live-trip-row .trip-po-stack strong { margin: 0; }.live-trip-row .trip-po-stack small { margin-top: -2px; }
+.evaluation-tag { display: inline-block !important; width: max-content; margin-bottom: 3px; padding: 2px 6px; border-radius: 99px; background: #f4e1b8; color: #75551d !important; font-size: 9px !important; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; }
+.live-po-plan { margin-top: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 9px; background: #fbfdfc; }.live-po-plan-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }.live-po-plan-head strong, .live-po-plan-head span { display: block; }.live-po-plan-head span { color: var(--muted); font-size: 11px; }.live-po-plan-fields { display: grid; grid-template-columns: 1fr 150px 150px; gap: 9px; margin-top: 10px; }.live-po-plan-fields label { color: var(--muted); font-size: 11px; font-weight: 730; }.live-po-plan-fields input { margin-top: 4px; }
+@media (max-width: 720px) {
+  .live-top-actions { display: grid; grid-template-columns: 1fr 1fr; width: 100%; }.live-top-actions .live-data-badge, .live-top-actions .live-user { grid-column: 1 / -1; }.live-top-actions button { width: 100%; }
+  .read-only-banner { align-items: flex-start; flex-direction: column; }
+  .live-owner-toolbar { grid-template-columns: 1fr 1fr; }.live-owner-toolbar .search-field { grid-column: 1 / -1; }.live-owner-toolbar .quiet-button { grid-column: 1 / -1; width: 100%; }
+  .last-refresh { text-align: left; }
+  .live-trip-heading { flex-direction: column; }.live-trip-row { grid-template-columns: 1fr 1fr; }.live-trip-row > div:first-child { grid-column: 1 / -1; }.live-trip-row button { width: 100%; }
+  .live-po-plan-fields { grid-template-columns: 1fr; }.live-po-plan-head { flex-direction: column; }
+}

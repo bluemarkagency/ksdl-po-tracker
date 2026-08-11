@@ -1,1026 +1,360 @@
-(() => {
-  'use strict';
+const CONFIG = window.PO_TRACKER_CONFIG || {};
+const BASE_URL = String(CONFIG.SUPABASE_URL || '').replace(/\/$/, '');
+const PUBLIC_KEY = CONFIG.SUPABASE_ANON_KEY || '';
+const SESSION_KEY = 'ksdl-po-tracker-session';
+const NOTE_BUCKET = 'delivery-notes';
+const ACTIVE_TRIP_STATUSES = new Set(['Dispatched', 'Awaiting GRN']);
+const BLOCKED_PO_STATUSES = new Set(['In Transit', 'Delivered', 'Cancelled']);
+let session = null;
+let orders = [];
+let trips = [];
+let transporters = [];
+let refreshTimer = null;
+const state = { customer: 'All', schedule: 'Today', selected: new Set(), editTripId: null, completeTripId: null };
 
-  const CONFIG = window.PO_TRACKER_CONFIG || {};
-  const BASE_URL = String(CONFIG.SUPABASE_URL || '').replace(/\/$/, '');
-  const PUBLIC_KEY = CONFIG.SUPABASE_ANON_KEY || '';
-  const SESSION_KEY = 'ksdl-po-tracker-session';
-  const LANGUAGE_KEY = 'ksdl-logistics-language';
-  const NOTE_BUCKET = 'delivery-notes';
-  const OPEN_STATUSES = ['Received', 'Scheduled', 'In Transit', 'Partially Delivered'];
-  const CLOSED_TRIP_STATUSES = ['Delivered', 'Cancelled'];
-  const TRANSLATIONS = {
-    en: {
-      brand: 'KSDL DISTRIBUTION', pageTitle: 'Dispatch & Invoice Review', loginSubtitle: 'For the accountant and sales representative. Sign in with your authorised business email.',
-      language: 'Language', email: 'Email', password: 'Password', signIn: 'Sign in', refresh: 'Refresh', signOut: 'Sign out',
-      totalOpenPos: 'Total open POs', value: '{amount} value', received: 'Received', waitingPlanning: 'Waiting for planning', scheduled: 'Scheduled', plannedDispatch: 'Planned for dispatch',
-      inTransit: 'In transit', materialOnRoad: 'Material on the road', partiallyDelivered: 'Partially delivered', balancePending: 'Balance still pending',
-      searchPlaceholder: 'Search PO, customer, location, invoice or transporter', allOpenStatuses: 'All open statuses', allDates: 'All dates', currentMonth: 'Current month',
-      lastMonth: 'Last month', customDates: 'Custom dates', from: 'From', to: 'To', clearFilters: 'Clear filters', openPurchaseOrders: 'Open purchase orders',
-      poCustomer: 'PO / Customer', poDate: 'PO Date', status: 'Status', deliveryLocation: 'Delivery location', poValue: 'PO Value', deliveryDate: 'Appointment date',
-      invoice: 'Invoice', transport: 'Transport', assigned: 'Assigned', age: 'Age', noOpenPos: 'No open POs found', noOpenPosHelp: 'There are no POs matching the current search and filters.',
-      tripDate: 'Trip date*', transporterOwner: 'Transporter / tempo owner*', selectTransporter: 'Select transporter', vehicleNumber: 'Vehicle number', driverName: 'Driver name',
-      driverPhone: 'Driver phone', vehicleCost: 'Vehicle / tempo cost (₹)', optional: 'Optional', invoiceCostHeading: 'Invoice and delivery cost for each PO',
-      invoiceCostHelp: 'Upload each Tally invoice PDF. The invoice number and date will be filled automatically and checked against the selected PO.',
-      poLocation: 'PO / location', invoiceNumber: 'Invoice number*', invoiceDate: 'Invoice date*', invoiceAmount: 'Invoice amount (₹)', invoiceCopy: 'Invoice copy', allocatedCost: 'Allocated cost (₹)', cancel: 'Cancel',
-      deliveryCompleted: 'DELIVERY COMPLETED', completeDelivery: 'Complete delivery', finalTransportCost: 'Final transport cost (₹)', signedDeliverySlip: 'Delivery confirmation',
-      finalTotalCost: 'Final total transport cost', completionNote: 'The total is calculated automatically. DMart requires a signed slip; Blinkit, Zepto and BigBasket will be confirmed from their GRN email.',
-      step4: 'STEP 4', posInTrip: 'POs in trip', reviewHint: 'Open the PO and invoice copies here to verify that the correct documents are attached.', tripDatePlain: 'Trip date',
-      poLocationCopy: 'PO / location / PO copy', tempoDriver: 'Tempo / driver', invoiceAndCopy: 'Invoice / invoice copy', tempoCost: 'Tempo cost', action: 'Action',
-      noPosInTrip: 'No POs are in a trip', noPosInTripHelp: 'Tick POs above and create the first delivery plan.', footerNote: 'This shared page lets the accountant verify documents and the sales representative plan and complete trips.',
-      connecting: 'Connecting…', loadingPos: 'Loading POs…', couldNotLoad: 'Could not load POs', cloudSynced: 'Cloud synced', setupRequired: 'POs loaded; payment setup required',
-      openPoCount: '{count} open PO(s)', activeTripCount: '{count} active trip(s)', createNewTripCount: 'Create new trip ({count})', createTripCount: 'Create trip with {count} PO(s)',
-      updateDeliveryPlan: 'UPDATE DELIVERY PLAN', planDelivery: 'PLAN FOR DELIVERY', editTrip: 'Edit trip', createNewTrip: 'Create new trip',
-      selectedPos: '{count} PO(s): {pos}', selectPosHelp: 'Tick POs above to plan one delivery trip.', locationPending: 'Location pending', receivedOn: 'Received {date}', days: '{count} days',
-      viewPoCopy: 'View PO copy', viewInvoiceCopy: 'View invoice copy', poCopyUnavailable: 'PO copy unavailable', invoiceCopyUnavailable: 'Invoice copy unavailable',
-      invoiceAttached: 'Invoice already attached. Upload a file only to replace it.', selectTally: 'Select a Tally PDF to auto-fill.', ownerCorrection: 'Owner correction: {reason}',
-      correctionRequested: 'Correction requested', pleaseReview: 'Please review this delivery.', noPosLinked: 'No POs linked', needsCorrection: 'Needs Correction',
-      edit: 'Edit', deleteTrip: 'Delete entry', deleteTripConfirm: 'Delete this trip entry? Its POs will return to the open list so the trip can be recreated.', tripDeleted: 'Trip entry deleted. The POs are available for a new trip.', couldNotDeleteTrip: 'Could not delete this trip entry.',
-      correctDelivery: 'Correct delivery', saveTripChanges: 'Save trip changes', completeEachDelivery: '{count} PO(s) in this trip — complete each delivery separately.',
-      grnDeliveryHelp: 'Customer GRN will confirm delivery. Enter the final transport cost; no delivery slip is required.', awaitingGrn: 'Awaiting GRN', awaitingGrnAction: 'Waiting for customer GRN',
-      returnedByOwner: '{count} PO(s) returned by the owner — upload the corrected delivery slip and final cost.', tripNotFound: 'Trip not found. Refresh and try again.',
-      uploadSlipForPo: 'Upload the signed delivery slip for PO {po}.', completingDelivery: 'Completing delivery…', tripChangesSaved: 'Trip changes saved.',
-      tripCreated: 'Trip created — selected POs moved to POs in trip.', correctedResubmitted: 'Corrected delivery resubmitted to the owner.',
-      deliveryUpdated: 'Delivery completed — linked POs updated in the owner tracker.', deliverySentForGrn: 'Transport cost saved. Email-GRN POs are now waiting for customer confirmation.', readingInvoice: 'Reading invoice…',
-      selectAtLeastOne: 'Select at least one PO first.', waitForInvoice: 'Wait for invoice reading to finish for PO {po}.', replaceWrongInvoice: 'The uploaded invoice does not match PO {po}. Replace it before saving.',
-      uploadVerifyInvoice: 'Upload and verify the invoice for PO {po}.', invoiceAmountRequired: 'Enter or verify the invoice amount for PO {po}.', selectTransporterError: 'Select a transporter from the Transporter Master.', editInvoiceFirst: 'Edit the trip and complete the invoice details for PO {po}.',
-      planning: 'Planning', pending: 'Pending', delivered: 'Delivered', cancelled: 'Cancelled',
-      invoiceCopyRequired: 'Attach the invoice copy before creating the trip.', invoiceTooLarge: 'Invoice copy must be 10 MB or smaller.', slipRequired: 'Upload the signed delivery slip before completing the trip.',
-      slipTooLarge: 'Delivery slip must be 10 MB or smaller.', pdfReaderError: 'The PDF reader did not load. Check the internet connection and try again.', tripSetupNotReady: 'Trip setup is not ready. Please contact the administrator.',
-      couldNotSaveTrip: 'Could not save the trip.', couldNotComplete: 'Could not complete the delivery.', signInFailed: 'Sign in failed.', notConfigured: 'The app is not configured.', signInAgain: 'Please sign in again.',
-      invoiceNumberPlaceholder: 'Invoice number',
-      imageInvoiceManual: 'Please select the original Tally invoice PDF. Images and PO copies cannot be read as invoices.', wrongInvoice: 'Wrong invoice: it belongs to PO {actual}, not {expected}.',
-      invoiceMatched: '✓ PO {po} matched', verifyInvoice: 'This is not a readable Tally invoice PDF. Please select the original invoice PDF.', savingChanges: 'Saving changes…', creatingTrip: 'Creating trip…',
-      createManualPo: '+ Create manual PO', manualPoEyebrow: 'MANUAL PURCHASE ORDER', manualPoTitle: 'Create a new PO',
-      manualPoHelp: 'Enter the PO details below. It will be saved as Received and appear in the open PO list immediately.',
-      customerName: 'Customer name*', customerPlaceholder: 'Example: DMart', manualPoNumber: 'PO number*', poNumberPlaceholder: 'Enter PO number',
-      manualLocation: 'Delivery location*', locationPlaceholder: 'Example: Bopal', manualPoValue: 'PO value (₹)', manualPoDate: 'PO date*',
-      poReceivedDate: 'PO received date*', manualDeliveryDate: 'Appointment date', manualAssignedTo: 'Assigned to', assignedPlaceholder: 'Staff name or email',
-      poCopy: 'PO copy', poCopyHelp: 'Optional PDF, JPG or PNG up to 10 MB.', remarks: 'Remarks', remarksPlaceholder: 'Any special delivery instructions',
-      savePo: 'Save PO', savingPo: 'Saving PO…', manualPoSaved: 'Manual PO saved and added to the open PO list.',
-      manualDuplicate: 'This PO number already exists.', manualFileTooLarge: 'PO copy must be 10 MB or smaller.',
-      manualFileType: 'PO copy must be a PDF, JPG or PNG file.', couldNotSavePo: 'Could not save the PO.',
-      appointmentEyebrow: 'DELIVERY APPOINTMENT', appointmentTitle: 'Update appointment date', appointmentDate: 'Appointment date',
-      appointmentHelp: 'Leave blank only when DMart has not confirmed an appointment.', appointmentForPo: 'PO {po} · {location}',
-      editAppointment: 'Edit date', saveAppointment: 'Save appointment', savingAppointment: 'Saving…',
-      appointmentSaved: 'Appointment date updated.', couldNotSaveAppointment: 'Could not update the appointment date.',
-      editPoEyebrow: 'EDIT PURCHASE ORDER', editPoTitle: 'Edit PO details', editPoHelp: 'Update the PO information below. Dispatch, invoice and delivery records will not be changed.',
-      savePoChanges: 'Save changes', poUpdated: 'PO details updated.'
-    },
-    gu: {
-      brand: 'KSDL ડિસ્ટ્રિબ્યુશન', pageTitle: 'ડિસ્પેચ અને ઇન્વૉઇસ ચકાસણી', loginSubtitle: 'એકાઉન્ટન્ટ અને સેલ્સ પ્રતિનિધિ માટે. તમારા અધિકૃત બિઝનેસ ઈમેલથી સાઇન ઇન કરો.',
-      language: 'ભાષા', email: 'ઈમેલ', password: 'પાસવર્ડ', signIn: 'સાઇન ઇન', refresh: 'રિફ્રેશ', signOut: 'સાઇન આઉટ',
-      totalOpenPos: 'કુલ ઓપન PO', value: '{amount} મૂલ્ય', received: 'મળેલ', waitingPlanning: 'પ્લાનિંગ બાકી', scheduled: 'નિયોજિત', plannedDispatch: 'ડિસ્પેચ માટે આયોજન થયેલ',
-      inTransit: 'માર્ગમાં', materialOnRoad: 'માલ રસ્તામાં છે', partiallyDelivered: 'આંશિક ડિલિવરી', balancePending: 'બાકી માલ આપવાનો છે',
-      searchPlaceholder: 'PO, ગ્રાહક, સ્થળ, ઇન્વૉઇસ અથવા ટ્રાન્સપોર્ટર શોધો', allOpenStatuses: 'બધા ઓપન સ્ટેટસ', allDates: 'બધી તારીખો', currentMonth: 'ચાલુ મહિનો',
-      lastMonth: 'ગયા મહિનો', customDates: 'પસંદગીની તારીખો', from: 'થી', to: 'સુધી', clearFilters: 'ફિલ્ટર સાફ કરો', openPurchaseOrders: 'ઓપન પરચેઝ ઓર્ડર',
-      poCustomer: 'PO / ગ્રાહક', poDate: 'PO તારીખ', status: 'સ્થિતિ', deliveryLocation: 'ડિલિવરી સ્થળ', poValue: 'PO મૂલ્ય', deliveryDate: 'અપોઇન્ટમેન્ટ તારીખ',
-      invoice: 'ઇન્વૉઇસ', transport: 'ટ્રાન્સપોર્ટ', assigned: 'જવાબદારી', age: 'ઉંમર', noOpenPos: 'કોઈ ઓપન PO મળ્યો નથી', noOpenPosHelp: 'હાલની શોધ અને ફિલ્ટર મુજબ કોઈ PO નથી.',
-      tripDate: 'ટ્રિપ તારીખ*', transporterOwner: 'ટ્રાન્સપોર્ટર / ટેમ્પો માલિક*', selectTransporter: 'ટ્રાન્સપોર્ટર પસંદ કરો', vehicleNumber: 'વાહન નંબર', driverName: 'ડ્રાઇવરનું નામ',
-      driverPhone: 'ડ્રાઇવર ફોન', vehicleCost: 'વાહન / ટેમ્પો ખર્ચ (₹)', optional: 'વૈકલ્પિક', invoiceCostHeading: 'દરેક PO માટે ઇન્વૉઇસ અને ડિલિવરી ખર્ચ',
-      invoiceCostHelp: 'દરેક Tally ઇન્વૉઇસ PDF અપલોડ કરો. ઇન્વૉઇસ નંબર અને તારીખ આપમેળે ભરાશે અને પસંદ કરેલા PO સાથે ચકાસાશે.',
-      poLocation: 'PO / સ્થળ', invoiceNumber: 'ઇન્વૉઇસ નંબર*', invoiceDate: 'ઇન્વૉઇસ તારીખ*', invoiceAmount: 'ઇન્વૉઇસ રકમ (₹)', invoiceCopy: 'ઇન્વૉઇસ નકલ', allocatedCost: 'ફાળવેલ ખર્ચ (₹)', cancel: 'રદ કરો',
-      deliveryCompleted: 'ડિલિવરી પૂર્ણ', completeDelivery: 'ડિલિવરી પૂર્ણ કરો', finalTransportCost: 'અંતિમ ટ્રાન્સપોર્ટ ખર્ચ (₹)', signedDeliverySlip: 'ડિલિવરી પુષ્ટિ',
-      finalTotalCost: 'કુલ અંતિમ ટ્રાન્સપોર્ટ ખર્ચ', completionNote: 'કુલ આપમેળે ગણાશે. DMart માટે સહીવાળી સ્લિપ જરૂરી છે; Blinkit, Zepto અને BigBasket તેમના GRN ઈમેલથી પુષ્ટિ થશે.',
-      step4: 'પગલું 4', posInTrip: 'ટ્રિપમાં PO', reviewHint: 'સાચા દસ્તાવેજ જોડાયેલા છે કે નહીં તે તપાસવા PO અને ઇન્વૉઇસની નકલ અહીં ખોલો.', tripDatePlain: 'ટ્રિપ તારીખ',
-      poLocationCopy: 'PO / સ્થળ / PO નકલ', tempoDriver: 'ટેમ્પો / ડ્રાઇવર', invoiceAndCopy: 'ઇન્વૉઇસ / ઇન્વૉઇસ નકલ', tempoCost: 'ટેમ્પો ખર્ચ', action: 'કાર્યवाही',
-      noPosInTrip: 'કોઈ PO ટ્રિપમાં નથી', noPosInTripHelp: 'ઉપર PO પસંદ કરીને પ્રથમ ડિલિવરી પ્લાન બનાવો.', footerNote: 'આ પેજ પર એકાઉન્ટન્ટ દસ્તાવેજ તપાસી શકે છે અને સેલ્સ પ્રતિનિધિ ટ્રિપ બનાવી અને પૂર્ણ કરી શકે છે.',
-      connecting: 'કનેક્ટ થઈ રહ્યું છે…', loadingPos: 'PO લોડ થઈ રહ્યા છે…', couldNotLoad: 'PO લોડ થઈ શક્યા નથી', cloudSynced: 'ક્લાઉડ સિંક થયેલ', setupRequired: 'PO લોડ થયા; પેમેન્ટ સેટઅપ જરૂરી',
-      openPoCount: '{count} ઓપન PO', activeTripCount: '{count} સક્રિય ટ્રિપ', createNewTripCount: 'નવી ટ્રિપ બનાવો ({count})', createTripCount: '{count} PO સાથે ટ્રિપ બનાવો',
-      updateDeliveryPlan: 'ડિલિવરી પ્લાન સુધારો', planDelivery: 'ડિલિવરીનું આયોજન', editTrip: 'ટ્રિપ સુધારો', createNewTrip: 'નવી ટ્રિપ બનાવો',
-      selectedPos: '{count} PO: {pos}', selectPosHelp: 'એક ડિલિવરી ટ્રિપ બનાવવા ઉપર PO પસંદ કરો.', locationPending: 'સ્થળ બાકી', receivedOn: '{date} એ મળેલ', days: '{count} દિવસ',
-      viewPoCopy: 'PO નકલ જુઓ', viewInvoiceCopy: 'ઇન્વૉઇસ નકલ જુઓ', poCopyUnavailable: 'PO નકલ ઉપલબ્ધ નથી', invoiceCopyUnavailable: 'ઇન્વૉઇસ નકલ ઉપલબ્ધ નથી',
-      invoiceAttached: 'ઇન્વૉઇસ પહેલેથી જોડાયેલ છે. બદલવા માટે જ નવી ફાઇલ અપલોડ કરો.', selectTally: 'આપમેળે ભરવા Tally PDF પસંદ કરો.', ownerCorrection: 'ઓનર સુધારો: {reason}',
-      correctionRequested: 'સુધારો માંગેલ', pleaseReview: 'આ ડિલિવરી ફરી તપાસો.', noPosLinked: 'કોઈ PO જોડાયેલ નથી', needsCorrection: 'સુધારો જરૂરી',
-      edit: 'સુધારો', deleteTrip: 'એન્ટ્રી કાઢી નાખો', deleteTripConfirm: 'આ ટ્રિપ એન્ટ્રી કાઢી નાખવી છે? તેના PO ફરી ઓપન યાદીમાં આવશે જેથી નવી ટ્રિપ બનાવી શકાય.', tripDeleted: 'ટ્રિપ એન્ટ્રી કાઢી નાખી. PO નવી ટ્રિપ માટે ઉપલબ્ધ છે.', couldNotDeleteTrip: 'આ ટ્રિપ એન્ટ્રી કાઢી શકાયી નથી.',
-      correctDelivery: 'ડિલિવરી સુધારો', saveTripChanges: 'ટ્રિપ ફેરફાર સાચવો', completeEachDelivery: 'આ ટ્રિપના {count} PO — દરેક ડિલિવરી અલગથી પૂર્ણ કરો.',
-      grnDeliveryHelp: 'ગ્રાહકનો GRN ડિલિવરીની પુષ્ટિ કરશે. અંતિમ ટ્રાન્સપોર્ટ ખર્ચ દાખલ કરો; ડિલિવરી સ્લિપ જરૂરી નથી.', awaitingGrn: 'GRNની રાહમાં', awaitingGrnAction: 'ગ્રાહકના GRNની રાહમાં',
-      returnedByOwner: 'ઓનરે {count} PO પાછા મોકલ્યા — સુધારેલી ડિલિવરી સ્લિપ અને અંતિમ ખર્ચ અપલોડ કરો.', tripNotFound: 'ટ્રિપ મળી નથી. રિફ્રેશ કરીને ફરી પ્રયાસ કરો.',
-      uploadSlipForPo: 'PO {po} માટે સહીવાળી ડિલિવરી સ્લિપ અપલોડ કરો.', completingDelivery: 'ડિલિવરી પૂર્ણ થઈ રહી છે…', tripChangesSaved: 'ટ્રિપ ફેરફાર સાચવ્યા.',
-      tripCreated: 'ટ્રિપ બની — પસંદ કરેલા PO ટ્રિપ વિભાગમાં ખસેડાયા.', correctedResubmitted: 'સુધારેલી ડિલિવરી ઓનરને ફરી મોકલાઈ.',
-      deliveryUpdated: 'ડિલિવરી પૂર્ણ — જોડાયેલા PO ઓનર ટ્રેકરમાં અપડેટ થયા.', deliverySentForGrn: 'ટ્રાન્સપોર્ટ ખર્ચ સાચવ્યો. ઈમેલ-GRN PO હવે ગ્રાહકની પુષ્ટિની રાહમાં છે.', readingInvoice: 'ઇન્વૉઇસ વાંચી રહ્યું છે…',
-      selectAtLeastOne: 'પહેલા ઓછામાં ઓછો એક PO પસંદ કરો.', waitForInvoice: 'PO {po}નું ઇન્વૉઇસ વાંચવાનું પૂરું થાય ત્યાં સુધી રાહ જુઓ.', replaceWrongInvoice: 'અપલોડ કરેલું ઇન્વૉઇસ PO {po} સાથે મળતું નથી. સાચું ઇન્વૉઇસ અપલોડ કરો.',
-      uploadVerifyInvoice: 'PO {po}નું ઇન્વૉઇસ અપલોડ કરીને ચકાસો.', invoiceAmountRequired: 'PO {po} માટે ઇન્વૉઇસ રકમ દાખલ કરો અથવા ચકાસો.', selectTransporterError: 'ટ્રાન્સપોર્ટર માસ્ટરમાંથી ટ્રાન્સપોર્ટર પસંદ કરો.', editInvoiceFirst: 'ટ્રિપ સુધારી PO {po}ની ઇન્વૉઇસ વિગતો પૂર્ણ કરો.',
-      planning: 'આયોજન', pending: 'બાકી', delivered: 'ડિલિવર થયેલ', cancelled: 'રદ થયેલ',
-      invoiceCopyRequired: 'ટ્રિપ બનાવતા પહેલા ઇન્વૉઇસ નકલ જોડો.', invoiceTooLarge: 'ઇન્વૉઇસ નકલ 10 MB અથવા તેનાથી નાની હોવી જોઈએ.', slipRequired: 'ટ્રિપ પૂર્ણ કરતા પહેલા સહીવાળી ડિલિવરી સ્લિપ અપલોડ કરો.',
-      slipTooLarge: 'ડિલિવરી સ્લિપ 10 MB અથવા તેનાથી નાની હોવી જોઈએ.', pdfReaderError: 'PDF રીડર લોડ થયો નથી. ઇન્ટરનેટ તપાસી ફરી પ્રયાસ કરો.', tripSetupNotReady: 'ટ્રિપ સેટઅપ તૈયાર નથી. એડમિનિસ્ટ્રેટરનો સંપર્ક કરો.',
-      couldNotSaveTrip: 'ટ્રિપ સાચવી શકાઈ નથી.', couldNotComplete: 'ડિલિવરી પૂર્ણ થઈ શકી નથી.', signInFailed: 'સાઇન ઇન થઈ શક્યું નથી.', notConfigured: 'એપનું સેટઅપ પૂર્ણ નથી.', signInAgain: 'ફરી સાઇન ઇન કરો.',
-      invoiceNumberPlaceholder: 'ઇન્વૉઇસ નંબર',
-      imageInvoiceManual: 'મૂળ Tally ઇન્વૉઇસ PDF પસંદ કરો. ઇમેજ અથવા PO નકલ ઇન્વૉઇસ તરીકે વાંચી શકાતી નથી.', wrongInvoice: 'ખોટું ઇન્વૉઇસ: આ PO {actual}નું છે, {expected}નું નથી.',
-      invoiceMatched: '✓ PO {po} મેળ ખાય છે', verifyInvoice: 'આ વાંચી શકાય તેવી Tally ઇન્વૉઇસ PDF નથી. મૂળ ઇન્વૉઇસ PDF પસંદ કરો.', savingChanges: 'ફેરફાર સાચવી રહ્યા છે…', creatingTrip: 'ટ્રિપ બની રહી છે…',
-      createManualPo: '+ મેન્યુઅલ PO બનાવો', manualPoEyebrow: 'મેન્યુઅલ પરચેઝ ઓર્ડર', manualPoTitle: 'નવો PO બનાવો',
-      manualPoHelp: 'નીચે POની વિગતો દાખલ કરો. તે મળેલ સ્થિતિમાં સાચવાશે અને તરત ઓપન PO યાદીમાં દેખાશે.',
-      customerName: 'ગ્રાહકનું નામ*', customerPlaceholder: 'ઉદાહરણ: DMart', manualPoNumber: 'PO નંબર*', poNumberPlaceholder: 'PO નંબર દાખલ કરો',
-      manualLocation: 'ડિલિવરી સ્થળ*', locationPlaceholder: 'ઉદાહરણ: Bopal', manualPoValue: 'PO મૂલ્ય (₹)', manualPoDate: 'PO તારીખ*',
-      poReceivedDate: 'PO મળ્યાની તારીખ*', manualDeliveryDate: 'અપોઇન્ટમેન્ટ તારીખ', manualAssignedTo: 'જવાબદારી', assignedPlaceholder: 'સ્ટાફનું નામ અથવા ઈમેલ',
-      poCopy: 'PO નકલ', poCopyHelp: 'વૈકલ્પિક PDF, JPG અથવા PNG, વધુમાં વધુ 10 MB.', remarks: 'નોંધ', remarksPlaceholder: 'કોઈ ખાસ ડિલિવરી સૂચના',
-      savePo: 'PO સાચવો', savingPo: 'PO સાચવાઈ રહ્યો છે…', manualPoSaved: 'મેન્યુઅલ PO સાચવાયો અને ઓપન PO યાદીમાં ઉમેરાયો.',
-      manualDuplicate: 'આ PO નંબર પહેલેથી હાજર છે.', manualFileTooLarge: 'PO નકલ 10 MB અથવા તેનાથી નાની હોવી જોઈએ.',
-      manualFileType: 'PO નકલ PDF, JPG અથવા PNG ફાઇલ હોવી જોઈએ.', couldNotSavePo: 'PO સાચવી શકાયો નથી.',
-      appointmentEyebrow: 'ડિલિવરી અપોઇન્ટમેન્ટ', appointmentTitle: 'અપોઇન્ટમેન્ટ તારીખ સુધારો', appointmentDate: 'અપોઇન્ટમેન્ટ તારીખ',
-      appointmentHelp: 'DMart દ્વારા અપોઇન્ટમેન્ટ નક્કી ન થઈ હોય ત્યારે જ ખાલી રાખો.', appointmentForPo: 'PO {po} · {location}',
-      editAppointment: 'તારીખ સુધારો', saveAppointment: 'અપોઇન્ટમેન્ટ સાચવો', savingAppointment: 'સાચવી રહ્યા છે…',
-      appointmentSaved: 'અપોઇન્ટમેન્ટ તારીખ સુધારાઈ.', couldNotSaveAppointment: 'અપોઇન્ટમેન્ટ તારીખ સુધારી શકાયી નથી.',
-      editPoEyebrow: 'પરચેઝ ઓર્ડર સુધારો', editPoTitle: 'PO વિગતો સુધારો', editPoHelp: 'નીચે POની માહિતી સુધારો. ડિસ્પેચ, ઇન્વૉઇસ અને ડિલિવરી રેકોર્ડ બદલાશે નહીં.',
-      savePoChanges: 'ફેરફાર સાચવો', poUpdated: 'PO વિગતો સુધારાઈ.'
-    },
-    hi: {
-      brand: 'KSDL डिस्ट्रीब्यूशन', pageTitle: 'डिस्पैच और इनवॉइस जाँच', loginSubtitle: 'अकाउंटेंट और सेल्स प्रतिनिधि के लिए। अपने अधिकृत बिज़नेस ईमेल से साइन इन करें।',
-      language: 'भाषा', email: 'ईमेल', password: 'पासवर्ड', signIn: 'साइन इन', refresh: 'रिफ्रेश', signOut: 'साइन आउट',
-      totalOpenPos: 'कुल खुले PO', value: '{amount} मूल्य', received: 'प्राप्त', waitingPlanning: 'प्लानिंग बाकी', scheduled: 'निर्धारित', plannedDispatch: 'डिस्पैच की योजना बनी',
-      inTransit: 'रास्ते में', materialOnRoad: 'सामान रास्ते में है', partiallyDelivered: 'आंशिक डिलीवरी', balancePending: 'बाकी माल देना है',
-      searchPlaceholder: 'PO, ग्राहक, स्थान, इनवॉइस या ट्रांसपोर्टर खोजें', allOpenStatuses: 'सभी खुले स्टेटस', allDates: 'सभी तारीखें', currentMonth: 'चालू महीना',
-      lastMonth: 'पिछला महीना', customDates: 'अपनी तारीखें', from: 'से', to: 'तक', clearFilters: 'फिल्टर हटाएँ', openPurchaseOrders: 'खुले परचेज़ ऑर्डर',
-      poCustomer: 'PO / ग्राहक', poDate: 'PO तारीख', status: 'स्थिति', deliveryLocation: 'डिलीवरी स्थान', poValue: 'PO मूल्य', deliveryDate: 'अपॉइंटमेंट तारीख',
-      invoice: 'इनवॉइस', transport: 'ट्रांसपोर्ट', assigned: 'जिम्मेदारी', age: 'आयु', noOpenPos: 'कोई खुला PO नहीं मिला', noOpenPosHelp: 'मौजूदा खोज और फिल्टर से मेल खाने वाला कोई PO नहीं है।',
-      tripDate: 'ट्रिप तारीख*', transporterOwner: 'ट्रांसपोर्टर / टेम्पो मालिक*', selectTransporter: 'ट्रांसपोर्टर चुनें', vehicleNumber: 'वाहन नंबर', driverName: 'ड्राइवर का नाम',
-      driverPhone: 'ड्राइवर फोन', vehicleCost: 'वाहन / टेम्पो खर्च (₹)', optional: 'वैकल्पिक', invoiceCostHeading: 'हर PO का इनवॉइस और डिलीवरी खर्च',
-      invoiceCostHelp: 'हर Tally इनवॉइस PDF अपलोड करें। इनवॉइस नंबर और तारीख अपने आप भरेंगे और चुने गए PO से जाँच होगी।',
-      poLocation: 'PO / स्थान', invoiceNumber: 'इनवॉइस नंबर*', invoiceDate: 'इनवॉइस तारीख*', invoiceAmount: 'इनवॉइस राशि (₹)', invoiceCopy: 'इनवॉइस कॉपी', allocatedCost: 'आवंटित खर्च (₹)', cancel: 'रद्द करें',
-      deliveryCompleted: 'डिलीवरी पूरी', completeDelivery: 'डिलीवरी पूरी करें', finalTransportCost: 'अंतिम ट्रांसपोर्ट खर्च (₹)', signedDeliverySlip: 'डिलीवरी पुष्टि',
-      finalTotalCost: 'कुल अंतिम ट्रांसपोर्ट खर्च', completionNote: 'कुल अपने आप निकलेगा। DMart के लिए हस्ताक्षरित स्लिप जरूरी है; Blinkit, Zepto और BigBasket की पुष्टि उनके GRN ईमेल से होगी।',
-      step4: 'चरण 4', posInTrip: 'ट्रिप में PO', reviewHint: 'सही दस्तावेज़ लगे हैं या नहीं, यह जाँचने के लिए PO और इनवॉइस कॉपी यहाँ खोलें।', tripDatePlain: 'ट्रिप तारीख',
-      poLocationCopy: 'PO / स्थान / PO कॉपी', tempoDriver: 'टेम्पो / ड्राइवर', invoiceAndCopy: 'इनवॉइस / इनवॉइस कॉपी', tempoCost: 'टेम्पो खर्च', action: 'कार्रवाई',
-      noPosInTrip: 'कोई PO ट्रिप में नहीं है', noPosInTripHelp: 'ऊपर PO चुनकर पहला डिलीवरी प्लान बनाएँ।', footerNote: 'इस पेज पर अकाउंटेंट दस्तावेज़ जाँच सकता है और सेल्स प्रतिनिधि ट्रिप बना और पूरी कर सकता है।',
-      connecting: 'कनेक्ट हो रहा है…', loadingPos: 'PO लोड हो रहे हैं…', couldNotLoad: 'PO लोड नहीं हो सके', cloudSynced: 'क्लाउड सिंक हुआ', setupRequired: 'PO लोड हुए; भुगतान सेटअप जरूरी',
-      openPoCount: '{count} खुले PO', activeTripCount: '{count} सक्रिय ट्रिप', createNewTripCount: 'नई ट्रिप बनाएँ ({count})', createTripCount: '{count} PO की ट्रिप बनाएँ',
-      updateDeliveryPlan: 'डिलीवरी प्लान अपडेट करें', planDelivery: 'डिलीवरी की योजना', editTrip: 'ट्रिप संपादित करें', createNewTrip: 'नई ट्रिप बनाएँ',
-      selectedPos: '{count} PO: {pos}', selectPosHelp: 'एक डिलीवरी ट्रिप बनाने के लिए ऊपर PO चुनें।', locationPending: 'स्थान बाकी', receivedOn: '{date} को प्राप्त', days: '{count} दिन',
-      viewPoCopy: 'PO कॉपी देखें', viewInvoiceCopy: 'इनवॉइस कॉपी देखें', poCopyUnavailable: 'PO कॉपी उपलब्ध नहीं', invoiceCopyUnavailable: 'इनवॉइस कॉपी उपलब्ध नहीं',
-      invoiceAttached: 'इनवॉइस पहले से जुड़ा है। बदलने के लिए ही नई फाइल अपलोड करें।', selectTally: 'अपने आप भरने के लिए Tally PDF चुनें।', ownerCorrection: 'मालिक का सुधार: {reason}',
-      correctionRequested: 'सुधार माँगा गया', pleaseReview: 'इस डिलीवरी को फिर जाँचें।', noPosLinked: 'कोई PO जुड़ा नहीं', needsCorrection: 'सुधार जरूरी',
-      edit: 'संपादित करें', deleteTrip: 'एंट्री हटाएँ', deleteTripConfirm: 'यह ट्रिप एंट्री हटाएँ? इसके PO फिर खुली सूची में आ जाएँगे ताकि ट्रिप दोबारा बनाई जा सके।', tripDeleted: 'ट्रिप एंट्री हटा दी गई। PO नई ट्रिप के लिए उपलब्ध हैं।', couldNotDeleteTrip: 'यह ट्रिप एंट्री हटाई नहीं जा सकी।',
-      correctDelivery: 'डिलीवरी सुधारें', saveTripChanges: 'ट्रिप बदलाव सहेजें', completeEachDelivery: 'इस ट्रिप के {count} PO — हर डिलीवरी अलग से पूरी करें।',
-      grnDeliveryHelp: 'ग्राहक का GRN डिलीवरी की पुष्टि करेगा। अंतिम परिवहन लागत दर्ज करें; डिलीवरी स्लिप जरूरी नहीं है।', awaitingGrn: 'GRN की प्रतीक्षा', awaitingGrnAction: 'ग्राहक GRN की प्रतीक्षा',
-      returnedByOwner: 'मालिक ने {count} PO वापस भेजे — सही डिलीवरी स्लिप और अंतिम खर्च अपलोड करें।', tripNotFound: 'ट्रिप नहीं मिली। रिफ्रेश करके फिर प्रयास करें।',
-      uploadSlipForPo: 'PO {po} की हस्ताक्षरित डिलीवरी स्लिप अपलोड करें।', completingDelivery: 'डिलीवरी पूरी हो रही है…', tripChangesSaved: 'ट्रिप बदलाव सहेजे गए।',
-      tripCreated: 'ट्रिप बनी — चुने गए PO ट्रिप सेक्शन में चले गए।', correctedResubmitted: 'सुधारी गई डिलीवरी मालिक को फिर भेजी गई।',
-      deliveryUpdated: 'डिलीवरी पूरी — जुड़े PO मालिक के ट्रैकर में अपडेट हुए।', deliverySentForGrn: 'परिवहन लागत सहेजी गई। ईमेल-GRN PO अब ग्राहक पुष्टि की प्रतीक्षा में हैं।', readingInvoice: 'इनवॉइस पढ़ा जा रहा है…',
-      selectAtLeastOne: 'पहले कम से कम एक PO चुनें।', waitForInvoice: 'PO {po} का इनवॉइस पढ़ना पूरा होने तक रुकें।', replaceWrongInvoice: 'अपलोड किया गया इनवॉइस PO {po} से मेल नहीं खाता। सही इनवॉइस लगाएँ।',
-      uploadVerifyInvoice: 'PO {po} का इनवॉइस अपलोड करके जाँचें।', invoiceAmountRequired: 'PO {po} की इनवॉइस राशि दर्ज करें या जाँचें।', selectTransporterError: 'ट्रांसपोर्टर मास्टर से ट्रांसपोर्टर चुनें।', editInvoiceFirst: 'ट्रिप संपादित करके PO {po} का इनवॉइस विवरण पूरा करें।',
-      planning: 'योजना', pending: 'बाकी', delivered: 'डिलीवर हुआ', cancelled: 'रद्द',
-      invoiceCopyRequired: 'ट्रिप बनाने से पहले इनवॉइस कॉपी लगाएँ।', invoiceTooLarge: 'इनवॉइस कॉपी 10 MB या उससे छोटी होनी चाहिए।', slipRequired: 'ट्रिप पूरी करने से पहले हस्ताक्षरित डिलीवरी स्लिप अपलोड करें।',
-      slipTooLarge: 'डिलीवरी स्लिप 10 MB या उससे छोटी होनी चाहिए।', pdfReaderError: 'PDF रीडर लोड नहीं हुआ। इंटरनेट जाँचकर फिर प्रयास करें।', tripSetupNotReady: 'ट्रिप सेटअप तैयार नहीं है। एडमिनिस्ट्रेटर से संपर्क करें।',
-      couldNotSaveTrip: 'ट्रिप सहेजी नहीं जा सकी।', couldNotComplete: 'डिलीवरी पूरी नहीं हो सकी।', signInFailed: 'साइन इन नहीं हुआ।', notConfigured: 'ऐप का सेटअप पूरा नहीं है।', signInAgain: 'फिर से साइन इन करें।',
-      invoiceNumberPlaceholder: 'इनवॉइस नंबर',
-      imageInvoiceManual: 'मूल Tally इनवॉइस PDF चुनें। इमेज या PO कॉपी को इनवॉइस के रूप में नहीं पढ़ा जा सकता।', wrongInvoice: 'गलत इनवॉइस: यह PO {actual} का है, {expected} का नहीं।',
-      invoiceMatched: '✓ PO {po} मेल खाता है', verifyInvoice: 'यह पढ़ने योग्य Tally इनवॉइस PDF नहीं है। मूल इनवॉइस PDF चुनें।', savingChanges: 'बदलाव सहेजे जा रहे हैं…', creatingTrip: 'ट्रिप बन रही है…',
-      createManualPo: '+ मैन्युअल PO बनाएँ', manualPoEyebrow: 'मैन्युअल परचेज़ ऑर्डर', manualPoTitle: 'नया PO बनाएँ',
-      manualPoHelp: 'नीचे PO का विवरण भरें। यह प्राप्त स्थिति में सहेजा जाएगा और तुरंत खुले PO की सूची में दिखेगा।',
-      customerName: 'ग्राहक का नाम*', customerPlaceholder: 'उदाहरण: DMart', manualPoNumber: 'PO नंबर*', poNumberPlaceholder: 'PO नंबर दर्ज करें',
-      manualLocation: 'डिलीवरी स्थान*', locationPlaceholder: 'उदाहरण: Bopal', manualPoValue: 'PO मूल्य (₹)', manualPoDate: 'PO तारीख*',
-      poReceivedDate: 'PO प्राप्ति तारीख*', manualDeliveryDate: 'अपॉइंटमेंट तारीख', manualAssignedTo: 'जिम्मेदारी', assignedPlaceholder: 'स्टाफ का नाम या ईमेल',
-      poCopy: 'PO कॉपी', poCopyHelp: 'वैकल्पिक PDF, JPG या PNG, अधिकतम 10 MB.', remarks: 'टिप्पणी', remarksPlaceholder: 'कोई विशेष डिलीवरी निर्देश',
-      savePo: 'PO सहेजें', savingPo: 'PO सहेजा जा रहा है…', manualPoSaved: 'मैन्युअल PO सहेजा गया और खुले PO की सूची में जुड़ गया।',
-      manualDuplicate: 'यह PO नंबर पहले से मौजूद है।', manualFileTooLarge: 'PO कॉपी 10 MB या उससे छोटी होनी चाहिए।',
-      manualFileType: 'PO कॉपी PDF, JPG या PNG फाइल होनी चाहिए।', couldNotSavePo: 'PO सहेजा नहीं जा सका।',
-      appointmentEyebrow: 'डिलीवरी अपॉइंटमेंट', appointmentTitle: 'अपॉइंटमेंट तारीख बदलें', appointmentDate: 'अपॉइंटमेंट तारीख',
-      appointmentHelp: 'DMart ने अपॉइंटमेंट तय न किया हो तभी इसे खाली रखें।', appointmentForPo: 'PO {po} · {location}',
-      editAppointment: 'तारीख बदलें', saveAppointment: 'अपॉइंटमेंट सहेजें', savingAppointment: 'सहेज रहे हैं…',
-      appointmentSaved: 'अपॉइंटमेंट तारीख अपडेट हो गई।', couldNotSaveAppointment: 'अपॉइंटमेंट तारीख अपडेट नहीं हो सकी।',
-      editPoEyebrow: 'परचेज़ ऑर्डर संपादित करें', editPoTitle: 'PO विवरण संपादित करें', editPoHelp: 'नीचे PO की जानकारी बदलें। डिस्पैच, इनवॉइस और डिलीवरी रिकॉर्ड नहीं बदलेंगे।',
-      savePoChanges: 'बदलाव सहेजें', poUpdated: 'PO विवरण अपडेट हो गया।'
-    }
+const $ = id => document.getElementById(id);
+const safe = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+const money = value => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(Number(value || 0));
+const localIso = date => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+const todayIso = () => localIso(new Date());
+const dateText = value => value ? new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(`${value}T00:00:00`)) : '—';
+const shortDate = value => value ? new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short' }).format(new Date(`${value}T00:00:00`)) : '—';
+const statusClass = value => String(value || '').toLowerCase().replace(/\s+/g, '-');
+const addDays = (value, days) => { const date = new Date(`${value}T00:00:00`); date.setDate(date.getDate() + days); return localIso(date); };
+const canonicalCustomer = value => {
+  const name = String(value || '').trim();
+  if (/blinkit|hands\s*on/i.test(name)) return 'Blinkit';
+  if (/zepto|kiranakart/i.test(name)) return 'Zepto';
+  if (/big\s*basket|innovative\s+retail/i.test(name)) return 'BigBasket';
+  if (/^dmart$/i.test(name)) return 'DMart';
+  return name || 'Unknown';
+};
+const usesEmailGrn = customer => ['Blinkit', 'Zepto', 'BigBasket'].includes(canonicalCustomer(customer));
+
+function validateConfig() {
+  if (!BASE_URL || !PUBLIC_KEY) throw new Error('Supabase configuration is missing.');
+  if (/^(sb_secret_|eyJ.*service_role)/i.test(PUBLIC_KEY)) throw new Error('A private Supabase key cannot be used in this page.');
+}
+function storeSession(value) { session = value; sessionStorage.setItem(SESSION_KEY, JSON.stringify(value)); }
+function nearExpiry(value) { return !value?.access_token || (value.expires_at && value.expires_at * 1000 <= Date.now() + 60000); }
+async function authRequest(path, body) {
+  const response = await fetch(`${BASE_URL}${path}`, { method: 'POST', headers: { apikey: PUBLIC_KEY, Authorization: `Bearer ${PUBLIC_KEY}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error_description || data.msg || data.message || 'Authentication failed.');
+  return data;
+}
+async function refreshSession(value = session) {
+  if (!value?.refresh_token) throw new Error('Please sign in again.');
+  const refreshed = await authRequest('/auth/v1/token?grant_type=refresh_token', { refresh_token: value.refresh_token });
+  storeSession(refreshed); return refreshed;
+}
+async function restoreSession() {
+  const saved = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null');
+  if (!saved?.access_token) return null;
+  session = saved;
+  if (nearExpiry(saved)) return refreshSession(saved).catch(() => null);
+  return saved;
+}
+async function api(path, options = {}, retry = true) {
+  if (nearExpiry(session)) await refreshSession();
+  const headers = { apikey: PUBLIC_KEY, Authorization: `Bearer ${session.access_token}`, Accept: 'application/json', ...(options.headers || {}) };
+  const response = await fetch(`${BASE_URL}${path}`, { ...options, headers });
+  if (response.status === 401 && retry) { await refreshSession(); return api(path, options, false); }
+  const text = await response.text();
+  if (!response.ok) {
+    let detail = text;
+    try { const parsed = JSON.parse(text); detail = parsed.message || parsed.details || text; } catch (_) {}
+    throw new Error(detail || 'Request failed.');
+  }
+  return text ? JSON.parse(text) : null;
+}
+
+function storagePath(value) {
+  const text = String(value || '').trim();
+  if (!text) return '';
+  const marker = `/storage/v1/object/public/${NOTE_BUCKET}/`;
+  return text.includes(marker) ? decodeURIComponent(text.split(marker)[1].split('?')[0]) : text;
+}
+async function signedFileUrl(value) {
+  const original = String(value || '').trim();
+  if (!original) return '';
+  if (/^https:\/\//i.test(original) && !original.includes('/storage/v1/object/')) return original;
+  const data = await api(`/storage/v1/object/sign/${NOTE_BUCKET}/${storagePath(original)}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ expiresIn: 3600 }) });
+  return data?.signedURL ? `${BASE_URL}/storage/v1${data.signedURL}` : '';
+}
+async function openDocument(path) {
+  try { const url = await signedFileUrl(path); if (!url) throw new Error('Document is not available.'); window.open(url, '_blank', 'noopener'); }
+  catch (error) { toast(error.message); }
+}
+async function uploadFile(folder, tripId, poId, file) {
+  if (!file) return '';
+  if (file.size > 10 * 1024 * 1024) throw new Error('Each attachment must be 10 MB or smaller.');
+  const fileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const path = `${folder}/${tripId}/${poId}/${Date.now()}-${fileName}`;
+  await api(`/storage/v1/object/${NOTE_BUCKET}/${path}`, { method: 'POST', headers: { 'Content-Type': file.type || 'application/octet-stream', 'x-upsert': 'true' }, body: file });
+  return path;
+}
+
+function mapOrder(row) {
+  return {
+    id: row.id, customer: canonicalCustomer(row.customer_name), customerRaw: row.customer_name || '', po: row.po_number,
+    poDate: row.po_date, receivedDate: row.po_received_date, appointmentDate: row.delivery_date, status: row.status,
+    value: Number(row.po_value || 0), location: row.delivery_location || 'Location pending', invoice: row.invoice_number || '',
+    invoiceDate: row.invoice_date || '', invoiceAmount: Number(row.invoice_amount || 0), invoicePath: row.invoice_attachment_url || '',
+    poPath: row.po_attachment_url || '', assignedTo: row.assigned_to || '', remarks: row.remarks || ''
   };
-  const LOCALES = { en: 'en-IN', gu: 'gu-IN', hi: 'hi-IN' };
-  let currentLanguage = localStorage.getItem(LANGUAGE_KEY) || 'en';
-  if (!TRANSLATIONS[currentLanguage]) currentLanguage = 'en';
-  const t = (key, values = {}) => {
-    let text = TRANSLATIONS[currentLanguage]?.[key] || TRANSLATIONS.en[key] || key;
-    Object.entries(values).forEach(([name, value]) => { text = text.replaceAll(`{${name}}`, value); });
-    return text;
-  };
-
-  if (window.pdfjsLib) {
-    window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-  }
-
-  let session = null;
-  let refreshPromise = null;
-  let records = [];
-  let trips = [];
-  let transporters = [];
-  let selectedPoIds = new Set();
-  let editingPoId = null;
-  let editingTripId = null;
-  let completingTripId = null;
-  let tripStorageReady = true;
-  let refreshTimer = null;
-  let connectionMessageKey = 'connecting';
-
-  const $ = id => document.getElementById(id);
-  const money = value => new Intl.NumberFormat(LOCALES[currentLanguage], { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(Number(value || 0));
-  const safe = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
-  const localDate = value => value ? new Date(`${value}T00:00:00`).toLocaleDateString(LOCALES[currentLanguage], { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
-  const isoDate = date => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-  const today = () => isoDate(new Date());
-  const ageDays = record => record.po_received_date ? Math.max(0, Math.floor((new Date() - new Date(`${record.po_received_date}T00:00:00`)) / 86400000)) : null;
-  const normalizeDeliveryLocation = value => {
-    const location = String(value || '').replace(/\s+/g, ' ').trim();
-    return /^modasa(?:\b|[,\-])/i.test(location) ? 'Modasa' : location;
-  };
-
-  function show(id) { $(id).classList.remove('hidden'); }
-  function hide(id) { $(id).classList.add('hidden'); }
-  function applyLanguage(nextLanguage = currentLanguage) {
-    currentLanguage = TRANSLATIONS[nextLanguage] ? nextLanguage : 'en';
-    localStorage.setItem(LANGUAGE_KEY, currentLanguage);
-    document.documentElement.lang = currentLanguage;
-    document.title = `KSDL ${t('pageTitle')}`;
-    document.querySelectorAll('[data-i18n]').forEach(element => { element.textContent = t(element.dataset.i18n); });
-    document.querySelectorAll('[data-i18n-placeholder]').forEach(element => { element.placeholder = t(element.dataset.i18nPlaceholder); });
-    if ($('languageSelect')) $('languageSelect').value = currentLanguage;
-    if ($('loginLanguageSelect')) $('loginLanguageSelect').value = currentLanguage;
-    if ($('connectionStatus')) $('connectionStatus').textContent = t(connectionMessageKey);
-    renderTransporterOptions();
-    render();
-    syncManualPoDialogText_();
-  }
-  function setConnectionStatus(key) { connectionMessageKey = key; $('connectionStatus').textContent = t(key); }
-  function headers(extra = {}) { return { apikey: PUBLIC_KEY, Authorization: `Bearer ${session?.access_token || PUBLIC_KEY}`, ...extra }; }
-  function saveSession(nextSession) { session = nextSession; sessionStorage.setItem(SESSION_KEY, JSON.stringify(session)); }
-  function tokenExpiresSoon() {
-    if (!session?.access_token) return false;
-    let expiresAt = Number(session.expires_at || 0);
-    if (!expiresAt) { try { const payload = session.access_token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'); expiresAt = Number(JSON.parse(atob(payload.padEnd(Math.ceil(payload.length / 4) * 4, '='))).exp || 0); } catch (_) { return false; } }
-    return expiresAt * 1000 <= Date.now() + 60000;
-  }
-  async function refreshSession() {
-    if (refreshPromise) return refreshPromise;
-    if (!session?.refresh_token) throw new Error('Your session has expired. Please sign in again.');
-    refreshPromise = (async () => {
-      const response = await fetch(`${BASE_URL}/auth/v1/token?grant_type=refresh_token`, { method: 'POST', headers: { apikey: PUBLIC_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ refresh_token: session.refresh_token }) });
-      const text = await response.text(); let data = null; if (text) { try { data = JSON.parse(text); } catch (_) { data = text; } }
-      if (!response.ok || !data?.access_token) throw new Error(data?.message || data?.error_description || 'Your session has expired. Please sign in again.');
-      saveSession({ ...session, ...data }); return session;
-    })();
-    try { return await refreshPromise; } finally { refreshPromise = null; }
-  }
-  async function api(path, options = {}, allowRefreshRetry = true) {
-    const tokenRequest = path.startsWith('/auth/v1/token');
-    if (!tokenRequest && session?.refresh_token && tokenExpiresSoon()) await refreshSession();
-    const requestHeaders = tokenRequest ? { apikey: PUBLIC_KEY, Authorization: `Bearer ${PUBLIC_KEY}`, ...(options.headers || {}) } : headers(options.headers || {});
-    const response = await fetch(`${BASE_URL}${path}`, { ...options, headers: requestHeaders });
-    const text = await response.text();
-    let data = null;
-    if (text) { try { data = JSON.parse(text); } catch (_) { data = text; } }
-    const message = data?.message || data?.error_description || text || `Request failed (${response.status})`;
-    if (!response.ok && allowRefreshRetry && !tokenRequest && session?.refresh_token && (response.status === 401 || /exp(?:ired)?|jwt|timestamp check failed/i.test(String(message)))) { await refreshSession(); return api(path, options, false); }
-    if (!response.ok) throw new Error(message);
-    return data;
-  }
-  function toast(message) {
-    const element = $('toast'); element.textContent = message; element.classList.add('show');
-    clearTimeout(toast.timer); toast.timer = setTimeout(() => element.classList.remove('show'), 3000);
-  }
-  async function signIn(email, password) {
-    const data = await api('/auth/v1/token?grant_type=password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
-    saveSession(data);
-  }
-  async function signOut() {
-    try { if (session?.access_token) await api('/auth/v1/logout', { method: 'POST' }); } catch (_) { /* local sign-out still succeeds */ }
-    clearInterval(refreshTimer); session = null; sessionStorage.removeItem(SESSION_KEY); hide('app'); show('loginScreen');
-  }
-
-  function filePath(value) {
-    const text = String(value || ''); const marker = `/storage/v1/object/public/${NOTE_BUCKET}/`;
-    return text.includes(marker) ? text.split(marker)[1].split('?')[0] : text;
-  }
-  async function signedFileUrl(value) {
-    const original = String(value || '').trim();
-    if (/^https:\/\//i.test(original) && !original.includes('/storage/v1/object/')) return original;
-    const path = filePath(original); if (!path) return '';
-    const data = await api(`/storage/v1/object/sign/${NOTE_BUCKET}/${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ expiresIn: 3600 }) });
-    return data?.signedURL ? `${BASE_URL}/storage/v1${data.signedURL}` : '';
-  }
-  async function uploadTripInvoice(tripId, poId, file) {
-    if (!file) throw new Error(t('invoiceCopyRequired'));
-    if (file.size > 10 * 1024 * 1024) throw new Error(t('invoiceTooLarge'));
-    const fileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-    const path = `trip-invoices/${tripId}/${poId}/${Date.now()}-${fileName}`;
-    await api(`/storage/v1/object/${NOTE_BUCKET}/${path}`, { method: 'POST', headers: { 'Content-Type': file.type || 'application/octet-stream', 'x-upsert': 'true' }, body: file });
-    return path;
-  }
-  async function uploadTripDeliverySlip(tripId, poId, file) {
-    if (!file) throw new Error(t('slipRequired'));
-    if (file.size > 10 * 1024 * 1024) throw new Error(t('slipTooLarge'));
-    const fileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-    const path = `trip-delivery-slips/${tripId}/${poId}/${Date.now()}-${fileName}`;
-    await api(`/storage/v1/object/${NOTE_BUCKET}/${path}`, { method: 'POST', headers: { 'Content-Type': file.type || 'application/octet-stream', 'x-upsert': 'true' }, body: file });
-    return path;
-  }
-  async function uploadManualPoCopy(poId, file) {
-    if (!file) return '';
-    if (file.size > 10 * 1024 * 1024) throw new Error(t('manualFileTooLarge'));
-    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png'];
-    const allowedExtension = /\.(pdf|jpe?g|png)$/i.test(file.name);
-    if (!allowedTypes.includes(file.type) && !allowedExtension) throw new Error(t('manualFileType'));
-    const fileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-    const path = `manual-po-copies/${poId}/${Date.now()}-${fileName}`;
-    await api(`/storage/v1/object/${NOTE_BUCKET}/${path}`, { method: 'POST', headers: { 'Content-Type': file.type || 'application/octet-stream', 'x-upsert': 'true' }, body: file });
-    return path;
-  }
-
-  function closeManualPoDialog() {
-    if ($('manualPoDialog').open) $('manualPoDialog').close();
-    $('manualPoForm').reset();
-    $('manualPoError').textContent = '';
-    editingPoId = null;
-    syncManualPoDialogText_();
-  }
-  function syncManualPoDialogText_() {
-    if (!$('manualPoDialogEyebrow')) return;
-    const editing = Boolean(editingPoId);
-    $('manualPoDialogEyebrow').textContent = t(editing ? 'editPoEyebrow' : 'manualPoEyebrow');
-    $('manualPoDialogTitle').textContent = t(editing ? 'editPoTitle' : 'manualPoTitle');
-    $('manualPoDialogHelp').textContent = t(editing ? 'editPoHelp' : 'manualPoHelp');
-    $('saveManualPoBtn').textContent = t(editing ? 'savePoChanges' : 'savePo');
-  }
-  function openManualPoDialog() {
-    editingPoId = null;
-    $('manualPoForm').reset();
-    $('manualPoDate').value = today();
-    $('manualReceivedDate').value = today();
-    $('manualAssignedTo').value = session?.user?.email || '';
-    $('manualPoError').textContent = '';
-    syncManualPoDialogText_();
-    $('manualPoDialog').showModal();
-    window.setTimeout(() => $('manualCustomer').focus(), 0);
-  }
-  function openEditPoDialog(poId) {
-    const record = records.find(item => item.id === poId);
-    if (!record) return;
-    editingPoId = record.id;
-    $('manualPoForm').reset();
-    $('manualCustomer').value = record.customer_name || '';
-    $('manualPoNumber').value = record.po_number || '';
-    $('manualLocation').value = record.delivery_location || '';
-    $('manualPoValue').value = Number(record.po_value || 0) || '';
-    $('manualPoDate').value = record.po_date || '';
-    $('manualReceivedDate').value = record.po_received_date || record.po_date || '';
-    $('manualDeliveryDate').value = record.delivery_date || '';
-    $('manualAssignedTo').value = record.assigned_to || '';
-    $('manualRemarks').value = record.remarks || '';
-    $('manualPoError').textContent = '';
-    syncManualPoDialogText_();
-    $('manualPoDialog').showModal();
-    window.setTimeout(() => $('manualCustomer').focus(), 0);
-  }
-  async function saveManualPo(event) {
-    event.preventDefault();
-    const error = $('manualPoError');
-    const button = $('saveManualPoBtn');
-    error.textContent = '';
-    const poNumber = $('manualPoNumber').value.trim();
-    const editingRecord = editingPoId
-      ? records.find(item => item.id === editingPoId)
-      : null;
-    const poId = editingRecord?.id || crypto.randomUUID();
-    try {
-      button.disabled = true;
-      button.textContent = t('savingPo');
-      const duplicatePath = editingRecord
-        ? `/rest/v1/purchase_orders?po_number=eq.${encodeURIComponent(poNumber)}&id=neq.${encodeURIComponent(poId)}&select=id&limit=1`
-        : `/rest/v1/purchase_orders?po_number=eq.${encodeURIComponent(poNumber)}&select=id&limit=1`;
-      const duplicate = await api(duplicatePath);
-      if (Array.isArray(duplicate) && duplicate.length) throw new Error(t('manualDuplicate'));
-      const poCopyPath = await uploadManualPoCopy(poId, $('manualPoFile').files?.[0]);
-      const now = new Date().toISOString();
-      const payload = {
-        id: poId,
-        customer_name: $('manualCustomer').value.trim(),
-        po_number: poNumber,
-        po_date: $('manualPoDate').value,
-        po_received_date: $('manualReceivedDate').value,
-        delivery_date: $('manualDeliveryDate').value || null,
-        delivery_location: normalizeDeliveryLocation($('manualLocation').value),
-        po_value: Number($('manualPoValue').value || 0),
-        assigned_to: $('manualAssignedTo').value.trim() || null,
-        remarks: $('manualRemarks').value.trim() || null,
-        po_attachment_url: poCopyPath || null,
-        status: 'Received',
-        created_by: session?.user?.id,
-        entry_source: 'Manual',
-        review_status: 'Draft',
-        updated_at: now
+}
+function mapTrip(row) {
+  return {
+    id: row.id, tripDate: row.trip_date, status: row.status, transporter: row.transporter || 'Transporter pending', transporterId: row.transporter_id || '',
+    vehicle: row.vehicle_number || 'Vehicle pending', driver: row.driver_name || '', driverPhone: row.driver_phone || '',
+    quotedCost: Number(row.quoted_cost || 0), actualFreight: Number(row.actual_freight || 0), remarks: row.remarks || '', createdAt: row.created_at,
+    pos: (row.delivery_trip_pos || []).map(link => {
+      const nested = Array.isArray(link.purchase_orders) ? link.purchase_orders[0] : link.purchase_orders;
+      const po = nested || orders.find(order => order.id === link.purchase_order_id) || {};
+      return {
+        id: link.id, purchaseOrderId: link.purchase_order_id, po: po.po_number || po.po || 'PO', customer: canonicalCustomer(po.customer_name || po.customer),
+        location: po.delivery_location || po.location || 'Location pending', appointmentDate: po.delivery_date || po.appointmentDate || null,
+        value: Number(po.po_value || po.value || 0), poPath: po.po_attachment_url || po.poPath || '',
+        invoice: link.invoice_number || po.invoice_number || po.invoice || '', invoiceDate: link.invoice_date || po.invoice_date || po.invoiceDate || '',
+        invoiceAmount: Number(link.invoice_amount || po.invoice_amount || po.invoiceAmount || 0), invoicePath: link.invoice_attachment_url || po.invoice_attachment_url || po.invoicePath || '',
+        deliveryNotePath: link.delivery_note_url || '', allocatedCost: Number(link.allocated_cost || 0), deliveryStatus: link.delivery_status || 'Pending',
+        correctionReason: link.correction_reason || '', deliveredAt: link.delivered_at || null
       };
-      if (editingRecord) {
-        await api('/rest/v1/rpc/update_open_purchase_order', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' },
-          body: JSON.stringify({
-            target_po_id: poId,
-            new_customer_name: payload.customer_name,
-            new_po_number: payload.po_number,
-            new_po_date: payload.po_date,
-            new_po_received_date: payload.po_received_date,
-            new_appointment_date: payload.delivery_date,
-            new_delivery_location: payload.delivery_location,
-            new_po_value: payload.po_value,
-            new_assigned_to: payload.assigned_to,
-            new_remarks: payload.remarks,
-            new_po_attachment_url: poCopyPath || null
-          })
-        });
-      } else {
-        await api('/rest/v1/purchase_orders', { method: 'POST', headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify(payload) });
-        try {
-          await api(`/rest/v1/purchase_orders?id=eq.${encodeURIComponent(poId)}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' },
-            body: JSON.stringify({ review_status: 'Submitted', submitted_at: now, updated_at: now })
-          });
-        } catch (_) { /* Draft PO remains usable if review submission is unavailable. */ }
-      }
-      const successMessage = editingRecord ? t('poUpdated') : t('manualPoSaved');
-      closeManualPoDialog();
-      await loadData();
-      toast(successMessage);
-    } catch (err) {
-      error.textContent = err.message || t('couldNotSavePo');
-    } finally {
-      button.disabled = false;
-      button.textContent = t(editingPoId ? 'savePoChanges' : 'savePo');
-    }
-  }
-
-  function closeAppointmentDialog() {
-    if ($('appointmentDialog').open) $('appointmentDialog').close();
-    $('appointmentForm').reset();
-    $('appointmentPoId').value = '';
-    $('appointmentError').textContent = '';
-  }
-  function openAppointmentDialog(poId) {
-    const record = records.find(item => item.id === poId);
-    if (!record) return;
-    $('appointmentPoId').value = record.id;
-    $('appointmentDate').value = record.delivery_date || '';
-    $('appointmentSummary').textContent = t('appointmentForPo', {
-      po: record.po_number || '—',
-      location: record.delivery_location || t('locationPending')
-    });
-    $('appointmentError').textContent = '';
-    $('appointmentDialog').showModal();
-    window.setTimeout(() => $('appointmentDate').focus(), 0);
-  }
-  async function saveAppointmentDate(event) {
-    event.preventDefault();
-    const poId = $('appointmentPoId').value;
-    const record = records.find(item => item.id === poId);
-    if (!record) return;
-    const button = $('saveAppointmentBtn');
-    const error = $('appointmentError');
-    const appointmentDate = $('appointmentDate').value || null;
-    error.textContent = '';
-    try {
-      button.disabled = true;
-      button.textContent = t('savingAppointment');
-      await api('/rest/v1/rpc/update_po_appointment_date', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' },
-        body: JSON.stringify({ po_id: poId, new_appointment_date: appointmentDate })
-      });
-      record.delivery_date = appointmentDate;
-      closeAppointmentDialog();
-      render();
-      toast(t('appointmentSaved'));
-    } catch (err) {
-      error.textContent = err.message || t('couldNotSaveAppointment');
-    } finally {
-      button.disabled = false;
-      button.textContent = t('saveAppointment');
-    }
-  }
-
-  function normalizePoNumber(value) { return String(value || '').replace(/\D/g, ''); }
-  function tallyDateToIso(value) {
-    const match = String(value || '').match(/(\d{1,2})[-\s/]([A-Za-z]{3,9})[-\s/](\d{2,4})/);
-    if (!match) return '';
-    const months = { jan: 1, january: 1, feb: 2, february: 2, mar: 3, march: 3, apr: 4, april: 4, may: 5, jun: 6, june: 6, jul: 7, july: 7, aug: 8, august: 8, sep: 9, sept: 9, september: 9, oct: 10, october: 10, nov: 11, november: 11, dec: 12, december: 12 };
-    const month = months[match[2].toLowerCase()];
-    if (!month) return '';
-    const year = match[3].length === 2 ? 2000 + Number(match[3]) : Number(match[3]);
-    return `${year}-${String(month).padStart(2, '0')}-${String(Number(match[1])).padStart(2, '0')}`;
-  }
-  function nearbyValue(lines, labelPattern, valuePattern, lookAhead = 8) {
-    const index = lines.findIndex(line => labelPattern.test(line));
-    if (index < 0) return '';
-    return lines.slice(index, index + lookAhead).join(' ').match(valuePattern)?.[1] || '';
-  }
-  async function readPdfLines(file) {
-    if (!window.pdfjsLib) throw new Error(t('pdfReaderError'));
-    const pdf = await window.pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
-    const pages = [];
-    for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
-      const page = await pdf.getPage(pageNumber);
-      const content = await page.getTextContent();
-      const positioned = content.items
-        .filter(item => String(item.str || '').trim())
-        .map(item => ({ text: String(item.str).trim(), x: item.transform?.[4] || 0, y: item.transform?.[5] || 0 }));
-      const rows = [];
-      positioned.sort((a, b) => Math.abs(b.y - a.y) > 2 ? b.y - a.y : a.x - b.x).forEach(item => {
-        let row = rows.find(candidate => Math.abs(candidate.y - item.y) <= 2);
-        if (!row) { row = { y: item.y, items: [] }; rows.push(row); }
-        row.items.push(item);
-      });
-      pages.push(rows.sort((a, b) => b.y - a.y).map(row => row.items.sort((a, b) => a.x - b.x).map(item => item.text).join(' ').replace(/\s+/g, ' ').trim()));
-    }
-    return pages.flat();
-  }
-  function canonicalInvoiceArticle(value) {
-    let name = String(value || '').toUpperCase().replace(/\bMYS\.?\s*SANDAL\b/g, 'MYSORE SANDAL').replace(/^M\s*S\s+/g, 'MYSORE SANDAL ').replace(/\s+/g, ' ').trim();
-    if (!/^MYSORE SANDAL\b/.test(name)) name = `MYSORE SANDAL ${name}`;
-    if (/\bSOAP\s+TRIO\b/.test(name) && /450\s*[X×]|450G\b/.test(name)) return 'MYSORE SANDAL SOAP TRIO 450G';
-    if (/\bSOAP\s*\(S\)|\bSOAP\s+SINGLE\b/.test(name) && /150\s*[X×]|150G\b/.test(name)) return 'MYSORE SANDAL SOAP SINGLE 150G';
-    if (/\bGOLD\s+SOAP\b/.test(name) && /125\s*[X×]|125G\b/.test(name)) return 'MYSORE SANDAL GOLD SOAP 125G';
-    if (/\bTALC\b/.test(name) && /300\s*[X×]|300G\b/.test(name)) return 'MYSORE SANDAL TALC 300G';
-    if (/\bBODY\s+WASH\b/.test(name) && /200\s*[X×]|200ML\b/.test(name)) return 'MYSORE SANDAL BODY WASH 200ML';
-    return name;
-  }
-  function parseColumnarTallyInvoiceItems(lines) {
-    const flat = lines.join(' ').replace(/\s+/g, ' ').trim();
-    const start = flat.search(/\bDescription\s+of\s+Goods\b/i);
-    if (start < 0) return [];
-    const afterStart = flat.slice(start);
-    const end = afterStart.search(/\bAmount\s+Chargeable\b/i);
-    const goods = end >= 0 ? afterStart.slice(0, end) : afterStart;
-    const products = [];
-    const productPattern = /MYSORE\s+SANDAL\s+[A-Z][A-Z0-9 ()&/.\-]{1,90}?\s+\d+(?:\.\d+)?\s*(?:G|GM|ML)(?=\s|DISCOUNT\b|OUTPUT\b|M\s*S\b|$)/gi;
-    let match;
-    while ((match = productPattern.exec(goods)) !== null) products.push(match[0].replace(/\s+/g, ' ').trim());
-    if (!products.length) return [];
-
-    const hsns = [];
-    (goods.match(/\d{8,}/g) || []).forEach(run => {
-      if (run.length % 8 !== 0) return;
-      for (let offset = 0; offset < run.length; offset += 8) hsns.push(run.slice(offset, offset + 8));
-    });
-    const cbsValues = [...goods.matchAll(/(?<![\d.,])([\d,]+(?:\.\d+)?)\s*CBS\b/gi)].map(result => Number(result[1].replace(/,/g, ''))).filter(value => value > 0);
-    const measurements = [...goods.matchAll(/(?<![\d.,])([\d,]+)\s*(PCS|NOS|EA|BOX|CTN|BTL)\s*([\d,]+\.\d{2})\b/gi)].map(result => ({ quantity: Number(result[1].replace(/,/g, '')), unit: result[2].toUpperCase(), taxableAmount: Number(result[3].replace(/,/g, '')) }));
-    const count = Math.min(products.length, hsns.length, cbsValues.length, measurements.length);
-    return products.slice(0, count).map((product, index) => ({
-      line_number: index + 1,
-      article_name: canonicalInvoiceArticle(product),
-      article_description: product,
-      hsn_sac: hsns[index],
-      quantity: measurements[index].quantity,
-      quantity_cbs: cbsValues[index],
-      unit: measurements[index].unit,
-      rate: Number((measurements[index].taxableAmount / measurements[index].quantity).toFixed(4)),
-      taxable_amount: measurements[index].taxableAmount
-    })).filter(item => item.quantity > 0 && item.quantity_cbs > 0 && item.taxable_amount > 0);
-  }
-  function parseTallyInvoiceItems(lines) {
-    const items = [];
-    lines.forEach((line, index) => {
-      const match = String(line || '').match(/^(\d+)\s+(.+?)\s+(\d{8})\s+(.+)$/);
-      if (!match) return;
-      const tail = match[4];
-      const quantities = Array.from(tail.matchAll(/([\d,]+(?:\.\d+)?)\s+(PCS|NOS|EA|BOX|CTN|BTL)\b/gi));
-      const cbs = tail.match(/(?<![\d.,])([\d,]+(?:\.\d+)?)\s*CBS\b/i);
-      const amounts = tail.match(/\d[\d,]*\.\d{2}/g) || [];
-      if (!quantities.length || !amounts.length || !cbs) return;
-      const nextLine = String(lines[index + 1] || '').replace(/\s+/g, ' ').trim();
-      const description = /(?:MYSORE|MYS\.?\s*SANDAL|SANDAL)/i.test(nextLine) && !/^DISCOUNT\b/i.test(nextLine) ? nextLine : '';
-      const rawName = match[2].replace(/(?:₹|Rs\.?)\s*[\d,.]+\s*\/-?/gi, '').replace(/\s+/g, ' ').trim();
-      const quantity = quantities[0], rate = quantities.length > 1 ? quantities[1] : null;
-      items.push({ line_number: Number(match[1]), article_name: canonicalInvoiceArticle(description || rawName), article_description: description || rawName, hsn_sac: match[3], quantity: Number(quantity[1].replace(/,/g, '')), quantity_cbs: Number(cbs[1].replace(/,/g, '')), unit: quantity[2].toUpperCase(), rate: rate ? Number(rate[1].replace(/,/g, '')) : null, taxable_amount: Number(amounts[amounts.length - 1].replace(/,/g, '')) });
-    });
-    const columnarItems = parseColumnarTallyInvoiceItems(lines);
-    return columnarItems.length > items.length ? columnarItems : items;
-  }
-  function parseTallyInvoice(lines, expectedPoNumber = '') {
-    const flat = lines.join(' ').replace(/\s+/g, ' ');
-    const invoiceNumber = flat.match(/\b(BMAG\/\d{2}-\d{2}\/\d{3,8})\b/i)?.[1] || flat.match(/\b([A-Z]{2,10}[A-Z0-9 -]*\/\d{2}-\d{2}\/\d{3,8})\b/i)?.[1]?.replace(/\s+/g, ' ') || '';
-    let invoiceDate = '';
-    const invoiceLineIndex = lines.findIndex(line => invoiceNumber && line.includes(invoiceNumber));
-    if (invoiceLineIndex >= 0) invoiceDate = lines.slice(invoiceLineIndex, invoiceLineIndex + 6).join(' ').match(/\b(\d{1,2}[-\s/][A-Za-z]{3,9}[-\s/]\d{2,4})\b/)?.[1] || '';
-    if (!invoiceDate) invoiceDate = nearbyValue(lines, /\bDated\b/i, /\b(\d{1,2}[-\s/][A-Za-z]{3,9}[-\s/]\d{2,4})\b/, 5);
-    const expectedPo = normalizePoNumber(expectedPoNumber);
-    const expectedPoPattern = expectedPo ? new RegExp(`(?:^|\\D)${expectedPo}(?:\\D|$)`) : null;
-    const poNumber = expectedPoPattern?.test(flat)
-      ? expectedPoNumber
-      : nearbyValue(lines, /Buyer'?s\s+Order\s+No/i, /\b(\d{8,12})\b/, 10);
-    let destination = nearbyValue(lines, /\bDestination\b/i, /\bDestination\b\s*[:\-]?\s*([A-Za-z][A-Za-z .'-]{1,45})/i, 3).trim();
-    destination = destination.replace(/\s+(Terms|Dispatch|Dated|Buyer|Mode|Other)\b.*$/i, '').trim();
-    const amountWordsIndex = lines.findIndex(line => /Amount\s+Chargeable/i.test(line));
-    const invoiceAmountBlock = amountWordsIndex > 0 ? lines.slice(Math.max(0, amountWordsIndex - 5), amountWordsIndex).join(' ') : '';
-    const ewayInvoiceAmount = flat.match(/Total\s+Inv\s+Amt\s*:\s*([\d,]+\.\d{2})/i)?.[1] || '';
-    const tallyTotalIndex = lines.findIndex(line => /^\s*Total\b/i.test(line) && /\b(?:PCS|CBS|NOS|EA|BOX|CTN)\b/i.test(line));
-    const tallyTotalBlock = tallyTotalIndex >= 0 ? lines.slice(tallyTotalIndex, tallyTotalIndex + 3).join(' ') : '';
-    const tallyTotalLine = lines.find(line => /\bTotal\b/i.test(line) && /(?:₹|Rs\.?)/i.test(line) && /\d[\d,]*\.\d{2}/.test(line)) || '';
-    const tallyTotalAmount = tallyTotalBlock.match(/(?:₹|Rs\.?)\s*([\d,]+\.\d{2})/i)?.[1]
-      || tallyTotalLine.match(/(?:₹|Rs\.?)\s*([\d,]+\.\d{2})(?!.*\d[\d,]*\.\d{2})/i)?.[1]
-      || flat.match(/\bTotal\s+\d+(?:\.\d+)?\s+[A-Z]{2,8}\s+\d+(?:\.\d+)?\s+[A-Z]{2,8}\s+(?:₹|Rs\.?)?\s*([\d,]+\.\d{2})/i)?.[1]
-      || '';
-    const invoiceAmounts = invoiceAmountBlock.match(/\d[\d,]*\.\d{2}/g) || [];
-    const invoiceValue = tallyTotalAmount
-      ? Number(tallyTotalAmount.replace(/,/g, ''))
-      : ewayInvoiceAmount
-        ? Number(ewayInvoiceAmount.replace(/,/g, ''))
-        : invoiceAmounts.length
-          ? Math.max(...invoiceAmounts.map(value => Number(value.replace(/,/g, ''))))
-          : null;
-    const ewayBill = flat.match(/(?:e-?Way\s+Bill(?:\s+No\.?)?)[^0-9]{0,30}(\d{12})/i)?.[1] || '';
-    const vehicleNumber = flat.match(/\b([A-Z]{2}\s?\d{1,2}\s?[A-Z]{1,3}\s?\d{4})\b/i)?.[1]?.replace(/\s+/g, '').toUpperCase() || '';
-    return { invoiceNumber, invoiceDate: tallyDateToIso(invoiceDate), poNumber, destination, invoiceValue, ewayBill, vehicleNumber, items: parseTallyInvoiceItems(lines) };
-  }
-  function invoiceStatus(row, state, message) {
-    row.dataset.invoiceState = state;
-    row.classList.toggle('invoice-mismatch', state === 'mismatch');
-    row.classList.toggle('invoice-matched', state === 'matched');
-    const status = row.querySelector('.invoice-read-status');
-    status.dataset.state = state; status.textContent = message;
-  }
-  async function handleInvoiceFile(input) {
-    const row = input.closest('tr'), file = input.files?.[0], record = records.find(item => item.id === row?.dataset.poId);
-    if (!row || !record || !file) { if (row) invoiceStatus(row, 'idle', t('selectTally')); return; }
-    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
-      invoiceStatus(row, 'warning', t('imageInvoiceManual')); return;
-    }
-    invoiceStatus(row, 'reading', t('readingInvoice'));
-    try {
-      const parsed = parseTallyInvoice(await readPdfLines(file), record.po_number);
-      if (parsed.invoiceNumber) row.querySelector('.po-invoice-number').value = parsed.invoiceNumber;
-      if (parsed.invoiceDate) row.querySelector('.po-invoice-date').value = parsed.invoiceDate;
-      if (parsed.invoiceValue != null) row.querySelector('.po-invoice-amount').value = parsed.invoiceValue.toFixed(2);
-      if (parsed.vehicleNumber) $('tripVehicle').value = parsed.vehicleNumber;
-      row.dataset.invoiceItems = JSON.stringify(parsed.items || []);
-      row.dataset.invoiceDestination = parsed.destination || record.delivery_location || '';
-      const expectedPo = normalizePoNumber(record.po_number), invoicePo = normalizePoNumber(parsed.poNumber);
-      const details = [parsed.invoiceNumber, record.delivery_location || parsed.destination, parsed.invoiceValue != null ? money(parsed.invoiceValue) : '', parsed.ewayBill ? `e-Way ${parsed.ewayBill}` : ''].filter(Boolean).join(' · ');
-      if (invoicePo && expectedPo && invoicePo !== expectedPo) {
-        invoiceStatus(row, 'mismatch', t('wrongInvoice', { actual: parsed.poNumber, expected: record.po_number })); return;
-      }
-      if (invoicePo && expectedPo === invoicePo && parsed.invoiceNumber && parsed.invoiceDate) {
-        if (/^BMAG\//i.test(parsed.invoiceNumber) && !parsed.items.length) {
-          invoiceStatus(row, 'warning', `Invoice matched, but product lines were not readable for Analytics. Please use the original Tally PDF.`); return;
-        }
-        const analyticsDetail = parsed.items.length ? ` · ${parsed.items.length} product line(s) ready for Analytics` : '';
-        invoiceStatus(row, 'matched', `${t('invoiceMatched', { po: record.po_number })}${details ? ` · ${details}` : ''}${analyticsDetail}`); return;
-      }
-      invoiceStatus(row, 'warning', t('verifyInvoice'));
-    } catch (error) { invoiceStatus(row, 'warning', error.message || t('verifyInvoice')); }
-  }
-
-  async function loadData() {
-    setConnectionStatus('loadingPos');
-    const [poResult, tripResult, transporterResult] = await Promise.allSettled([
-      api('/rest/v1/purchase_orders?is_archived=eq.false&select=*&order=po_received_date.desc'),
-      api('/rest/v1/delivery_trips?select=*,delivery_trip_pos(purchase_order_id,allocated_cost,invoice_number,invoice_date,invoice_amount,invoice_attachment_url,delivery_status,correction_reason,purchase_orders(id,po_number,customer_name,delivery_location,status,po_attachment_url,invoice_number,invoice_date,invoice_amount,invoice_attachment_url))&order=trip_date.desc,created_at.desc'),
-      api('/rest/v1/transporters?select=id,name,phone,active&active=eq.true&order=name.asc')
+    })
+  };
+}
+async function loadData() {
+  setConnection('Refreshing…');
+  try {
+    const poSelect = 'id,customer_name,po_number,po_date,po_received_date,delivery_date,status,po_value,delivery_location,invoice_number,invoice_date,invoice_amount,invoice_attachment_url,po_attachment_url,assigned_to,remarks';
+    const tripSelect = 'id,trip_date,status,transporter_id,transporter,vehicle_number,driver_name,driver_phone,quoted_cost,actual_freight,remarks,created_at,delivery_trip_pos(id,trip_id,purchase_order_id,allocated_cost,invoice_number,invoice_date,invoice_amount,invoice_attachment_url,delivery_note_url,delivery_status,correction_reason,delivered_at,purchase_orders(id,po_number,customer_name,delivery_location,delivery_date,status,po_value,po_attachment_url,invoice_number,invoice_date,invoice_amount,invoice_attachment_url))';
+    const [poRows, tripRows, transporterRows] = await Promise.all([
+      api(`/rest/v1/purchase_orders?is_archived=eq.false&select=${poSelect}&order=po_received_date.desc`),
+      api(`/rest/v1/delivery_trips?select=${tripSelect}&order=trip_date.desc,created_at.desc`),
+      api('/rest/v1/transporters?active=eq.true&select=id,name,phone&order=name.asc')
     ]);
-    if (poResult.status === 'rejected') {
-      records = []; trips = []; render(); setConnectionStatus('couldNotLoad'); toast(poResult.reason?.message || t('couldNotLoad')); return;
+    orders = (poRows || []).map(mapOrder);
+    trips = (tripRows || []).map(mapTrip);
+    transporters = transporterRows || [];
+    $('lastRefreshTime').textContent = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+    setConnection(`${orders.length} POs · ${trips.filter(trip => ACTIVE_TRIP_STATUSES.has(trip.status)).length} active trips`);
+    renderAll();
+  } catch (error) { setConnection('Data unavailable', true); toast(error.message); }
+}
+function setConnection(message, error = false) { $('connectionStatus').textContent = message; $('connectionStatus').classList.toggle('error', error); }
+function linkedPoIds() { return new Set(trips.flatMap(trip => trip.pos.map(link => link.purchaseOrderId))); }
+function customerMatches(value) { return state.customer === 'All' || value === state.customer; }
+function availableOrders() { const linked = linkedPoIds(); return orders.filter(order => customerMatches(order.customer) && !BLOCKED_PO_STATUSES.has(order.status) && !linked.has(order.id)); }
+function customerLogo(customer) { return `<span class="customer-logo ${customer === 'Blinkit' ? 'blinkit-logo' : customer === 'Zepto' ? 'zepto-logo' : customer === 'BigBasket' ? 'bigbasket-logo' : customer === 'DMart' ? 'dmart-logo' : 'all-logo'}">${safe(customer[0] || '?')}</span>`; }
+function renderCustomerSwitcher() {
+  const extra = [...new Set(orders.map(order => order.customer).filter(name => !['DMart', 'Blinkit', 'Zepto', 'BigBasket'].includes(name)))];
+  const names = ['All', 'DMart', 'Blinkit', 'Zepto', 'BigBasket', ...extra];
+  $('customerSwitcher').innerHTML = names.map(name => { const count = name === 'All' ? orders.length : orders.filter(order => order.customer === name).length; return `<button class="customer-chip ${state.customer === name ? 'active' : ''} ${count === 0 ? 'live-customer-empty' : ''}" type="button" data-customer="${safe(name)}">${name === 'All' ? '<span class="customer-logo all-logo">A</span>' : customerLogo(name)}<span>${name === 'All' ? 'All customers' : safe(name)}</span><strong>${count}</strong></button>`; }).join('');
+  document.querySelectorAll('[data-customer]').forEach(button => button.addEventListener('click', () => { state.customer = button.dataset.customer; state.selected.clear(); renderAll(); }));
+}
+function appointmentMarkup(order) {
+  if (!order.appointmentDate) return '<div class="appointment-block awaiting"><strong>Awaiting appointment</strong><span>Follow up required</span></div>';
+  const source = order.customer === 'Blinkit' ? 'Partners Biz confirmation' : order.customer === 'Zepto' ? 'Zepto schedule confirmation' : order.customer === 'BigBasket' ? 'BigBasket confirmation' : 'Confirmed appointment';
+  return `<div class="appointment-block"><strong>${dateText(order.appointmentDate)}</strong><span>${source}</span></div>`;
+}
+function scheduleMatches(order, period) {
+  if (period === 'All') return true;
+  if (period === 'Awaiting') return !order.appointmentDate;
+  if (!order.appointmentDate) return false;
+  const today = todayIso();
+  if (period === 'Today') return order.appointmentDate === today;
+  if (period === 'Tomorrow') return order.appointmentDate === addDays(today, 1);
+  if (period === 'Next7') return order.appointmentDate > addDays(today, 1) && order.appointmentDate <= addDays(today, 7);
+  return false;
+}
+function renderSchedule() {
+  const available = availableOrders();
+  ({ Today: 'todayCount', Tomorrow: 'tomorrowCount', Next7: 'next7Count', Awaiting: 'awaitingCount' });
+  Object.entries({ Today: 'todayCount', Tomorrow: 'tomorrowCount', Next7: 'next7Count', Awaiting: 'awaitingCount' }).forEach(([period, id]) => { $(id).textContent = available.filter(order => scheduleMatches(order, period)).length; });
+  $('todayDate').textContent = shortDate(todayIso()); $('tomorrowDate').textContent = shortDate(addDays(todayIso(), 1));
+  document.querySelectorAll('[data-schedule]').forEach(button => button.classList.toggle('active', button.dataset.schedule === state.schedule));
+  const agenda = available.filter(order => scheduleMatches(order, state.schedule)).sort((a, b) => (a.appointmentDate || '9999').localeCompare(b.appointmentDate || '9999'));
+  $('agendaTitle').textContent = ({ Today: 'Today’s delivery plan', Tomorrow: 'Tomorrow’s delivery plan', Next7: 'Next 7 days', Awaiting: 'POs awaiting appointment', All: 'All available purchase orders' })[state.schedule];
+  $('agendaCount').textContent = `${agenda.length} PO${agenda.length === 1 ? '' : 's'}`;
+  $('agendaList').innerHTML = agenda.map(order => `<article class="agenda-item"><div class="agenda-date"><div><strong>${order.appointmentDate ? shortDate(order.appointmentDate) : 'Pending'}</strong><span>${order.appointmentDate ? 'Confirmed' : 'No appointment'}</span></div></div><div class="agenda-po"><strong>PO ${safe(order.po)}</strong><span>${safe(order.customer)} · ${money(order.value)}</span></div><div class="agenda-location"><strong>${safe(order.location)}</strong><span>${order.invoice ? `Invoice ${safe(order.invoice)}` : 'Invoice pending'}</span></div><span class="status-pill ${statusClass(order.status)}">${safe(order.status)}</span><button class="view-button" type="button" data-view-po="${order.id}">View PO</button></article>`).join('');
+  $('agendaEmpty').classList.toggle('hidden', agenda.length !== 0);
+}
+function filteredAvailableOrders() {
+  const query = $('poSearch').value.trim().toLowerCase(); const confirmedOnly = $('confirmedOnly').checked;
+  return availableOrders().filter(order => { const text = [order.po, order.customer, order.location, order.invoice].join(' ').toLowerCase(); return (!query || text.includes(query)) && (!confirmedOnly || order.appointmentDate); });
+}
+function renderOpenOrders() {
+  const visible = filteredAvailableOrders(); const ids = new Set(visible.map(order => order.id)); [...state.selected].forEach(id => { if (!ids.has(id)) state.selected.delete(id); });
+  $('poTableBody').innerHTML = visible.map(order => `<tr><td><input class="row-select" type="checkbox" data-select-po="${order.id}" ${state.selected.has(order.id) ? 'checked' : ''} aria-label="Select PO ${safe(order.po)}" /></td><td><span class="po-number">${safe(order.po)}</span><span class="row-customer">${customerLogo(order.customer)}${safe(order.customer)}</span></td><td>${dateText(order.poDate)}</td><td><span class="status-pill ${statusClass(order.status)}">${safe(order.status)}</span></td><td><div class="appointment-cell">${appointmentMarkup(order)}<button class="edit-date-button" type="button" data-edit-appointment="${order.id}">Edit date</button></div></td><td>${safe(order.location)}</td><td class="value-cell">${money(order.value)}</td><td>${order.invoice ? `<strong>${safe(order.invoice)}</strong><span class="secondary-line">${dateText(order.invoiceDate)}</span>` : '—'}</td><td><div class="po-action-stack"><button class="view-button" type="button" data-view-po="${order.id}">View</button><button class="edit-po-button" type="button" data-edit-po="${order.id}">Edit</button></div></td></tr>`).join('');
+  $('poEmpty').classList.toggle('hidden', visible.length !== 0); $('selectAll').checked = visible.length > 0 && visible.every(order => state.selected.has(order.id));
+  const selected = orders.filter(order => state.selected.has(order.id)); $('selectedCount').textContent = `${selected.length} PO${selected.length === 1 ? '' : 's'} selected`; $('selectedValue').textContent = `${money(selected.reduce((sum, order) => sum + order.value, 0))} selected value`; $('selectionBar').classList.toggle('hidden', selected.length === 0);
+}
+function tripNeedsCorrection(trip) { return trip.pos.some(link => link.deliveryStatus === 'Needs Correction'); }
+function tripLinksForCustomer(trip) { return state.customer === 'All' ? trip.pos : trip.pos.filter(link => link.customer === state.customer); }
+function filteredTrips() {
+  const filter = $('tripFilter').value;
+  return trips.filter(trip => tripLinksForCustomer(trip).length).filter(trip => filter === 'All' || (filter === 'Active' ? ACTIVE_TRIP_STATUSES.has(trip.status) || tripNeedsCorrection(trip) : trip.status === 'Delivered' && !tripNeedsCorrection(trip)));
+}
+function docButton(path, label) { return path ? `<button class="doc-link-button" type="button" data-open-doc="${safe(path)}">${safe(label)}</button>` : `<span class="doc-missing">${safe(label)} unavailable</span>`; }
+function renderTrips() {
+  const visible = filteredTrips(); $('tripCount').textContent = `${visible.length} trip${visible.length === 1 ? '' : 's'}`; $('tripEmpty').classList.toggle('hidden', visible.length !== 0);
+  $('tripList').innerHTML = visible.map(trip => {
+    const links = tripLinksForCustomer(trip); const appointments = links.map(link => link.appointmentDate).filter(Boolean).sort(); const correction = tripNeedsCorrection(trip);
+    let actions = '';
+    if (trip.status === 'Awaiting GRN' && !correction) actions = `<button type="button" data-edit-trip="${trip.id}">Edit</button><span class="grn-waiting">Waiting for customer GRN</span><button class="danger" type="button" data-delete-trip="${trip.id}">Delete</button>`;
+    else if (ACTIVE_TRIP_STATUSES.has(trip.status) || correction) actions = `<button type="button" data-edit-trip="${trip.id}">Edit</button><button class="primary-mini" type="button" data-complete-trip="${trip.id}">${correction ? 'Correct delivery' : 'Complete'}</button><button class="danger" type="button" data-delete-trip="${trip.id}">Delete</button>`;
+    const linkRows = links.map(link => `<div class="trip-po-doc-row"><div><strong>PO ${safe(link.po)}</strong><small>${safe(link.customer)} · ${safe(link.location)}${link.invoice ? ` · ${safe(link.invoice)}` : ''}</small>${link.correctionReason ? `<small class="correction-text">Correction: ${safe(link.correctionReason)}</small>` : ''}</div><div class="trip-docs">${docButton(link.poPath, 'PO copy')}${docButton(link.invoicePath, 'Invoice copy')}</div></div>`).join('');
+    return `<article class="trip-row uat-trip-row ${statusClass(correction ? 'Needs Correction' : trip.status)}"><div><span>Trip date</span><strong>${dateText(trip.tripDate)}</strong><small>${safe(trip.vehicle)} · ${safe(trip.transporter)}</small></div><div class="trip-po-stack"><span>${links.length} purchase order${links.length === 1 ? '' : 's'}</span>${linkRows}</div><div><span>Appointment</span><strong>${appointments.length ? dateText(appointments[0]) : 'Awaiting'}</strong><small>${appointments.length > 1 ? `${appointments.length} confirmed dates` : appointments.length ? 'Confirmed' : 'Follow up required'}</small></div><div><span>Status</span><strong class="status-pill ${statusClass(correction ? 'Needs Correction' : trip.status)}">${safe(correction ? 'Needs Correction' : trip.status === 'Dispatched' ? 'In Transit' : trip.status)}</strong><small>${trip.actualFreight ? money(trip.actualFreight) : 'Cost pending'}</small></div><div class="uat-trip-actions">${actions}</div></article>`;
+  }).join('');
+}
+function renderKpis() {
+  const available = availableOrders(); const customerTrips = trips.filter(trip => tripLinksForCustomer(trip).length);
+  $('availableKpi').textContent = available.length; $('todayKpi').textContent = available.filter(order => scheduleMatches(order, 'Today')).length; $('todayLabel').textContent = dateText(todayIso()); $('activeTripKpi').textContent = customerTrips.filter(trip => ACTIVE_TRIP_STATUSES.has(trip.status) || tripNeedsCorrection(trip)).length; $('awaitingGrnKpi').textContent = customerTrips.filter(trip => trip.status === 'Awaiting GRN').length;
+}
+function renderAll() { renderCustomerSwitcher(); renderKpis(); renderSchedule(); renderOpenOrders(); renderTrips(); }
+
+function showPo(id) {
+  const order = orders.find(item => item.id === id); if (!order) return;
+  $('poDialogCustomer').textContent = order.customer; $('poDialogNumber').textContent = `PO ${order.po}`;
+  $('poDialogContent').innerHTML = `<div class="detail-item"><span>PO date</span><strong>${dateText(order.poDate)}</strong></div><div class="detail-item"><span>Status</span><strong>${safe(order.status)}</strong></div><div class="detail-item"><span>PO value</span><strong>${money(order.value)}</strong></div><div class="detail-item"><span>Confirmed appointment</span><strong>${dateText(order.appointmentDate)}</strong></div><div class="detail-item"><span>Delivery location</span><strong>${safe(order.location)}</strong></div><div class="detail-item"><span>Invoice</span><strong>${safe(order.invoice || '—')}</strong></div><div class="detail-docs">${docButton(order.poPath, 'View PO copy')}${docButton(order.invoicePath, 'View invoice copy')}</div>`;
+  $('poDialog').showModal();
+}
+function openEditPo(id) {
+  const order = orders.find(item => item.id === id); if (!order) return;
+  $('editPoForm').reset(); $('editPoError').textContent = ''; $('editPoId').value = order.id; $('editPoTitle').textContent = `Edit PO ${order.po}`;
+  $('editPoCustomer').value = order.customerRaw || order.customer; $('editPoNumber').value = order.po; $('editPoDate').value = order.poDate || ''; $('editPoReceivedDate').value = order.receivedDate || order.poDate || ''; $('editPoAppointment').value = order.appointmentDate || ''; $('editPoLocation').value = order.location === 'Location pending' ? '' : order.location; $('editPoValue').value = order.value || ''; $('editPoStatus').value = order.status || ''; $('editPoRemarks').value = order.remarks || '';
+  $('editPoDialog').showModal();
+}
+async function saveEditedPo(event) {
+  event.preventDefault(); const order = orders.find(item => item.id === $('editPoId').value); if (!order) return;
+  $('editPoError').textContent = ''; setDialogBusy('editPoForm', true);
+  try {
+    await api('/rest/v1/rpc/update_open_purchase_order', { method: 'POST', headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify({ target_po_id: order.id, new_customer_name: $('editPoCustomer').value.trim(), new_po_number: order.po, new_po_date: $('editPoDate').value, new_po_received_date: $('editPoReceivedDate').value, new_appointment_date: $('editPoAppointment').value || null, new_delivery_location: $('editPoLocation').value.trim(), new_po_value: Number($('editPoValue').value || 0), new_assigned_to: order.assignedTo || null, new_remarks: $('editPoRemarks').value.trim() || null, new_po_attachment_url: null }) });
+    $('editPoDialog').close(); toast(`PO ${order.po} updated.`); await loadData();
+  } catch (error) { $('editPoError').textContent = error.message; } finally { setDialogBusy('editPoForm', false); }
+}
+function openAppointmentEdit(id) {
+  const order = orders.find(item => item.id === id); if (!order) return;
+  $('appointmentForm').reset(); $('appointmentError').textContent = ''; $('appointmentPoId').value = order.id; $('appointmentDate').value = order.appointmentDate || ''; $('appointmentSummary').textContent = `PO ${order.po} · ${order.customer} · ${order.location}`; $('appointmentDialog').showModal();
+}
+async function saveAppointmentDate(event) {
+  event.preventDefault(); const order = orders.find(item => item.id === $('appointmentPoId').value); if (!order) return;
+  $('appointmentError').textContent = ''; $('saveAppointmentButton').disabled = true;
+  try { await api('/rest/v1/rpc/update_po_appointment_date', { method: 'POST', headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify({ po_id: order.id, new_appointment_date: $('appointmentDate').value || null }) }); $('appointmentDialog').close(); toast(`Appointment updated for PO ${order.po}.`); await loadData(); }
+  catch (error) { $('appointmentError').textContent = error.message; } finally { $('saveAppointmentButton').disabled = false; }
+}
+
+function transporterOptions(selected = '') { return '<option value="">Choose transporter</option>' + transporters.map(item => `<option value="${safe(item.id)}" data-name="${safe(item.name)}" ${item.id === selected || item.name === selected ? 'selected' : ''}>${safe(item.name)}</option>`).join(''); }
+function planCard(order, link = null) {
+  return `<article class="uat-po-plan" data-plan-po="${order.id}" data-link-id="${safe(link?.id || '')}" data-existing-file="${safe(link?.invoicePath || order.invoicePath || '')}" data-invoice-state="idle" data-invoice-items="[]"><div class="uat-po-plan-head"><div><strong>PO ${safe(order.po)} · ${safe(order.customer)}</strong><span>${safe(order.location)} · ${money(order.value)}</span></div>${appointmentMarkup(order)}</div><div class="uat-po-fields"><label>Invoice number*<input data-plan-invoice value="${safe(link?.invoice || order.invoice || '')}" placeholder="Tally invoice number" /></label><label>Invoice date*<input data-plan-invoice-date type="date" value="${safe(link?.invoiceDate || order.invoiceDate || '')}" /></label><label>Invoice amount (₹)*<input data-plan-invoice-amount type="number" min="0" step="0.01" value="${Number(link?.invoiceAmount || order.invoiceAmount || 0) || ''}" /></label><label>Allocated cost (₹)<input data-plan-cost type="number" min="0" step="0.01" value="${Number(link?.allocatedCost || 0) || ''}" placeholder="Optional" /></label><label>Invoice copy*<input data-plan-file type="file" accept="application/pdf" /><small class="uat-file-note">${link?.invoicePath || order.invoicePath ? 'Invoice already attached. Upload only to replace it.' : 'Select the original Tally PDF.'}</small></label></div><div class="invoice-read-status"></div></article>`;
+}
+function openCreateTrip() {
+  const selected = orders.filter(order => state.selected.has(order.id)); if (!selected.length) return;
+  state.editTripId = null; $('tripError').textContent = ''; $('tripDialogTitle').textContent = 'Create a new trip'; $('tripSummary').textContent = `${selected.length} PO${selected.length === 1 ? '' : 's'} selected for this vehicle.`; $('tripDate').value = todayIso(); $('tripTransporter').innerHTML = transporterOptions(); $('tripVehicle').value = ''; $('tripDriver').value = ''; $('tripPhone').value = ''; $('tripCost').value = ''; $('tripPoList').innerHTML = selected.map(order => planCard(order)).join(''); $('tripDialog').showModal();
+}
+function openEditTrip(id) {
+  const trip = trips.find(item => item.id === id); if (!trip) return;
+  state.editTripId = id; $('tripError').textContent = ''; $('tripDialogTitle').textContent = 'Edit trip'; $('tripSummary').textContent = `${trip.pos.length} linked PO${trip.pos.length === 1 ? '' : 's'}.`;
+  $('tripDate').value = trip.tripDate; $('tripTransporter').innerHTML = transporterOptions(trip.transporterId || trip.transporter); $('tripVehicle').value = trip.vehicle === 'Vehicle pending' ? '' : trip.vehicle; $('tripDriver').value = trip.driver; $('tripPhone').value = trip.driverPhone; $('tripCost').value = trip.quotedCost || trip.actualFreight || '';
+  $('tripPoList').innerHTML = trip.pos.map(link => { const order = orders.find(item => item.id === link.purchaseOrderId) || { id: link.purchaseOrderId, po: link.po, customer: link.customer, location: link.location, value: link.value, appointmentDate: link.appointmentDate, invoice: link.invoice, invoiceDate: link.invoiceDate, invoiceAmount: link.invoiceAmount, invoicePath: link.invoicePath }; return planCard(order, link); }).join(''); $('tripDialog').showModal();
+}
+
+function normalizePoNumber(value) { return String(value || '').replace(/\D/g, ''); }
+function tallyDateToIso(value) {
+  const match = String(value || '').match(/(\d{1,2})[-\s\/]([A-Za-z]{3,9})[-\s\/](\d{2,4})/); if (!match) return '';
+  const months = { jan: 1, january: 1, feb: 2, february: 2, mar: 3, march: 3, apr: 4, april: 4, may: 5, jun: 6, june: 6, jul: 7, july: 7, aug: 8, august: 8, sep: 9, sept: 9, september: 9, oct: 10, october: 10, nov: 11, november: 11, dec: 12, december: 12 };
+  const month = months[match[2].toLowerCase()]; if (!month) return ''; const year = match[3].length === 2 ? 2000 + Number(match[3]) : Number(match[3]); return `${year}-${String(month).padStart(2, '0')}-${String(Number(match[1])).padStart(2, '0')}`;
+}
+async function readPdfLines(file) {
+  if (!window.pdfjsLib) throw new Error('The PDF reader did not load.');
+  window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  const pdf = await window.pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise; const lines = [];
+  for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) { const page = await pdf.getPage(pageNumber); const content = await page.getTextContent(); lines.push(...content.items.map(item => String(item.str || '').trim()).filter(Boolean)); }
+  return lines;
+}
+function parseInvoiceItems(flat) {
+  const goods = flat.split(/Amount\s+Chargeable/i)[0]; const products = [...goods.matchAll(/MYSORE\s+SANDAL\s+[A-Z][A-Z0-9 ()&/.\-]{1,90}?\s+\d+(?:\.\d+)?\s*(?:G|GM|ML)(?=\s|DISCOUNT|OUTPUT|$)/gi)].map(match => match[0].replace(/\s+/g, ' ').trim());
+  const cbs = [...goods.matchAll(/([\d,.]+)\s*CBS\b/gi)].map(match => Number(match[1].replace(/,/g, ''))).filter(Boolean); const pcs = [...goods.matchAll(/([\d,]+)\s*(PCS|NOS|EA|BOX|CTN|BTL)\s*([\d,]+\.\d{2})/gi)].map(match => ({ quantity: Number(match[1].replace(/,/g, '')), unit: match[2].toUpperCase(), amount: Number(match[3].replace(/,/g, '')) })); const hsns = (goods.match(/\b\d{8}\b/g) || []); const count = Math.min(products.length, cbs.length, pcs.length);
+  return products.slice(0, count).map((name, index) => ({ line_number: index + 1, article_name: name, article_description: name, hsn_sac: hsns[index] || null, quantity: pcs[index].quantity, quantity_cbs: cbs[index], unit: pcs[index].unit, rate: Number((pcs[index].amount / pcs[index].quantity).toFixed(4)), taxable_amount: pcs[index].amount }));
+}
+function parseTallyInvoice(lines, expectedPoNumber) {
+  const flat = lines.join(' ').replace(/\s+/g, ' '); const invoiceNumber = flat.match(/\b(BMAG\/\d{2}-\d{2}\/\d{3,8})\b/i)?.[1] || flat.match(/\b([A-Z]{2,10}[A-Z0-9 -]*\/\d{2}-\d{2}\/\d{3,8})\b/i)?.[1] || '';
+  const dateRaw = flat.match(/\b(\d{1,2}[-\s\/][A-Za-z]{3,9}[-\s\/]\d{2,4})\b/)?.[1] || ''; const expected = normalizePoNumber(expectedPoNumber); const poNumber = expected && new RegExp(`(?:^|\\D)${expected}(?:\\D|$)`).test(flat) ? expectedPoNumber : flat.match(/Buyer'?s\s+Order\s+No[^0-9]{0,30}(\d{8,12})/i)?.[1] || '';
+  const amounts = [...flat.matchAll(/Total\s+Inv\s+Amt\s*:\s*([\d,]+\.\d{2})/gi)].map(match => Number(match[1].replace(/,/g, ''))); const rupeeTotals = [...flat.matchAll(/(?:₹|Rs\.?)\s*([\d,]+\.\d{2})/gi)].map(match => Number(match[1].replace(/,/g, ''))); const invoiceValue = amounts[0] || (rupeeTotals.length ? Math.max(...rupeeTotals) : null); const vehicle = flat.match(/\b([A-Z]{2}\s?\d{1,2}\s?[A-Z]{1,3}\s?\d{4})\b/i)?.[1]?.replace(/\s+/g, '').toUpperCase() || '';
+  return { invoiceNumber, invoiceDate: tallyDateToIso(dateRaw), poNumber, invoiceValue, vehicle, items: parseInvoiceItems(flat) };
+}
+async function handleInvoiceFile(input) {
+  const card = input.closest('[data-plan-po]'); const file = input.files?.[0]; const order = orders.find(item => item.id === card?.dataset.planPo); if (!card || !file || !order) return;
+  const status = card.querySelector('.invoice-read-status'); card.dataset.invoiceState = 'reading'; status.textContent = 'Reading invoice…';
+  try {
+    const parsed = parseTallyInvoice(await readPdfLines(file), order.po); if (parsed.invoiceNumber) card.querySelector('[data-plan-invoice]').value = parsed.invoiceNumber; if (parsed.invoiceDate) card.querySelector('[data-plan-invoice-date]').value = parsed.invoiceDate; if (parsed.invoiceValue) card.querySelector('[data-plan-invoice-amount]').value = parsed.invoiceValue.toFixed(2); if (parsed.vehicle) $('tripVehicle').value = parsed.vehicle; card.dataset.invoiceItems = JSON.stringify(parsed.items || []);
+    const actual = normalizePoNumber(parsed.poNumber); const expected = normalizePoNumber(order.po); if (actual && actual !== expected) { card.dataset.invoiceState = 'mismatch'; status.textContent = `Wrong invoice: PO ${parsed.poNumber} does not match ${order.po}.`; return; }
+    card.dataset.invoiceState = parsed.invoiceNumber && parsed.invoiceDate ? 'matched' : 'warning'; status.textContent = card.dataset.invoiceState === 'matched' ? `✓ PO ${order.po} matched${parsed.items.length ? ` · ${parsed.items.length} product line(s) ready for Analytics` : ''}` : 'Please verify the invoice number, date and amount.';
+  } catch (error) { card.dataset.invoiceState = 'warning'; status.textContent = error.message; }
+}
+function planDetails() {
+  return [...document.querySelectorAll('[data-plan-po]')].map(card => ({ purchaseOrderId: card.dataset.planPo, linkId: card.dataset.linkId || null, existingPath: card.dataset.existingFile || '', invoiceState: card.dataset.invoiceState || 'idle', invoiceNumber: card.querySelector('[data-plan-invoice]').value.trim(), invoiceDate: card.querySelector('[data-plan-invoice-date]').value, invoiceAmount: Number(card.querySelector('[data-plan-invoice-amount]').value || 0), allocatedCost: Number(card.querySelector('[data-plan-cost]').value || 0), invoiceFile: card.querySelector('[data-plan-file]').files[0], items: JSON.parse(card.dataset.invoiceItems || '[]') }));
+}
+async function saveTrip(event) {
+  event.preventDefault(); $('tripError').textContent = ''; const details = planDetails(); const editTrip = state.editTripId ? trips.find(item => item.id === state.editTripId) : null;
+  try {
+    setDialogBusy('tripForm', true); if (!$('tripTransporter').value) throw new Error('Select a transporter.');
+    for (const detail of details) { if (detail.invoiceState === 'reading') throw new Error('Wait for invoice reading to finish.'); if (detail.invoiceState === 'mismatch') throw new Error('Replace the invoice that does not match its PO.'); if (!detail.invoiceNumber || !detail.invoiceDate || detail.invoiceAmount <= 0 || (!detail.invoiceFile && !detail.existingPath)) throw new Error(`Complete invoice number, date, amount and attachment for PO ${orders.find(order => order.id === detail.purchaseOrderId)?.po || ''}.`); }
+    const tripId = editTrip?.id || crypto.randomUUID(); await Promise.all(details.map(async detail => { detail.invoicePath = detail.invoiceFile ? await uploadFile('trip-invoices', tripId, detail.purchaseOrderId, detail.invoiceFile) : detail.existingPath; }));
+    const option = $('tripTransporter').selectedOptions[0]; const payload = { trip_date: $('tripDate').value, transporter_id: $('tripTransporter').value, transporter: option?.dataset.name || option?.textContent?.trim() || null, vehicle_number: $('tripVehicle').value.trim() || null, driver_name: $('tripDriver').value.trim() || null, driver_phone: $('tripPhone').value.trim() || null, quoted_cost: Number($('tripCost').value || 0), actual_freight: Number($('tripCost').value || 0) };
+    if (editTrip) {
+      await api(`/rest/v1/delivery_trips?id=eq.${encodeURIComponent(tripId)}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify(payload) });
+      await Promise.all(details.map(detail => api(`/rest/v1/delivery_trip_pos?trip_id=eq.${encodeURIComponent(tripId)}&purchase_order_id=eq.${encodeURIComponent(detail.purchaseOrderId)}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify({ allocation_method: 'Manual', allocated_cost: detail.allocatedCost, invoice_number: detail.invoiceNumber, invoice_date: detail.invoiceDate, invoice_amount: detail.invoiceAmount, invoice_attachment_url: detail.invoicePath }) })));
+    } else {
+      await api('/rest/v1/delivery_trips', { method: 'POST', headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify({ id: tripId, status: 'Dispatched', ...payload }) });
+      await api('/rest/v1/delivery_trip_pos', { method: 'POST', headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify(details.map(detail => ({ trip_id: tripId, purchase_order_id: detail.purchaseOrderId, allocation_method: 'Manual', allocated_cost: detail.allocatedCost, invoice_number: detail.invoiceNumber, invoice_date: detail.invoiceDate, invoice_amount: detail.invoiceAmount, invoice_attachment_url: detail.invoicePath, delivery_status: 'Pending' }))) }); state.selected.clear();
     }
-    records = (Array.isArray(poResult.value) ? poResult.value : [])
-      .map(record => ({ ...record, delivery_location: normalizeDeliveryLocation(record.delivery_location) }))
-      .filter(record => OPEN_STATUSES.includes(record.status));
-    tripStorageReady = tripResult.status === 'fulfilled';
-    trips = tripStorageReady && Array.isArray(tripResult.value) ? tripResult.value
-      .map(trip => ({
-        ...trip,
-        delivery_trip_pos: (trip.delivery_trip_pos || []).map(link => ({
-          ...link,
-          purchase_orders: link.purchase_orders ? {
-            ...link.purchase_orders,
-            delivery_location: normalizeDeliveryLocation(link.purchase_orders.delivery_location)
-          } : link.purchase_orders
-        }))
-      }))
-      .filter(trip => !CLOSED_TRIP_STATUSES.includes(trip.status) || (trip.delivery_trip_pos || []).some(link => link.delivery_status === 'Needs Correction')) : [];
-    transporters = transporterResult.status === 'fulfilled' && Array.isArray(transporterResult.value) ? transporterResult.value : [];
-    renderTransporterOptions();
-    await Promise.all(records.map(async record => {
-      if (record.po_attachment_url) record.po_attachment_link = await signedFileUrl(record.po_attachment_url).catch(() => '');
-    }));
-    await Promise.all(trips.flatMap(trip => (trip.delivery_trip_pos || []).map(async link => {
-      const poCopy = link.purchase_orders?.po_attachment_url;
-      const invoiceCopy = link.invoice_attachment_url || trip.invoice_attachment_url || link.purchase_orders?.invoice_attachment_url;
-      if (poCopy) link.po_attachment_link = await signedFileUrl(poCopy).catch(() => '');
-      if (invoiceCopy) link.invoice_attachment_link = await signedFileUrl(invoiceCopy).catch(() => '');
-    })));
-    const availableIds = new Set(availableRecords().map(record => record.id));
-    selectedPoIds = new Set([...selectedPoIds].filter(id => availableIds.has(id)));
-    setConnectionStatus(tripStorageReady && transporterResult.status === 'fulfilled' ? 'cloudSynced' : 'setupRequired');
-    render();
-  }
+    await Promise.all(details.filter(detail => detail.items.length && /^BMAG\//i.test(detail.invoiceNumber)).map(detail => { const order = orders.find(item => item.id === detail.purchaseOrderId); return api('/rest/v1/rpc/import_dmart_invoice_items', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ payload: { invoice_number: detail.invoiceNumber, po_number: order.po, invoice_date: detail.invoiceDate, delivery_location: order.location, items: detail.items } }) }).catch(error => console.error('Analytics sync failed:', error)); }));
+    $('tripDialog').close(); toast(editTrip ? 'Trip updated.' : 'Trip created. Selected POs moved to POs in Trip.'); await loadData(); $('tripsTitle').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } catch (error) { $('tripError').textContent = error.message; } finally { setDialogBusy('tripForm', false); }
+}
+function openCompleteTrip(id) {
+  const trip = trips.find(item => item.id === id); if (!trip) return; if (trip.status === 'Awaiting GRN' && !tripNeedsCorrection(trip)) return toast('This trip is waiting for the customer GRN email.');
+  state.completeTripId = id; $('completeError').textContent = ''; const correctionLinks = trip.pos.filter(link => link.deliveryStatus === 'Needs Correction'); const links = correctionLinks.length ? correctionLinks : trip.pos; const hasEmailGrn = links.some(link => usesEmailGrn(link.customer)); const hasSlipCustomer = links.some(link => !usesEmailGrn(link.customer)); $('completeSummary').textContent = `${links.length} PO${links.length === 1 ? '' : 's'} · ${trip.vehicle}`; $('finalTripCost').value = trip.actualFreight || trip.quotedCost || ''; const evenCost = (trip.actualFreight || trip.quotedCost || 0) / Math.max(1, links.length);
+  $('completePoList').innerHTML = links.map(link => { const emailGrn = usesEmailGrn(link.customer); return `<article class="uat-complete-po" data-complete-po="${link.purchaseOrderId}" data-customer="${safe(link.customer)}"><div class="uat-po-plan-head"><div><strong>PO ${safe(link.po)} · ${safe(link.customer)}</strong><span>${safe(link.location)} · ${link.invoice ? `Invoice ${safe(link.invoice)}` : 'Invoice pending'}</span></div><span>${emailGrn ? 'Email GRN-controlled' : 'Delivery slip required'}</span></div><div class="uat-complete-fields"><label>Final PO cost (₹)<input data-complete-cost type="number" min="0" step="0.01" value="${Number(link.allocatedCost || evenCost || 0) || ''}" /></label>${emailGrn ? `<div class="uat-blinkit-rule">No delivery slip. ${safe(link.customer)} will move to Awaiting GRN.</div>` : '<label>Delivery slip*<input data-complete-note type="file" accept="application/pdf,image/jpeg,image/png" required /></label>'}</div></article>`; }).join('');
+  $('completionRule').innerHTML = hasEmailGrn && hasSlipCustomer ? '<strong>Mixed trip:</strong> DMart POs will be delivered after the signed slip is saved; email-GRN POs will wait for customer confirmation.' : hasEmailGrn ? '<strong>Email GRN customers:</strong> enter the final costs. Delivery is confirmed automatically from the customer GRN email.' : '<strong>DMart:</strong> upload a signed delivery slip and final cost for each PO.'; $('completeDialog').showModal();
+  updateCompletionTotal();
+}
+function updateCompletionTotal() { $('finalTripCost').value = [...document.querySelectorAll('[data-complete-cost]')].reduce((sum, input) => sum + Number(input.value || 0), 0).toFixed(2); }
+async function completeTrip(event) {
+  event.preventDefault(); const trip = trips.find(item => item.id === state.completeTripId); if (!trip) return; $('completeError').textContent = '';
+  const cards = [...document.querySelectorAll('[data-complete-po]')];
+  try {
+    setDialogBusy('completeForm', true); const deliveries = await Promise.all(cards.map(async card => { const poId = card.dataset.completePo; const emailGrn = usesEmailGrn(card.dataset.customer); const file = card.querySelector('[data-complete-note]')?.files?.[0]; if (!emailGrn && !file) throw new Error('Upload every required DMart delivery slip.'); return { purchase_order_id: poId, note_path: emailGrn ? null : await uploadFile('trip-delivery-slips', trip.id, poId, file), final_cost: Number(card.querySelector('[data-complete-cost]').value || 0) }; }));
+    await api('/rest/v1/rpc/complete_delivery_trip', { method: 'POST', headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify({ trip: trip.id, deliveries }) }); $('completeDialog').close(); toast(cards.some(card => usesEmailGrn(card.dataset.customer)) ? 'Transport cost saved. Email-GRN POs are awaiting customer confirmation.' : 'Delivery completed and owner tracker updated.'); await loadData();
+  } catch (error) { $('completeError').textContent = error.message; } finally { setDialogBusy('completeForm', false); }
+}
+async function deleteTrip(id) {
+  if (!confirm('Delete this trip? Its POs will return to the open list so the trip can be recreated.')) return;
+  try { await api('/rest/v1/rpc/delete_delivery_trip', { method: 'POST', headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify({ trip: id }) }); state.selected.clear(); toast('Trip deleted. POs returned to the open list.'); await loadData(); }
+  catch (error) { toast(error.message); }
+}
+function setDialogBusy(formId, busy) { document.querySelectorAll(`#${formId} button, #${formId} input, #${formId} select, #${formId} textarea`).forEach(control => { if (!control.classList.contains('icon-button')) control.disabled = busy; }); }
+function toast(message) { $('toast').textContent = message; $('toast').classList.add('show'); clearTimeout(toast.timer); toast.timer = setTimeout(() => $('toast').classList.remove('show'), 3600); }
+function closeDialog(id) { $(id).close(); }
+function showApp(value) { $('currentUser').textContent = value.user?.email || ''; $('loginView').classList.add('hidden'); $('appView').classList.remove('hidden'); loadData(); clearInterval(refreshTimer); refreshTimer = setInterval(loadData, 60000); }
+function showLogin() { $('appView').classList.add('hidden'); $('loginView').classList.remove('hidden'); }
 
-  function renderTransporterOptions(selectedId = '') {
-    const select = $('tripTransporter'), current = selectedId || select.value;
-    select.innerHTML = `<option value="">${safe(t('selectTransporter'))}</option>` + transporters.map(transporter => `<option value="${transporter.id}">${safe(transporter.name)}</option>`).join('');
-    select.value = current;
-  }
+document.querySelectorAll('[data-schedule]').forEach(button => button.addEventListener('click', () => { state.schedule = button.dataset.schedule; renderSchedule(); }));
+$('showAllSchedule').addEventListener('click', () => { state.schedule = 'All'; renderSchedule(); });
+$('poSearch').addEventListener('input', renderOpenOrders); $('confirmedOnly').addEventListener('change', renderOpenOrders); $('tripFilter').addEventListener('change', renderTrips);
+$('selectAll').addEventListener('change', event => { filteredAvailableOrders().forEach(order => event.target.checked ? state.selected.add(order.id) : state.selected.delete(order.id)); renderOpenOrders(); });
+$('poTableBody').addEventListener('change', event => { if (!event.target.matches('[data-select-po]')) return; event.target.checked ? state.selected.add(event.target.dataset.selectPo) : state.selected.delete(event.target.dataset.selectPo); renderOpenOrders(); });
+$('clearSelection').addEventListener('click', () => { state.selected.clear(); renderOpenOrders(); }); $('createTripButton').addEventListener('click', openCreateTrip);
+$('tripForm').addEventListener('submit', saveTrip); $('closeTripDialog').addEventListener('click', () => closeDialog('tripDialog')); $('cancelTripButton').addEventListener('click', () => closeDialog('tripDialog'));
+$('completeForm').addEventListener('submit', completeTrip); $('closeCompleteDialog').addEventListener('click', () => closeDialog('completeDialog')); $('cancelCompleteButton').addEventListener('click', () => closeDialog('completeDialog'));
+$('completePoList').addEventListener('input', event => { if (event.target.matches('[data-complete-cost]')) updateCompletionTotal(); });
+$('editPoForm').addEventListener('submit', saveEditedPo); $('closeEditPoDialog').addEventListener('click', () => closeDialog('editPoDialog')); $('cancelEditPoButton').addEventListener('click', () => closeDialog('editPoDialog'));
+$('appointmentForm').addEventListener('submit', saveAppointmentDate); $('closeAppointmentDialog').addEventListener('click', () => closeDialog('appointmentDialog')); $('cancelAppointmentButton').addEventListener('click', () => closeDialog('appointmentDialog'));
+$('tripPoList').addEventListener('change', event => { if (event.target.matches('[data-plan-file]')) handleInvoiceFile(event.target); });
+$('refreshButton').addEventListener('click', loadData); $('signOutButton').addEventListener('click', () => { clearInterval(refreshTimer); session = null; sessionStorage.removeItem(SESSION_KEY); location.reload(); });
+document.body.addEventListener('click', event => { const po = event.target.closest('[data-view-po]'); if (po) showPo(po.dataset.viewPo); const appointment = event.target.closest('[data-edit-appointment]'); if (appointment) openAppointmentEdit(appointment.dataset.editAppointment); const editPo = event.target.closest('[data-edit-po]'); if (editPo) openEditPo(editPo.dataset.editPo); const edit = event.target.closest('[data-edit-trip]'); if (edit) openEditTrip(edit.dataset.editTrip); const complete = event.target.closest('[data-complete-trip]'); if (complete) openCompleteTrip(complete.dataset.completeTrip); const remove = event.target.closest('[data-delete-trip]'); if (remove) deleteTrip(remove.dataset.deleteTrip); const documentButton = event.target.closest('[data-open-doc]'); if (documentButton) openDocument(documentButton.dataset.openDoc); });
+$('loginForm').addEventListener('submit', async event => { event.preventDefault(); $('loginError').textContent = ''; try { const value = await authRequest('/auth/v1/token?grant_type=password', { email: $('email').value.trim(), password: $('password').value }); storeSession(value); showApp(value); } catch (error) { $('loginError').textContent = error.message; } });
 
-  function linkedPoIds() {
-    return new Set(trips.flatMap(trip => (trip.delivery_trip_pos || []).map(link => link.purchase_order_id)));
-  }
-  function availableRecords() {
-    const linked = linkedPoIds();
-    return records.filter(record => !linked.has(record.id));
-  }
-  function monthBounds(offset) {
-    const now = new Date(); const start = new Date(now.getFullYear(), now.getMonth() + offset, 1);
-    const end = offset === 0 ? now : new Date(now.getFullYear(), now.getMonth() + offset + 1, 0);
-    return { from: isoDate(start), to: isoDate(end) };
-  }
-  function selectedBounds() {
-    const range = $('dateRangeFilter').value;
-    if (range === 'current') return monthBounds(0); if (range === 'last') return monthBounds(-1);
-    if (range === 'custom') return { from: $('dateFrom').value, to: $('dateTo').value };
-    return { from: '', to: '' };
-  }
-  function recordMatchesFilters(record) {
-    const search = $('searchInput').value.trim().toLowerCase(), status = $('statusFilter').value, { from, to } = selectedBounds();
-    const poDate = record.po_date || '';
-    const searchable = [record.po_number, record.customer_name, record.delivery_location, record.invoice_number, record.transporter, record.tracking_number, record.assigned_to].join(' ').toLowerCase();
-    return (!status || record.status === status) && (!from || (poDate && poDate >= from)) && (!to || (poDate && poDate <= to)) && (!search || searchable.includes(search));
-  }
-  function filteredRecords() {
-    return availableRecords().filter(recordMatchesFilters);
-  }
-  function filteredOpenRecords() {
-    return records.filter(recordMatchesFilters);
-  }
-  function statusClass(status) { return String(status || '').toLowerCase().replaceAll(' ', '-'); }
-  function customerUsesEmailGrn(customerName) {
-    return /(blinkit|hands\s*on|zepto|big\s*basket|innovative\s*retail)/i.test(String(customerName || ''));
-  }
-  function statusLabel(status) {
-    return ({ Received: t('received'), Scheduled: t('scheduled'), 'In Transit': t('inTransit'), Dispatched: t('inTransit'), 'Partially Delivered': t('partiallyDelivered'), 'Needs Correction': t('needsCorrection'), 'Awaiting GRN': t('awaitingGrn'), Pending: t('pending'), Delivered: t('delivered'), Cancelled: t('cancelled') })[status] || status || '—';
-  }
-
-  function renderOpenPos() {
-    const showing = filteredRecords();
-    const allOpen = filteredOpenRecords();
-    const totalValue = allOpen.reduce((sum, record) => sum + Number(record.po_value || 0), 0);
-    $('openCount').textContent = allOpen.length; $('openValue').textContent = t('value', { amount: money(totalValue) });
-    $('receivedCount').textContent = allOpen.filter(record => record.status === 'Received').length;
-    $('scheduledCount').textContent = allOpen.filter(record => record.status === 'Scheduled').length;
-    $('transitCount').textContent = allOpen.filter(record => record.status === 'In Transit').length;
-    $('partialCount').textContent = allOpen.filter(record => record.status === 'Partially Delivered').length;
-    $('resultCount').textContent = t('openPoCount', { count: showing.length });
-    $('poTableBody').innerHTML = showing.map(record => {
-      const age = ageDays(record), attachment = record.po_attachment_link ? `<a class="po-link" href="${safe(record.po_attachment_link)}" target="_blank" rel="noopener">${safe(t('viewPoCopy'))}</a>` : '';
-      return `<tr class="${selectedPoIds.has(record.id) ? 'selected-row' : ''}">
-        <td class="selection-cell"><input class="po-choice" type="checkbox" value="${record.id}" ${selectedPoIds.has(record.id) ? 'checked' : ''} aria-label="Select ${safe(record.po_number)}" /></td>
-        <td><span class="po-main">${safe(record.po_number || '—')}</span><span class="po-secondary">${safe(record.customer_name || '—')}</span>${attachment}</td>
-        <td>${localDate(record.po_date)}<span class="po-secondary">${safe(t('receivedOn', { date: localDate(record.po_received_date) }))}</span></td>
-        <td><span class="executive-status ${statusClass(record.status)}">${safe(statusLabel(record.status))}</span></td>
-        <td>${safe(record.delivery_location || '—')}</td><td>${money(record.po_value)}</td><td><div class="appointment-cell"><span>${localDate(record.delivery_date)}</span><button class="text-btn appointment-edit-btn" type="button" data-po-id="${record.id}">${safe(t('editAppointment'))}</button></div></td>
-        <td>${safe(record.invoice_number || '—')}<span class="po-secondary">${localDate(record.invoice_date)}</span></td>
-        <td>${safe(record.transporter || '—')}<span class="po-secondary">${safe(record.tracking_number || '')}${record.transport_amount ? ` · ${money(record.transport_amount)}` : ''}</span></td>
-        <td>${age == null ? '—' : safe(t('days', { count: age }))}</td><td><button class="text-btn po-edit-btn" type="button" data-po-id="${record.id}">${safe(t('edit'))}</button></td>
-      </tr>`;
-    }).join('');
-    $('emptyState').classList.toggle('hidden', showing.length !== 0);
-    const visibleIds = showing.map(record => record.id), selectedVisible = visibleIds.filter(id => selectedPoIds.has(id));
-    $('selectAllPos').checked = visibleIds.length > 0 && selectedVisible.length === visibleIds.length;
-    $('selectAllPos').indeterminate = selectedVisible.length > 0 && selectedVisible.length < visibleIds.length;
-  }
-  function renderPlan() {
-    const editTrip = editingTripId ? trips.find(trip => trip.id === editingTripId) : null;
-    const editLinks = editTrip?.delivery_trip_pos || [];
-    const editLinksByPo = new Map(editLinks.map(link => [link.purchase_order_id, link]));
-    const chosen = editTrip
-      ? editLinks.map(link => records.find(record => record.id === link.purchase_order_id)).filter(Boolean)
-      : records.filter(record => selectedPoIds.has(record.id));
-    $('tripDialogEyebrow').textContent = editTrip ? t('updateDeliveryPlan') : t('planDelivery');
-    $('tripDialogTitle').textContent = editTrip ? t('editTrip') : t('createNewTrip');
-    $('selectedPoSummary').textContent = chosen.length ? t('selectedPos', { count: chosen.length, pos: chosen.map(record => record.po_number).join(', ') }) : t('selectPosHelp');
-    $('tripPoDetails').innerHTML = chosen.map(record => {
-      const link = editLinksByPo.get(record.id); const hasInvoice = Boolean(link?.invoice_attachment_url || record.invoice_attachment_url);
-      const invoiceStatusText = hasInvoice ? t('invoiceAttached') : t('selectTally');
-      const correction = link?.delivery_status === 'Needs Correction' ? `<span class="correction-note">${safe(t('ownerCorrection', { reason: link.correction_reason || t('pleaseReview') }))}</span>` : '';
-      return `<tr data-po-id="${record.id}" data-invoice-state="${hasInvoice ? 'existing' : 'idle'}" data-existing-invoice="${safe(link?.invoice_attachment_url || record.invoice_attachment_url || '')}">
-      <td><span class="po-main">${safe(record.po_number)}</span><span class="po-secondary">${safe(record.delivery_location || t('locationPending'))}</span>${correction}</td>
-      <td><input class="po-invoice-number" required placeholder="${safe(t('invoiceNumberPlaceholder'))}" value="${safe(link?.invoice_number || record.invoice_number || '')}" /></td>
-      <td><input class="po-invoice-date" type="date" required value="${safe(link?.invoice_date || record.invoice_date || '')}" /></td>
-      <td><input class="po-invoice-amount" type="number" min="0.01" step="0.01" required placeholder="Required" value="${link?.invoice_amount ?? record.invoice_amount ?? ''}" /></td>
-      <td><input class="po-invoice-file" type="file" accept="application/pdf,image/*" ${hasInvoice ? '' : 'required'} /><small class="invoice-read-status" data-state="${hasInvoice ? 'matched' : 'idle'}">${invoiceStatusText}</small></td>
-      <td><input class="po-allocated-cost" type="number" min="0" step="0.01" placeholder="Optional" value="${link?.allocated_cost ?? ''}" /></td>
-    </tr>`;
-    }).join('');
-    const selectedCount = records.filter(record => selectedPoIds.has(record.id)).length;
-    $('openTripDialogBtn').disabled = selectedCount === 0;
-    $('openTripDialogBtn').textContent = t('createNewTripCount', { count: selectedCount });
-    $('createTripBtn').disabled = chosen.length === 0;
-    $('createTripBtn').textContent = editTrip ? t('saveTripChanges') : t('createTripCount', { count: chosen.length });
-  }
-  function renderTrips() {
-    $('tripCount').textContent = t('activeTripCount', { count: trips.length });
-    $('inTripBody').innerHTML = trips.map(trip => {
-      const links = trip.delivery_trip_pos || [];
-      const correctionLinks = links.filter(link => link.delivery_status === 'Needs Correction'), needsCorrection = correctionLinks.length > 0;
-      const chips = links.map(link => {
-        const poCopy = link.po_attachment_link
-          ? `<a class="trip-doc-link po-copy-link" href="${safe(link.po_attachment_link)}" target="_blank" rel="noopener">${safe(t('viewPoCopy'))}</a>`
-          : `<span class="trip-doc-missing">${safe(t('poCopyUnavailable'))}</span>`;
-        return `<div class="trip-po-card"><span class="trip-po-chip ${link.delivery_status === 'Needs Correction' ? 'needs-correction' : ''}">${safe(link.purchase_orders?.po_number || 'PO')} · ${safe(link.purchase_orders?.delivery_location || t('locationPending'))}${link.delivery_status === 'Needs Correction' ? `<small>${safe(link.correction_reason || t('correctionRequested'))}</small>` : ''}</span>${poCopy}</div>`;
-      }).join('');
-      const invoices = links.map(link => {
-        const invoiceCopy = link.invoice_attachment_link
-          ? `<a class="trip-doc-link invoice-copy-link" href="${safe(link.invoice_attachment_link)}" target="_blank" rel="noopener">${safe(t('viewInvoiceCopy'))}</a>`
-          : `<span class="trip-doc-missing">${safe(t('invoiceCopyUnavailable'))}</span>`;
-        const invoiceNumber = link.invoice_number || trip.invoice_number || link.purchase_orders?.invoice_number;
-        const invoiceAmount = link.invoice_amount ?? link.purchase_orders?.invoice_amount;
-        return `<div class="trip-invoice-row"><div><strong>${safe(link.purchase_orders?.po_number || 'PO')}:</strong> ${safe(invoiceNumber || '—')} · Invoice ${invoiceAmount == null ? '—' : money(invoiceAmount)} · Delivery ${money(link.allocated_cost)}</div>${invoiceCopy}</div>`;
-      }).join('');
-      const tempoCost = Number(trip.actual_freight || 0);
-      const completeAction = trip.status === 'Awaiting GRN' && !needsCorrection
-        ? `<span class="grn-waiting-note">${safe(t('awaitingGrnAction'))}</span>`
-        : `<button class="complete-trip-btn" type="button" data-trip-id="${trip.id}">${safe(needsCorrection ? t('correctDelivery') : t('completeDelivery'))}</button>`;
-      return `<tr class="${needsCorrection ? 'correction-trip' : ''}"><td>${localDate(trip.trip_date)}</td><td><div class="trip-po-list">${chips || safe(t('noPosLinked'))}</div></td><td>${safe(trip.vehicle_number || trip.transporter || '—')}<span class="po-secondary">${safe(trip.driver_name || '')}</span></td><td>${invoices || '—'}</td><td><span class="executive-status ${needsCorrection ? 'needs-correction' : statusClass(trip.status)}">${safe(needsCorrection ? t('needsCorrection') : statusLabel(trip.status))}</span></td><td>${tempoCost ? money(tempoCost) : '—'}</td><td><div class="trip-actions"><button class="text-btn edit-trip-btn" type="button" data-trip-id="${trip.id}">${safe(t('edit'))}</button>${completeAction}<button class="text-btn danger delete-trip-btn" type="button" data-trip-id="${trip.id}">${safe(t('deleteTrip'))}</button></div></td></tr>`;
-    }).join('');
-    $('tripEmptyState').classList.toggle('hidden', trips.length !== 0);
-  }
-  function render() { renderOpenPos(); if (!$('tripPlanDialog').open) renderPlan(); renderTrips(); }
-
-  function closeTripDialog() {
-    if ($('tripPlanDialog').open) $('tripPlanDialog').close();
-    editingTripId = null; $('tripPlanForm').reset(); $('tripDate').value = today(); $('tripPlanError').textContent = ''; renderPlan();
-  }
-  function openCreateTrip() {
-    if (!selectedPoIds.size) return;
-    editingTripId = null; $('tripPlanForm').reset(); renderTransporterOptions(); $('tripDate').value = today(); $('tripPlanError').textContent = ''; renderPlan(); $('tripPlanDialog').showModal();
-  }
-  function openEditTrip(tripId) {
-    const trip = trips.find(item => item.id === tripId); if (!trip) return;
-    editingTripId = tripId; $('tripPlanForm').reset(); renderTransporterOptions(trip.transporter_id || '');
-    $('tripDate').value = trip.trip_date || today(); $('tripVehicle').value = trip.vehicle_number || '';
-    $('tripDriver').value = trip.driver_name || ''; $('tripDriverPhone').value = trip.driver_phone || ''; $('tripFreight').value = Number(trip.actual_freight || 0) || '';
-    $('tripPlanError').textContent = ''; renderPlan(); $('tripPlanDialog').showModal();
-  }
-  async function saveTrip(event) {
-    event.preventDefault(); const error = $('tripPlanError'); error.textContent = '';
-    const editTrip = editingTripId ? trips.find(trip => trip.id === editingTripId) : null;
-    const editLinks = editTrip?.delivery_trip_pos || [];
-    const chosen = editTrip ? editLinks.map(link => records.find(record => record.id === link.purchase_order_id)).filter(Boolean) : records.filter(record => selectedPoIds.has(record.id));
-    if (!chosen.length) { error.textContent = t('selectAtLeastOne'); return; }
-    if (!tripStorageReady) { error.textContent = t('tripSetupNotReady'); return; }
-    const button = $('createTripBtn');
-    try {
-      button.disabled = true; button.textContent = editTrip ? t('savingChanges') : t('creatingTrip');
-      const freight = Number($('tripFreight').value || 0), tripId = editTrip?.id || crypto.randomUUID();
-      const details = chosen.map(record => {
-        const row = $('tripPoDetails').querySelector(`tr[data-po-id="${record.id}"]`);
-        const invoiceAmountText = row.querySelector('.po-invoice-amount').value;
-        let invoiceItems = [];
-        try { invoiceItems = JSON.parse(row.dataset.invoiceItems || '[]'); } catch (_) { invoiceItems = []; }
-        return { record, invoiceState: row.dataset.invoiceState || 'idle', existingInvoicePath: row.dataset.existingInvoice || '', invoiceNumber: row.querySelector('.po-invoice-number').value.trim(), invoiceDate: row.querySelector('.po-invoice-date').value, invoiceAmount: invoiceAmountText === '' ? null : Number(invoiceAmountText), invoiceFile: row.querySelector('.po-invoice-file').files[0], allocatedCost: Number(row.querySelector('.po-allocated-cost').value || 0), invoiceItems, invoiceDestination: normalizeDeliveryLocation(row.dataset.invoiceDestination || record.delivery_location || '') };
-      });
-      for (const detail of details) if (detail.invoiceState === 'reading') throw new Error(t('waitForInvoice', { po: detail.record.po_number }));
-      for (const detail of details) if (detail.invoiceState === 'mismatch') throw new Error(t('replaceWrongInvoice', { po: detail.record.po_number }));
-      for (const detail of details) {
-        const isPdf = detail.invoiceFile && (detail.invoiceFile.type === 'application/pdf' || detail.invoiceFile.name.toLowerCase().endsWith('.pdf'));
-        if (isPdf && /^BMAG\//i.test(detail.invoiceNumber) && !detail.invoiceItems.length) throw new Error(`Product lines could not be read from ${detail.invoiceNumber}. Re-select the original Tally PDF before saving so Analytics is updated.`);
-      }
-      for (const detail of details) if (!detail.invoiceNumber || !detail.invoiceDate || (!detail.invoiceFile && !detail.existingInvoicePath)) throw new Error(t('uploadVerifyInvoice', { po: detail.record.po_number }));
-      for (const detail of details) if (detail.invoiceAmount == null || !Number.isFinite(detail.invoiceAmount) || detail.invoiceAmount <= 0) throw new Error(t('invoiceAmountRequired', { po: detail.record.po_number }));
-      await Promise.all(details.map(async detail => { detail.invoicePath = detail.invoiceFile ? await uploadTripInvoice(tripId, detail.record.id, detail.invoiceFile) : detail.existingInvoicePath; }));
-      const transporterId = $('tripTransporter').value, transporterName = $('tripTransporter').selectedOptions[0]?.textContent?.trim() || '';
-      if (!transporterId) throw new Error(t('selectTransporterError'));
-      const tripPayload = { trip_date: $('tripDate').value, transporter_id: transporterId, transporter: transporterName, vehicle_number: $('tripVehicle').value.trim() || null, driver_name: $('tripDriver').value.trim() || null, driver_phone: $('tripDriverPhone').value.trim() || null, quoted_cost: freight, actual_freight: freight };
-      if (editTrip) {
-        await api(`/rest/v1/delivery_trips?id=eq.${encodeURIComponent(tripId)}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify(tripPayload) });
-        await Promise.all(details.map(detail => api(`/rest/v1/delivery_trip_pos?trip_id=eq.${encodeURIComponent(tripId)}&purchase_order_id=eq.${encodeURIComponent(detail.record.id)}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify({ allocation_method: 'Manual', allocated_cost: detail.allocatedCost, invoice_number: detail.invoiceNumber, invoice_date: detail.invoiceDate, invoice_amount: detail.invoiceAmount, invoice_attachment_url: detail.invoicePath }) })));
-      } else {
-        await api('/rest/v1/delivery_trips', { method: 'POST', headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify({ id: tripId, status: 'Dispatched', ...tripPayload }) });
-        const links = details.map(detail => ({ trip_id: tripId, purchase_order_id: detail.record.id, allocation_method: 'Manual', allocated_cost: detail.allocatedCost, invoice_number: detail.invoiceNumber, invoice_date: detail.invoiceDate, invoice_amount: detail.invoiceAmount, invoice_attachment_url: detail.invoicePath, delivery_status: 'Pending' }));
-        await api('/rest/v1/delivery_trip_pos', { method: 'POST', headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify(links) });
-        selectedPoIds.clear();
-      }
-      const analyticsFailures = [];
-      await Promise.all(details.filter(detail => detail.invoiceItems.length).map(async detail => {
-        try {
-          await api('/rest/v1/rpc/import_dmart_invoice_items', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ payload: { invoice_number: detail.invoiceNumber, po_number: detail.record.po_number, invoice_date: detail.invoiceDate, delivery_location: normalizeDeliveryLocation(detail.invoiceDestination || detail.record.delivery_location) || null, items: detail.invoiceItems } }) });
-        } catch (analyticsError) {
-          console.error(`Analytics sync failed for ${detail.invoiceNumber}: ${analyticsError.message}`);
-          analyticsFailures.push(detail.invoiceNumber);
-        }
-      }));
-      closeTripDialog(); await loadData(); toast(editTrip ? t('tripChangesSaved') : t('tripCreated'));
-      if (analyticsFailures.length) toast(`Trip saved, but Analytics sync failed for ${analyticsFailures.join(', ')}. Re-open the trip, select the invoice PDF again and save.`);
-    } catch (err) { error.textContent = err.message || t('couldNotSaveTrip'); }
-    finally { button.disabled = false; button.textContent = editTrip ? t('saveTripChanges') : t('createTripCount', { count: chosen.length }); }
-  }
-
-  function closeCompleteTripDialog() {
-    if ($('completeTripDialog').open) $('completeTripDialog').close();
-    completingTripId = null; $('completeTripForm').reset(); $('completeTripError').textContent = '';
-  }
-  function updateCompleteTripTotal() {
-    const total = [...document.querySelectorAll('.complete-po-cost')].reduce((sum, input) => sum + Number(input.value || 0), 0);
-    $('completeTripTotal').textContent = money(total); return total;
-  }
-  function openCompleteTrip(tripId) {
-    const trip = trips.find(item => item.id === tripId); if (!trip) return;
-    if (trip.status === 'Awaiting GRN' && !(trip.delivery_trip_pos || []).some(link => link.delivery_status === 'Needs Correction')) { toast(t('awaitingGrnAction')); return; }
-    const correctionLinks = (trip.delivery_trip_pos || []).filter(link => link.delivery_status === 'Needs Correction');
-    const links = correctionLinks.length ? correctionLinks : (trip.delivery_trip_pos || []);
-    const incompleteInvoice = links.find(link =>
-      !(link.invoice_number || trip.invoice_number || link.purchase_orders?.invoice_number)
-      || !(link.invoice_date || trip.invoice_date || link.purchase_orders?.invoice_date)
-      || Number(link.invoice_amount ?? link.purchase_orders?.invoice_amount ?? 0) <= 0
-      || !(link.invoice_attachment_url || trip.invoice_attachment_url || link.purchase_orders?.invoice_attachment_url)
-    );
-    if (incompleteInvoice) { toast(t('editInvoiceFirst', { po: incompleteInvoice.purchase_orders?.po_number || '' })); return; }
-    completingTripId = tripId; $('completeTripForm').reset(); $('completeTripError').textContent = '';
-    $('completeTripSummary').textContent = correctionLinks.length ? t('returnedByOwner', { count: links.length }) : t('completeEachDelivery', { count: links.length });
-    $('completeTripPoDetails').innerHTML = links.map(link => {
-      const emailGrn = customerUsesEmailGrn(link.purchase_orders?.customer_name);
-      return `<tr data-po-id="${link.purchase_order_id}" data-email-grn="${emailGrn ? 'true' : 'false'}">
-      <td><span class="po-main">${safe(link.purchase_orders?.po_number || 'PO')}</span><span class="po-secondary">${safe(link.purchase_orders?.delivery_location || t('locationPending'))}</span>${link.delivery_status === 'Needs Correction' ? `<span class="correction-note">${safe(t('ownerCorrection', { reason: link.correction_reason || t('pleaseReview') }))}</span>` : ''}</td>
-      <td><input class="complete-po-cost" type="number" min="0" step="0.01" placeholder="0" value="${Number(link.allocated_cost || 0) || ''}" /></td>
-      <td>${emailGrn ? `<span class="grn-delivery-help">${safe(t('grnDeliveryHelp'))}</span>` : '<input class="complete-po-slip" type="file" accept="application/pdf,image/jpeg,image/png" required />'}</td>
-    </tr>`;
-    }).join('');
-    updateCompleteTripTotal();
-    $('completeTripDialog').showModal();
-  }
-  async function completeTrip(event) {
-    event.preventDefault(); const error = $('completeTripError'); error.textContent = '';
-    const trip = trips.find(item => item.id === completingTripId);
-    if (!trip) { error.textContent = t('tripNotFound'); return; }
-    const details = [...$('completeTripPoDetails').querySelectorAll('tr')].map(row => ({ poId: row.dataset.poId, finalCost: Number(row.querySelector('.complete-po-cost').value || 0), emailGrn: row.dataset.emailGrn === 'true', slip: row.querySelector('.complete-po-slip')?.files?.[0], poNumber: row.querySelector('.po-main')?.textContent || 'PO' }));
-    const missingSlip = details.find(detail => !detail.emailGrn && !detail.slip); if (missingSlip) { error.textContent = t('uploadSlipForPo', { po: missingSlip.poNumber }); return; }
-    const button = $('completeTripBtn');
-    try {
-      button.disabled = true; button.textContent = t('completingDelivery');
-      const deliveries = await Promise.all(details.map(async detail => ({ purchase_order_id: detail.poId, note_path: detail.emailGrn ? null : await uploadTripDeliverySlip(trip.id, detail.poId, detail.slip), final_cost: detail.finalCost })));
-      await api('/rest/v1/rpc/complete_delivery_trip', { method: 'POST', headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify({ trip: trip.id, deliveries }) });
-      const corrected = (trip.delivery_trip_pos || []).some(link => link.delivery_status === 'Needs Correction');
-      const waitsForGrn = details.some(detail => detail.emailGrn);
-      closeCompleteTripDialog(); await loadData(); toast(corrected ? t('correctedResubmitted') : waitsForGrn ? t('deliverySentForGrn') : t('deliveryUpdated'));
-    } catch (err) { error.textContent = err.message || t('couldNotComplete'); }
-    finally { button.disabled = false; button.textContent = t('completeDelivery'); }
-  }
-  async function deleteTripEntry(tripId, button) {
-    const trip = trips.find(item => item.id === tripId); if (!trip || !confirm(t('deleteTripConfirm'))) return;
-    const originalText = button.textContent;
-    try {
-      button.disabled = true; button.textContent = '…';
-      await api('/rest/v1/rpc/delete_delivery_trip', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' },
-        body: JSON.stringify({ trip: tripId })
-      });
-      selectedPoIds.clear();
-      await loadData();
-      toast(t('tripDeleted'));
-    } catch (err) {
-      toast(err.message || t('couldNotDeleteTrip'));
-    } finally {
-      button.disabled = false; button.textContent = originalText;
-    }
-  }
-
-  function toggleCustomDates() { $('customDateFilters').classList.toggle('hidden', $('dateRangeFilter').value !== 'custom'); }
-  function clearFilters() { $('searchInput').value = ''; $('statusFilter').value = ''; $('dateRangeFilter').value = ''; $('dateFrom').value = ''; $('dateTo').value = ''; toggleCustomDates(); render(); }
-  function bindEvents() {
-    ['languageSelect', 'loginLanguageSelect'].forEach(id => $(id).addEventListener('change', event => applyLanguage(event.target.value)));
-    $('loginForm').addEventListener('submit', async event => { event.preventDefault(); $('loginError').textContent = ''; try { await signIn($('emailInput').value.trim(), $('passwordInput').value); await start(); } catch (error) { $('loginError').textContent = error.message || t('signInFailed'); } });
-    $('signOutBtn').addEventListener('click', signOut); $('refreshBtn').addEventListener('click', loadData); $('clearFilters').addEventListener('click', clearFilters); $('tripPlanForm').addEventListener('submit', saveTrip);
-    $('openManualPoBtn').addEventListener('click', openManualPoDialog);
-    $('manualPoForm').addEventListener('submit', saveManualPo);
-    $('closeManualPoBtn').addEventListener('click', closeManualPoDialog);
-    $('cancelManualPoBtn').addEventListener('click', closeManualPoDialog);
-    $('appointmentForm').addEventListener('submit', saveAppointmentDate);
-    $('closeAppointmentBtn').addEventListener('click', closeAppointmentDialog);
-    $('cancelAppointmentBtn').addEventListener('click', closeAppointmentDialog);
-    $('openTripDialogBtn').addEventListener('click', openCreateTrip);
-    $('closeTripDialogBtn').addEventListener('click', closeTripDialog); $('cancelTripBtn').addEventListener('click', closeTripDialog);
-    $('tripPoDetails').addEventListener('change', event => { if (event.target.matches('.po-invoice-file')) handleInvoiceFile(event.target); });
-    $('completeTripForm').addEventListener('submit', completeTrip); $('closeCompleteTripBtn').addEventListener('click', closeCompleteTripDialog); $('cancelCompleteTripBtn').addEventListener('click', closeCompleteTripDialog);
-    $('completeTripPoDetails').addEventListener('input', event => { if (event.target.matches('.complete-po-cost')) updateCompleteTripTotal(); });
-    $('inTripBody').addEventListener('click', event => {
-      const editButton = event.target.closest('.edit-trip-btn'), completeButton = event.target.closest('.complete-trip-btn'), deleteButton = event.target.closest('.delete-trip-btn');
-      if (editButton) openEditTrip(editButton.dataset.tripId);
-      else if (completeButton) openCompleteTrip(completeButton.dataset.tripId);
-      else if (deleteButton) deleteTripEntry(deleteButton.dataset.tripId, deleteButton);
-    });
-    ['searchInput', 'statusFilter', 'dateFrom', 'dateTo'].forEach(id => { $(id).addEventListener('input', render); $(id).addEventListener('change', render); });
-    $('dateRangeFilter').addEventListener('change', () => { toggleCustomDates(); render(); });
-    $('poTableBody').addEventListener('click', event => {
-      const appointmentButton = event.target.closest('.appointment-edit-btn');
-      const editButton = event.target.closest('.po-edit-btn');
-      if (appointmentButton) openAppointmentDialog(appointmentButton.dataset.poId);
-      else if (editButton) openEditPoDialog(editButton.dataset.poId);
-    });
-    $('poTableBody').addEventListener('change', event => { if (!event.target.matches('.po-choice')) return; if (event.target.checked) selectedPoIds.add(event.target.value); else selectedPoIds.delete(event.target.value); render(); });
-    $('selectAllPos').addEventListener('change', event => { filteredRecords().forEach(record => event.target.checked ? selectedPoIds.add(record.id) : selectedPoIds.delete(record.id)); render(); });
-  }
-  async function start() {
-    if (!BASE_URL || !PUBLIC_KEY) { show('loginScreen'); $('loginError').textContent = t('notConfigured'); return; }
-    $('signedInAs').textContent = session?.user?.email || '';
-    const role = await api('/rest/v1/rpc/po_tracker_role', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).catch(() => '');
-    $('receivablesNav').classList.toggle('hidden', !['owner', 'accountant'].includes(role));
-    $('analyticsNav').classList.toggle('hidden', !['owner', 'accountant'].includes(role));
-    hide('loginScreen'); show('app'); $('tripDate').value = today(); await loadData(); clearInterval(refreshTimer); refreshTimer = setInterval(loadData, 60000);
-  }
-
-  bindEvents(); applyLanguage(currentLanguage); toggleCustomDates();
-  try { session = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null'); } catch (_) { session = null; }
-  if (session?.access_token && session?.refresh_token) start().catch(error => { hide('app'); show('loginScreen'); $('loginError').textContent = error.message || t('signInAgain'); });
-  else { sessionStorage.removeItem(SESSION_KEY); show('loginScreen'); }
-})();
+(async function bootstrap() { try { validateConfig(); const value = await restoreSession(); if (value) showApp(value); else showLogin(); } catch (error) { showLogin(); $('loginError').textContent = error.message; } })();
