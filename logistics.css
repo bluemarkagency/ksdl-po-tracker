@@ -20,24 +20,15 @@ button:disabled { cursor: not-allowed; opacity: .55; }
 .dispatch-table th:nth-child(2) { width: 15%; }
 .dispatch-table th:nth-child(3) { width: 8%; }
 .dispatch-table th:nth-child(4) { width: 8%; }
-.dispatch-table th:nth-child(5) { width: 16%; }
-.dispatch-table th:nth-child(6) { width: 12%; }
-.dispatch-table th:nth-child(7) { width: 9%; }
-.dispatch-table th:nth-child(8) { width: 15%; }
-.dispatch-table th:last-child { width: 82px; }
-.manage-cell { text-align: center !important; }
-.manage-po-button { width: 100%; padding: 7px 8px; border-color: #b8d3cc; background: #f3faf7; color: var(--green); font-size: 11px; font-weight: 850; }
-.manage-po-dialog { width: min(540px, calc(100vw - 24px)); }
-.manage-po-actions { display: grid; gap: 9px; margin-top: 18px; }
-.manage-po-actions button { display: grid; gap: 3px; width: 100%; padding: 12px 14px; border: 1px solid var(--line); border-radius: 9px; background: white; color: var(--ink); text-align: left; }
-.manage-po-actions button:hover { border-color: #9fc8bb; background: #f7fbf9; }
-.manage-po-actions button span { font-size: 13px; font-weight: 830; }
-.manage-po-actions button small { color: var(--muted); font-size: 10px; font-weight: 550; }
-.manage-po-actions .invoice-action { border-color: #d6bd73; background: #fff9e9; }
-.manage-po-actions .print-action { border-color: #9fc8bb; background: #f3faf7; }
+.dispatch-table th:nth-child(5) { width: 18%; }
+.dispatch-table th:nth-child(6) { width: 13%; }
+.dispatch-table th:nth-child(7) { width: 10%; }
+.dispatch-table th:nth-child(8) { width: 18%; }
 .appointment-cell { display: grid; gap: 6px; min-width: 150px; }
 .edit-date-button { width: max-content; border: 0; padding: 0; background: transparent; color: #176b60; font: inherit; font-size: .79rem; font-weight: 800; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 .edit-date-button:hover { color: #0d4f47; }
+.inline-link-row { display: flex; flex-wrap: wrap; gap: 5px 10px; margin-top: 6px; }
+.inline-link-row .edit-date-button { font-size: .72rem; }
 .uat-appointment-dialog { width: min(520px, calc(100vw - 24px)); }
 .appointment-date-input { display: grid; gap: 8px; margin-top: 18px; font-weight: 750; color: #183733; }
 .appointment-date-input input { width: 100%; }
@@ -102,9 +93,6 @@ button:disabled { cursor: not-allowed; opacity: .55; }
   .dispatch-table .select-cell::before { display: none; }
   .dispatch-table .po-identity-cell { display: block; padding: 0 42px 11px 0; }
   .dispatch-table .po-identity-cell::before { display: none; }
-  .dispatch-table .manage-cell { display: block; padding-top: 12px; }
-  .dispatch-table .manage-cell::before { display: none; }
-  .manage-po-button { width: 100%; padding: 10px; }
   .uat-trip-row { grid-template-columns: 1fr 1fr; }.uat-trip-row > div:first-child { grid-column: 1 / -1; }.uat-trip-actions { grid-template-columns: 1fr 1fr; }.uat-po-fields, .uat-complete-fields, .edit-po-grid, .prepare-invoice-grid { grid-template-columns: 1fr; }.edit-po-grid .wide-field, .prepare-invoice-grid .wide-field { grid-column: auto; }.uat-po-plan-head { flex-direction: column; }.trip-po-doc-row { grid-template-columns: 1fr; }.trip-docs { justify-content: flex-start; }.prepared-invoice-existing { align-items: flex-start; flex-direction: column; }.trip-invoice-ready { align-items: flex-start; flex-direction: column; }.trip-invoice-ready .doc-link-button { width: 100% !important; }
 }
 @media (max-width: 460px) { .uat-kpis { grid-template-columns: 1fr; }.open-list-heading-actions { flex-direction: column; }.open-list-heading-actions button { width: 100%; }.uat-trip-row { grid-template-columns: 1fr; }.uat-trip-row > div:first-child { grid-column: auto; }.uat-trip-actions { grid-template-columns: 1fr 1fr; } }

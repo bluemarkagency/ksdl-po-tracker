@@ -65,7 +65,7 @@
         </div>
       </div>
       <section class="table-card">
-        <div class="table-scroll"><table class="orders-table dispatch-table"><thead><tr><th><input id="selectAll" type="checkbox" aria-label="Select all visible POs" /></th><th>PO / Customer</th><th>PO date</th><th>Status</th><th>Confirmed appointment</th><th>Delivery location</th><th>PO value</th><th>Invoice</th><th>Action</th></tr></thead><tbody id="poTableBody"></tbody></table></div>
+        <div class="table-scroll"><table class="orders-table dispatch-table"><thead><tr><th><input id="selectAll" type="checkbox" aria-label="Select all visible POs" /></th><th>PO / Customer</th><th>PO date</th><th>Status</th><th>Confirmed appointment</th><th>Delivery location</th><th>PO value</th><th>Invoice</th></tr></thead><tbody id="poTableBody"></tbody></table></div>
         <div id="poEmpty" class="empty-state hidden"><strong>No available POs</strong><span>Try another customer or filter.</span></div>
         <div id="selectionBar" class="selection-bar hidden" aria-live="polite"><div><strong id="selectedCount">0 POs selected</strong><span id="selectedValue">₹0 selected value</span></div><div class="selection-actions"><button id="clearSelection" class="quiet-button" type="button">Clear selection</button></div></div>
       </section>
@@ -77,17 +77,6 @@
     </main>
 
     <dialog id="poDialog"><form method="dialog"><div class="dialog-head"><div><span id="poDialogCustomer" class="customer-tag">Customer</span><h2 id="poDialogNumber">PO</h2></div><button class="icon-button" value="cancel" aria-label="Close">×</button></div><div id="poDialogContent" class="dialog-content"></div><div class="dialog-actions"><button value="cancel">Close</button></div></form></dialog>
-
-    <dialog id="managePoDialog" class="manage-po-dialog">
-      <form method="dialog">
-        <div class="dialog-head">
-          <div><span class="section-label">PURCHASE ORDER ACTIONS</span><h2 id="managePoTitle">Manage PO</h2><p id="managePoSummary"></p></div>
-          <button class="icon-button" value="cancel" aria-label="Close">×</button>
-        </div>
-        <div id="managePoActions" class="manage-po-actions"></div>
-        <div class="dialog-actions"><button value="cancel">Close</button></div>
-      </form>
-    </dialog>
 
     <dialog id="manualPoDialog">
       <form id="manualPoForm">
