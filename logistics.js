@@ -98,7 +98,7 @@ async function uploadFile(folder, tripId, poId, file) {
 function mapOrder(row) {
   return {
     id: row.id, customer: canonicalCustomer(row.customer_name), customerRaw: row.customer_name || '', po: row.po_number,
-    poDate: row.po_date, receivedDate: row.po_received_date, appointmentDate: row.delivery_date, status: row.status,
+    poDate: row.po_date, receivedDate: row.po_received_date, appointmentDate: row.delivery_date, deliveryCompletedDate: row.delivery_completed_date, status: row.status,
     value: Number(row.po_value || 0), location: row.delivery_location || 'Location pending', invoice: row.invoice_number || '',
     invoiceDate: row.invoice_date || '', invoiceAmount: Number(row.invoice_amount || 0), invoicePath: row.invoice_attachment_url || '',
     poPath: row.po_attachment_url || '', assignedTo: row.assigned_to || '', remarks: row.remarks || ''
@@ -127,7 +127,7 @@ function mapTrip(row) {
 async function loadData() {
   setConnection('Refreshing…');
   try {
-    const poSelect = 'id,customer_name,po_number,po_date,po_received_date,delivery_date,status,po_value,delivery_location,invoice_number,invoice_date,invoice_amount,invoice_attachment_url,po_attachment_url,assigned_to,remarks';
+    const poSelect = 'id,customer_name,po_number,po_date,po_received_date,delivery_date,delivery_completed_date,status,po_value,delivery_location,invoice_number,invoice_date,invoice_amount,invoice_attachment_url,po_attachment_url,assigned_to,remarks';
     const tripSelect = 'id,trip_date,status,transporter_id,transporter,vehicle_number,driver_name,driver_phone,quoted_cost,actual_freight,remarks,created_at,delivery_trip_pos(id,trip_id,purchase_order_id,allocated_cost,invoice_number,invoice_date,invoice_amount,invoice_attachment_url,delivery_note_url,delivery_status,correction_reason,delivered_at,purchase_orders(id,po_number,customer_name,delivery_location,delivery_date,status,po_value,po_attachment_url,invoice_number,invoice_date,invoice_amount,invoice_attachment_url))';
     const [poRows, tripRows, transporterRows] = await Promise.all([
       api(`/rest/v1/purchase_orders?is_archived=eq.false&select=${poSelect}&order=po_received_date.desc`),
@@ -145,12 +145,14 @@ async function loadData() {
 function setConnection(message, error = false) { $('connectionStatus').textContent = message; $('connectionStatus').classList.toggle('error', error); }
 function linkedPoIds() { return new Set(trips.flatMap(trip => trip.pos.map(link => link.purchaseOrderId))); }
 function customerMatches(value) { return state.customer === 'All' || value === state.customer; }
-function availableOrders() { const linked = linkedPoIds(); return orders.filter(order => customerMatches(order.customer) && !BLOCKED_PO_STATUSES.has(order.status) && !linked.has(order.id)); }
+function allAvailableOrders() { const linked = linkedPoIds(); return orders.filter(order => !BLOCKED_PO_STATUSES.has(order.status) && !linked.has(order.id)); }
+function availableOrders() { return allAvailableOrders().filter(order => customerMatches(order.customer)); }
 function customerLogo(customer) { return `<span class="customer-logo ${customer === 'Blinkit' ? 'blinkit-logo' : customer === 'Zepto' ? 'zepto-logo' : customer === 'BigBasket' ? 'bigbasket-logo' : customer === 'DMart' ? 'dmart-logo' : 'all-logo'}">${safe(customer[0] || '?')}</span>`; }
 function renderCustomerSwitcher() {
   const extra = [...new Set(orders.map(order => order.customer).filter(name => !['DMart', 'Blinkit', 'Zepto', 'BigBasket'].includes(name)))];
   const names = ['All', 'DMart', 'Blinkit', 'Zepto', 'BigBasket', ...extra];
-  $('customerSwitcher').innerHTML = names.map(name => { const count = name === 'All' ? orders.length : orders.filter(order => order.customer === name).length; return `<button class="customer-chip ${state.customer === name ? 'active' : ''} ${count === 0 ? 'live-customer-empty' : ''}" type="button" data-customer="${safe(name)}">${name === 'All' ? '<span class="customer-logo all-logo">A</span>' : customerLogo(name)}<span>${name === 'All' ? 'All customers' : safe(name)}</span><strong>${count}</strong></button>`; }).join('');
+  const available = allAvailableOrders();
+  $('customerSwitcher').innerHTML = names.map(name => { const count = name === 'All' ? available.length : available.filter(order => order.customer === name).length; return `<button class="customer-chip ${state.customer === name ? 'active' : ''} ${count === 0 ? 'live-customer-empty' : ''}" type="button" data-customer="${safe(name)}">${name === 'All' ? '<span class="customer-logo all-logo">A</span>' : customerLogo(name)}<span>${name === 'All' ? 'All customers' : safe(name)}</span><strong>${count}</strong></button>`; }).join('');
   document.querySelectorAll('[data-customer]').forEach(button => button.addEventListener('click', () => { state.customer = button.dataset.customer; state.selected.clear(); renderAll(); }));
 }
 function appointmentMarkup(order) {
@@ -231,8 +233,33 @@ async function saveEditedPo(event) {
   $('editPoError').textContent = ''; setDialogBusy('editPoForm', true);
   try {
     await api('/rest/v1/rpc/update_open_purchase_order', { method: 'POST', headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify({ target_po_id: order.id, new_customer_name: $('editPoCustomer').value.trim(), new_po_number: order.po, new_po_date: $('editPoDate').value, new_po_received_date: $('editPoReceivedDate').value, new_appointment_date: $('editPoAppointment').value || null, new_delivery_location: $('editPoLocation').value.trim(), new_po_value: Number($('editPoValue').value || 0), new_assigned_to: order.assignedTo || null, new_remarks: $('editPoRemarks').value.trim() || null, new_po_attachment_url: null }) });
+    if ($('editPoStatus').value !== order.status) await api('/rest/v1/rpc/update_open_purchase_order_status', { method: 'POST', headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify({ target_po_id: order.id, new_status: $('editPoStatus').value }) });
     $('editPoDialog').close(); toast(`PO ${order.po} updated.`); await loadData();
   } catch (error) { $('editPoError').textContent = error.message; } finally { setDialogBusy('editPoForm', false); }
+}
+
+function openManualPo() {
+  $('manualPoForm').reset(); $('manualPoError').textContent = ''; $('manualPoDate').value = todayIso(); $('manualPoReceivedDate').value = todayIso(); $('manualPoStatus').value = 'Received'; $('manualPoAssignedTo').value = session?.user?.email || ''; $('manualPoDialog').showModal();
+  window.setTimeout(() => $('manualPoCustomer').focus(), 0);
+}
+async function saveManualPo(event) {
+  event.preventDefault(); $('manualPoError').textContent = ''; setDialogBusy('manualPoForm', true);
+  const poId = crypto.randomUUID(); const poNumber = $('manualPoNumber').value.trim();
+  try {
+    const duplicate = await api(`/rest/v1/purchase_orders?po_number=eq.${encodeURIComponent(poNumber)}&select=id&limit=1`);
+    if (duplicate?.length) throw new Error(`PO ${poNumber} already exists.`);
+    const file = $('manualPoFile').files?.[0];
+    if (file && !['application/pdf', 'image/jpeg', 'image/png'].includes(file.type) && !/\.(pdf|jpe?g|png)$/i.test(file.name)) throw new Error('PO copy must be a PDF, JPG or PNG file.');
+    const poPath = file ? await uploadFile('manual-po-copies', 'manual', poId, file) : null;
+    await api('/rest/v1/rpc/create_manual_purchase_order', { method: 'POST', headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify({
+      new_id: poId, new_customer_name: $('manualPoCustomer').value.trim(), new_po_number: poNumber,
+      new_po_date: $('manualPoDate').value, new_po_received_date: $('manualPoReceivedDate').value,
+      new_appointment_date: $('manualPoAppointment').value || null, new_delivery_location: $('manualPoLocation').value.trim(),
+      new_po_value: Number($('manualPoValue').value || 0), new_assigned_to: $('manualPoAssignedTo').value.trim() || null,
+      new_remarks: $('manualPoRemarks').value.trim() || null, new_po_attachment_url: poPath, new_status: $('manualPoStatus').value
+    }) });
+    $('manualPoDialog').close(); toast(`Manual PO ${poNumber} created.`); await loadData();
+  } catch (error) { $('manualPoError').textContent = error.message; } finally { setDialogBusy('manualPoForm', false); }
 }
 function openAppointmentEdit(id) {
   const order = orders.find(item => item.id === id); if (!order) return;
@@ -350,6 +377,7 @@ $('clearSelection').addEventListener('click', () => { state.selected.clear(); re
 $('tripForm').addEventListener('submit', saveTrip); $('closeTripDialog').addEventListener('click', () => closeDialog('tripDialog')); $('cancelTripButton').addEventListener('click', () => closeDialog('tripDialog'));
 $('completeForm').addEventListener('submit', completeTrip); $('closeCompleteDialog').addEventListener('click', () => closeDialog('completeDialog')); $('cancelCompleteButton').addEventListener('click', () => closeDialog('completeDialog'));
 $('completePoList').addEventListener('input', event => { if (event.target.matches('[data-complete-cost]')) updateCompletionTotal(); });
+$('openManualPoButton').addEventListener('click', openManualPo); $('manualPoForm').addEventListener('submit', saveManualPo); $('closeManualPoDialog').addEventListener('click', () => closeDialog('manualPoDialog')); $('cancelManualPoButton').addEventListener('click', () => closeDialog('manualPoDialog'));
 $('editPoForm').addEventListener('submit', saveEditedPo); $('closeEditPoDialog').addEventListener('click', () => closeDialog('editPoDialog')); $('cancelEditPoButton').addEventListener('click', () => closeDialog('editPoDialog'));
 $('appointmentForm').addEventListener('submit', saveAppointmentDate); $('closeAppointmentDialog').addEventListener('click', () => closeDialog('appointmentDialog')); $('cancelAppointmentButton').addEventListener('click', () => closeDialog('appointmentDialog'));
 $('tripPoList').addEventListener('change', event => { if (event.target.matches('[data-plan-file]')) handleInvoiceFile(event.target); });

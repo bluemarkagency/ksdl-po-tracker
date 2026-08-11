@@ -57,7 +57,10 @@
         <label class="search-field"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="poSearch" type="search" placeholder="Search PO, customer or location" /></label>
         <label class="safe-only"><input id="confirmedOnly" type="checkbox" /> Confirmed appointments only</label>
       </section>
-      <div class="open-list-heading"><span class="section-label">AVAILABLE FOR DISPATCH</span><h2>Open purchase orders</h2><p>Use Edit to correct imported details or change the confirmed appointment for any customer.</p></div>
+      <div class="open-list-heading open-list-heading-with-action">
+        <div><span class="section-label">AVAILABLE FOR DISPATCH</span><h2>Open purchase orders</h2><p>Use Edit to correct imported details, status or the confirmed appointment for any customer.</p></div>
+        <button id="openManualPoButton" class="primary-button" type="button">+ Create manual PO</button>
+      </div>
       <section class="table-card">
         <div class="table-scroll"><table class="orders-table dispatch-table"><thead><tr><th><input id="selectAll" type="checkbox" aria-label="Select all visible POs" /></th><th>PO / Customer</th><th>PO date</th><th>Status</th><th>Confirmed appointment</th><th>Delivery location</th><th>PO value</th><th>Invoice</th><th>Action</th></tr></thead><tbody id="poTableBody"></tbody></table></div>
         <div id="poEmpty" class="empty-state hidden"><strong>No available POs</strong><span>Try another customer or filter.</span></div>
@@ -72,6 +75,27 @@
 
     <dialog id="poDialog"><form method="dialog"><div class="dialog-head"><div><span id="poDialogCustomer" class="customer-tag">Customer</span><h2 id="poDialogNumber">PO</h2></div><button class="icon-button" value="cancel" aria-label="Close">×</button></div><div id="poDialogContent" class="dialog-content"></div><div class="dialog-actions"><button value="cancel">Close</button></div></form></dialog>
 
+    <dialog id="manualPoDialog">
+      <form id="manualPoForm">
+        <div class="dialog-head"><div><span class="section-label">MANUAL PURCHASE ORDER</span><h2>Create a new PO</h2><p>Use this for a PO received by WhatsApp, printed copy or directly from a store.</p></div><button id="closeManualPoDialog" class="icon-button" type="button" aria-label="Close">×</button></div>
+        <div class="edit-po-grid">
+          <label>Customer name*<input id="manualPoCustomer" list="manualPoCustomerOptions" required autocomplete="organization" placeholder="DMart, Blinkit, Zepto or BigBasket" /><datalist id="manualPoCustomerOptions"><option value="DMart"></option><option value="Blinkit"></option><option value="Zepto"></option><option value="BigBasket"></option></datalist></label>
+          <label>PO number*<input id="manualPoNumber" required autocomplete="off" placeholder="Enter customer PO number" /></label>
+          <label>PO date*<input id="manualPoDate" type="date" required /></label>
+          <label>PO received date*<input id="manualPoReceivedDate" type="date" required /></label>
+          <label class="appointment-field">Confirmed appointment date<input id="manualPoAppointment" type="date" /><small>Leave blank when no appointment is confirmed.</small></label>
+          <label>Delivery location*<input id="manualPoLocation" required placeholder="Example: Bopal" /></label>
+          <label>PO value (₹)<input id="manualPoValue" type="number" min="0" step="0.01" inputmode="decimal" /></label>
+          <label>Status*<select id="manualPoStatus" required><option value="Received">Received</option><option value="Scheduled">Scheduled</option><option value="In Transit">In Transit</option><option value="Delivered">Delivered</option><option value="Partially Delivered">Partially Delivered</option><option value="Cancelled">Cancelled</option></select></label>
+          <label>Assigned to<input id="manualPoAssignedTo" placeholder="Staff name or email" /></label>
+          <label>Original PO copy<input id="manualPoFile" type="file" accept="application/pdf,image/jpeg,image/png" /><small>Optional PDF, JPG or PNG, maximum 10 MB.</small></label>
+          <label class="wide-field">Remarks<textarea id="manualPoRemarks" rows="3" placeholder="Optional delivery or dispatch note"></textarea></label>
+        </div>
+        <p id="manualPoError" class="live-error" aria-live="polite"></p>
+        <div class="dialog-actions"><button id="cancelManualPoButton" type="button">Cancel</button><button id="saveManualPoButton" class="primary-button" type="submit">Save PO</button></div>
+      </form>
+    </dialog>
+
     <dialog id="editPoDialog">
       <form id="editPoForm">
         <div class="dialog-head"><div><span class="section-label">EDIT PURCHASE ORDER</span><h2 id="editPoTitle">Update imported PO</h2><p>PO number is locked so future Gmail revisions, appointments and GRNs continue matching correctly.</p></div><button id="closeEditPoDialog" class="icon-button" type="button" aria-label="Close">×</button></div>
@@ -84,7 +108,7 @@
           <label class="appointment-field">Confirmed appointment date<input id="editPoAppointment" type="date" /><small>Leave blank when no appointment is confirmed.</small></label>
           <label>Delivery location*<input id="editPoLocation" required /></label>
           <label>PO value (₹)<input id="editPoValue" type="number" min="0" step="0.01" inputmode="decimal" /></label>
-          <label>Status<input id="editPoStatus" readonly aria-readonly="true" /></label>
+          <label>Status*<select id="editPoStatus" required><option value="Received">Received</option><option value="Scheduled">Scheduled</option><option value="In Transit">In Transit</option><option value="Delivered">Delivered</option><option value="Partially Delivered">Partially Delivered</option><option value="Cancelled">Cancelled</option></select></label>
           <label class="wide-field">Remarks<textarea id="editPoRemarks" rows="3" placeholder="Optional operational note"></textarea></label>
         </div>
         <p id="editPoError" class="live-error" aria-live="polite"></p>
