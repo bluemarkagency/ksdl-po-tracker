@@ -17,18 +17,20 @@ button:disabled { cursor: not-allowed; opacity: .55; }
 .dispatch-table { width: 100%; min-width: 0; table-layout: fixed; }
 .dispatch-table th, .dispatch-table td { padding: 10px 8px; overflow-wrap: anywhere; }
 .dispatch-table th:first-child { width: 42px; }
-.dispatch-table th:nth-child(2) { width: 15%; }
-.dispatch-table th:nth-child(3) { width: 8%; }
-.dispatch-table th:nth-child(4) { width: 8%; }
-.dispatch-table th:nth-child(5) { width: 18%; }
-.dispatch-table th:nth-child(6) { width: 13%; }
-.dispatch-table th:nth-child(7) { width: 10%; }
-.dispatch-table th:nth-child(8) { width: 18%; }
+.dispatch-table th:nth-child(2) { width: 14%; }
+.dispatch-table th:nth-child(3) { width: 7%; }
+.dispatch-table th:nth-child(4) { width: 7%; }
+.dispatch-table th:nth-child(5) { width: 17%; }
+.dispatch-table th:nth-child(6) { width: 12%; }
+.dispatch-table th:nth-child(7) { width: 9%; }
+.dispatch-table th:nth-child(8) { width: 16%; }
+.dispatch-table th:last-child { width: 80px; }
 .appointment-cell { display: grid; gap: 6px; min-width: 150px; }
 .edit-date-button { width: max-content; border: 0; padding: 0; background: transparent; color: #176b60; font: inherit; font-size: .79rem; font-weight: 800; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 .edit-date-button:hover { color: #0d4f47; }
 .inline-link-row { display: flex; flex-wrap: wrap; gap: 5px 10px; margin-top: 6px; }
 .inline-link-row .edit-date-button { font-size: .72rem; }
+.row-action-links { display: grid; justify-items: start; gap: 8px; }
 .uat-appointment-dialog { width: min(520px, calc(100vw - 24px)); }
 .appointment-date-input { display: grid; gap: 8px; margin-top: 18px; font-weight: 750; color: #183733; }
 .appointment-date-input input { width: 100%; }
