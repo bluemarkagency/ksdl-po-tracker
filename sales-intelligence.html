@@ -8,8 +8,9 @@
     <link rel="stylesheet" href="styles.css?v=sales-intelligence-20260804" />
     <link rel="stylesheet" href="mobile-filters.css" />
     <link rel="stylesheet" href="sales-intelligence.css?v=sales-intelligence-20260804" />
+    <link rel="stylesheet" href="owner-suite.css?v=owner-suite-20260811" />
   </head>
-  <body>
+  <body class="owner-suite sales-intelligence-page">
     <section id="loginScreen" class="login-screen hidden">
       <form id="loginForm" class="login-card">
         <span class="eyebrow">KSDL DISTRIBUTION</span>
@@ -23,22 +24,28 @@
     </section>
 
     <main id="app" class="app-shell hidden">
-      <header class="topbar intelligence-topbar">
-        <div>
-          <span class="eyebrow">GUJARAT · PREDICTIVE SALES</span>
+      <header class="topbar intelligence-topbar owner-suite-header">
+        <div class="owner-heading"><div class="owner-brand-mark" aria-hidden="true">BM</div><div>
+          <span class="owner-context">Gujarat predictive sales</span>
           <h1>Sales Intelligence</h1>
           <p class="page-intro">Expected POs, CBS demand and the next best sales action for every DMart location.</p>
-        </div>
-        <div class="top-actions">
+        </div></div>
+        <div class="top-actions owner-header-actions">
           <span id="connectionStatus" class="connection-status">Connecting…</span>
           <span id="signedInAs" class="connection-status"></span>
-          <a class="tracker-nav-link" href="analytics.html">Product Analytics</a>
-          <a class="tracker-nav-link operational-nav" href="index.html">PO Tracker</a>
-          <a class="tracker-nav-link operational-nav" href="logistics.html">Dispatch</a>
           <button id="refreshBtn" type="button">Refresh</button>
           <button id="signOutBtn" class="text-btn" type="button">Sign out</button>
         </div>
       </header>
+
+      <nav class="owner-suite-nav" aria-label="Owner workspace">
+        <a class="operational-nav" href="index.html">Purchase Orders</a>
+        <a class="operational-nav" href="logistics.html">Dispatch &amp; Invoices</a>
+        <a class="operational-nav" href="payments.html">Transport Payments</a>
+        <a class="operational-nav" href="receivables.html">Receivables</a>
+        <a href="analytics.html">Sales Analytics</a>
+        <a class="active" href="sales-intelligence.html" aria-current="page">Sales Intelligence</a>
+      </nav>
 
       <section class="intelligence-note">
         <div><strong>Private and free</strong><span>Predictions are calculated from your PO and invoice history. No business data is sent to an external AI service.</span></div>
@@ -53,6 +60,14 @@
         <button id="clearIntelligenceFilters" class="text-btn" type="button">Clear</button>
       </section>
 
+      <nav class="report-section-nav" aria-label="Sales Intelligence sections">
+        <span>Jump to</span>
+        <a href="#callPriority">Call priority</a>
+        <a href="#demandForecast">CBS forecast</a>
+        <a href="#growthOpportunities">Growth opportunities</a>
+        <a href="#riskRecovery">Risk &amp; recovery</a>
+      </nav>
+
       <section class="summary-grid intelligence-summary" aria-label="Predictive sales summary">
         <article class="attention"><span>Call today</span><strong id="callTodayCount">0</strong><small>Locations overdue for a PO</small></article>
         <article><span>POs expected</span><strong id="expectedPoCount">0</strong><small id="expectedPoHorizon">Next 14 days</small></article>
@@ -61,7 +76,7 @@
         <article class="attention"><span>At-risk locations</span><strong id="riskLocationCount">0</strong><small>CBS decline or overdue cycle</small></article>
       </section>
 
-      <section class="intelligence-card priority-card">
+      <section id="callPriority" class="intelligence-card priority-card report-anchor">
         <div class="section-head">
           <div><span class="eyebrow">TODAY'S SALES FOLLOW-UP</span><h2>Location call priority</h2><p>Expected PO timing is based on each location's historic ordering gap. Overdue locations appear first.</p></div>
           <span id="priorityCount" class="result-chip">0 locations</span>
@@ -70,7 +85,7 @@
         <div id="priorityEmpty" class="empty-state hidden"><h3>No locations match</h3><p>Clear filters or wait for more PO history.</p></div>
       </section>
 
-      <section class="intelligence-card">
+      <section id="demandForecast" class="intelligence-card report-anchor">
         <div class="section-head">
           <div><span class="eyebrow">30-DAY DEMAND FORECAST</span><h2>Article CBS requirement</h2><p>A weighted forecast using the latest three 30-day invoice periods. CBS comes only from invoice Alt. Quantity.</p></div>
           <span id="articleForecastCount" class="result-chip">0 articles</span>
@@ -79,7 +94,7 @@
         <div id="articleForecastEmpty" class="empty-state hidden"><h3>No article forecast</h3><p>Invoice product movement is required to calculate demand.</p></div>
       </section>
 
-      <section class="intelligence-card">
+      <section id="growthOpportunities" class="intelligence-card report-anchor">
         <div class="section-head">
           <div><span class="eyebrow">GROWTH OPPORTUNITIES</span><h2>Location × article recommendations</h2><p>Leading articles missing or dormant at a location are converted into specific conversations for sales staff.</p></div>
           <span id="growthCount" class="result-chip">0 actions</span>
@@ -88,7 +103,7 @@
         <div id="growthEmpty" class="empty-state hidden"><h3>No clear growth gap</h3><p>More invoice history may be needed to identify cross-sell opportunities.</p></div>
       </section>
 
-      <section class="intelligence-card">
+      <section id="riskRecovery" class="intelligence-card report-anchor">
         <div class="section-head">
           <div><span class="eyebrow">LOCATION RISK &amp; RECOVERY</span><h2>Locations losing momentum</h2><p>Compares the latest 30-day CBS movement with the preceding 30 days and combines it with PO-cycle timing.</p></div>
           <span id="riskCount" class="result-chip">0 risks</span>

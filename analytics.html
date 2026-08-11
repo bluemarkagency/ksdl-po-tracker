@@ -8,8 +8,9 @@
     <link rel="stylesheet" href="styles.css?v=analytics-20260731" />
     <link rel="stylesheet" href="mobile-filters.css" />
     <link rel="stylesheet" href="analytics.css?v=location-followup-20260804" />
+    <link rel="stylesheet" href="owner-suite.css?v=owner-suite-20260811" />
   </head>
-  <body>
+  <body class="owner-suite analytics-page">
     <section id="loginScreen" class="login-screen hidden">
       <form id="loginForm" class="login-card">
         <span class="eyebrow">KSDL DISTRIBUTION</span>
@@ -23,19 +24,24 @@
     </section>
 
     <main id="app" class="app-shell hidden">
-      <header class="topbar analytics-topbar">
-        <div><span class="eyebrow">GUJARAT · BRAND &amp; SALES INSIGHT</span><h1>DMart Product Movement</h1><p class="page-intro">Article performance across every invoiced DMart location.</p></div>
-        <div class="top-actions">
+      <header class="topbar analytics-topbar owner-suite-header">
+        <div class="owner-heading"><div class="owner-brand-mark" aria-hidden="true">BM</div><div><span class="owner-context">Gujarat sales performance</span><h1>DMart Product Movement</h1><p class="page-intro">Article performance and opportunity across every invoiced DMart location.</p></div></div>
+        <div class="top-actions owner-header-actions">
           <span id="connectionStatus" class="connection-status">Connecting…</span>
           <span id="signedInAs" class="connection-status"></span>
-          <a class="tracker-nav-link operational-nav" href="index.html">PO Tracker</a>
-          <a class="tracker-nav-link operational-nav" href="logistics.html">Dispatch</a>
-          <a class="tracker-nav-link operational-nav" href="receivables.html">Receivables</a>
-          <a class="tracker-nav-link" href="sales-intelligence.html">Sales Intelligence</a>
           <button id="refreshBtn" type="button">Refresh</button>
           <button id="signOutBtn" class="text-btn" type="button">Sign out</button>
         </div>
       </header>
+
+      <nav class="owner-suite-nav" aria-label="Owner workspace">
+        <a class="operational-nav" href="index.html">Purchase Orders</a>
+        <a class="operational-nav" href="logistics.html">Dispatch &amp; Invoices</a>
+        <a class="operational-nav" href="payments.html">Transport Payments</a>
+        <a class="operational-nav" href="receivables.html">Receivables</a>
+        <a class="active" href="analytics.html" aria-current="page">Sales Analytics</a>
+        <a href="sales-intelligence.html">Sales Intelligence</a>
+      </nav>
 
       <section class="analytics-filter-card" aria-label="Product analytics filters">
         <label class="analytics-search">Search<input id="analyticsSearch" placeholder="Article, location, invoice or PO" /></label>
@@ -50,6 +56,16 @@
         </div>
       </section>
 
+      <nav class="report-section-nav" aria-label="Sales Analytics sections">
+        <span>Jump to</span>
+        <a href="#ownerActions">Owner actions</a>
+        <a href="#movementOverview">Article &amp; trend</a>
+        <a href="#locationPerformance">Locations</a>
+        <a href="#salesOpportunities">Opportunities</a>
+        <a href="#dataQuality">Location master</a>
+        <a href="#movementMatrix">Movement matrix</a>
+      </nav>
+
       <section class="summary-grid analytics-summary" aria-label="Product movement summary">
         <article><span>Taxable sales value</span><strong id="analyticsSales">₹0</strong><small id="analyticsInvoiceCount">0 invoices</small></article>
         <article><span>Units dispatched</span><strong id="analyticsUnits">0</strong><small>Invoice quantity</small></article>
@@ -58,12 +74,12 @@
         <article class="attention"><span>Top article share</span><strong id="analyticsTopShare">0%</strong><small id="analyticsTopArticle">Waiting for data</small></article>
       </section>
 
-      <section class="analytics-card recommendation-card">
+      <section id="ownerActions" class="analytics-card recommendation-card report-anchor">
         <div class="analytics-section-head"><div><span class="eyebrow">SMART SALES COACH</span><h2>Recommended owner actions</h2><p>Private, data-driven suggestions calculated inside your browser. No sales data is sent to an external AI service.</p></div><span class="privacy-chip">Private · Free</span></div>
         <div id="recommendationGrid" class="recommendation-grid"></div>
       </section>
 
-      <section class="analytics-split">
+      <section id="movementOverview" class="analytics-split report-anchor">
         <article class="analytics-card">
           <div class="analytics-section-head"><div><span class="eyebrow">ARTICLE PERFORMANCE</span><h2>Best-selling articles</h2><p>Ranked by taxable invoice value with unit and location coverage.</p></div></div>
           <div id="articleRanking" class="ranking-list"></div>
@@ -74,13 +90,13 @@
         </article>
       </section>
 
-      <section class="analytics-card">
+      <section id="locationPerformance" class="analytics-card report-anchor">
         <div class="analytics-section-head"><div><span class="eyebrow">LOCATION PERFORMANCE</span><h2>DMart location comparison and PO follow-up</h2><p>Average PO and invoice gaps use the full tracker history to show each store's normal ordering cycle. Use Days since PO and Follow-up to decide which locations your sales staff should contact.</p></div><div class="location-followup-tools"><label><span>Show locations</span><select id="locationFollowupFilter"><option value="all">All locations</option><option value="attention">Follow-up list</option><option value="due">Due now</option></select></label><span id="analyticsResultCount" class="result-chip">0 lines</span></div></div>
         <div class="table-wrap"><table class="analytics-table location-table followup-location-table"><thead><tr><th>Rank</th><th>Location</th><th>Sales value</th><th>Units</th><th>Invoices</th><th>Articles</th><th>Last PO</th><th>Days since PO</th><th>Avg PO gap</th><th>Last invoice</th><th>Avg invoice gap</th><th>Avg PO → invoice</th><th>Follow-up</th><th>Top article</th><th>Contribution</th></tr></thead><tbody id="locationBody"></tbody></table></div>
         <div id="analyticsEmpty" class="empty-state hidden"><h3>No product movement found</h3><p>Upload the original Tally PDF while creating or editing a Dispatch trip, run the historical importer, or change the filters.</p></div>
       </section>
 
-      <section class="analytics-card opportunity-board-card">
+      <section id="salesOpportunities" class="analytics-card opportunity-board-card report-anchor">
         <div class="analytics-section-head"><div><span class="eyebrow">CBS SALES OPPORTUNITIES</span><h2>Location and article action board</h2><p>Cartons are taken only from each invoice's Alt. Quantity (CBS). Pieces remain available as supporting detail.</p></div><span id="opportunityPeriod" class="result-chip">Selected period</span></div>
         <div id="cbsDataNotice" class="cbs-data-notice hidden">CBS history is waiting to be imported. Run the updated historical product importer after applying the CBS database update.</div>
         <div class="opportunity-tabs" role="tablist" aria-label="Sales opportunity views">
@@ -107,7 +123,7 @@
         </section>
       </section>
 
-      <section class="analytics-card location-master-card">
+      <section id="dataQuality" class="analytics-card location-master-card report-anchor">
         <div class="analytics-section-head"><div><span class="eyebrow">DATA QUALITY CONTROL</span><h2>Delivery Location Master</h2><p>Every approved spelling points to one official location. A new invoice name that is not recognised appears here for owner review before it remains as a duplicate.</p></div><span id="locationMasterCount" class="result-chip">Checking locations…</span></div>
         <div id="locationMasterNotice" class="location-master-notice">Loading approved location names and invoice observations…</div>
         <datalist id="officialLocationOptions"></datalist>
@@ -116,7 +132,7 @@
         <details class="location-master-details"><summary>View approved locations and aliases</summary><div id="officialLocationGroups" class="official-location-grid"></div></details>
       </section>
 
-      <section class="analytics-card movement-matrix-card">
+      <section id="movementMatrix" class="analytics-card movement-matrix-card report-anchor">
         <div class="analytics-section-head"><div><span class="eyebrow">LOCATION × ARTICLE</span><h2>Movement opportunity matrix</h2><p>Compare carton movement for every article at every location. Darker cells show stronger CBS movement; empty cells highlight possible assortment or replenishment opportunities.</p></div><span id="matrixCoverage" class="result-chip">0% coverage</span></div>
         <div class="matrix-legend"><span><i class="matrix-swatch low"></i>Low CBS</span><span><i class="matrix-swatch high"></i>High CBS</span><span><i class="matrix-swatch empty"></i>No movement</span></div>
         <div class="table-wrap"><table class="analytics-table movement-matrix"><thead id="movementMatrixHead"></thead><tbody id="movementMatrixBody"></tbody></table></div>

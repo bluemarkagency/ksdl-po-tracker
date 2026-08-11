@@ -8,9 +8,10 @@
     <link rel="stylesheet" href="styles.css?v=main-table-alignment-2-20260728" />
     <link rel="stylesheet" href="main-tracker-layout.css?v=horizontal-scroll-20260728" />
     <link rel="stylesheet" href="mobile-filters.css" />
+    <link rel="stylesheet" href="owner-suite.css?v=owner-suite-20260811" />
     <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   </head>
-  <body>
+  <body class="owner-suite owner-tracker-page">
     <section id="loginScreen" class="login-screen hidden">
       <form id="loginForm" class="login-card">
         <span class="eyebrow">KSDL DISTRIBUTION</span>
@@ -24,20 +25,24 @@
     </section>
 
     <main id="app" class="app-shell hidden">
-      <header class="topbar">
-        <div><span class="eyebrow">KSDL DISTRIBUTION</span><h1>Purchase Order Tracker</h1></div>
-        <div class="top-actions">
+      <header class="topbar owner-suite-header">
+        <div class="owner-heading"><div class="owner-brand-mark" aria-hidden="true">BM</div><div><span class="owner-context">Gujarat distribution operations</span><h1>Purchase Order Tracker</h1><p class="page-intro">Monitor every order from receipt to invoice and delivery completion.</p></div></div>
+        <div class="top-actions owner-header-actions">
           <span id="connectionStatus" class="connection-status">Local data</span>
           <span id="signedInAs" class="connection-status"></span>
-          <a class="tracker-nav-link" href="logistics.html">Trips / Dispatch</a>
-          <a class="tracker-nav-link" href="payments.html">Transport Payments</a>
-          <a class="tracker-nav-link" href="receivables.html">Customer Receivables</a>
-          <a class="tracker-nav-link" href="analytics.html">Product Analytics</a>
-          <a class="tracker-nav-link" href="sales-intelligence.html">Sales Intelligence</a>
           <button id="signOutBtn" class="text-btn" type="button">Sign out</button>
           <button id="newPoBtn" class="primary">+ New PO</button>
         </div>
       </header>
+
+      <nav class="owner-suite-nav" aria-label="Owner workspace">
+        <a class="active" href="index.html" aria-current="page">Purchase Orders</a>
+        <a href="logistics.html">Dispatch &amp; Invoices</a>
+        <a href="payments.html">Transport Payments</a>
+        <a href="receivables.html">Receivables</a>
+        <a href="analytics.html">Sales Analytics</a>
+        <a href="sales-intelligence.html">Sales Intelligence</a>
+      </nav>
 
       <section class="summary-grid" aria-label="Dashboard summary">
         <article><span>Total POs</span><strong id="totalCount">0</strong><small id="totalValue">₹0</small></article>
