@@ -9,8 +9,9 @@ let session = null;
 let orders = [];
 let trips = [];
 let transporters = [];
+let currentRole = '';
 let refreshTimer = null;
-const state = { customer: 'All', schedule: 'Today', selected: new Set(), editTripId: null, completeTripId: null };
+const state = { customer: 'All', schedule: 'Today', selected: new Set(), editTripId: null, completeTripId: null, prepareInvoiceItems: [], prepareInvoiceState: 'idle' };
 
 const $ = id => document.getElementById(id);
 const safe = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
@@ -129,14 +130,16 @@ async function loadData() {
   try {
     const poSelect = 'id,customer_name,po_number,po_date,po_received_date,delivery_date,delivery_completed_date,status,po_value,delivery_location,invoice_number,invoice_date,invoice_amount,invoice_attachment_url,po_attachment_url,assigned_to,remarks';
     const tripSelect = 'id,trip_date,status,transporter_id,transporter,vehicle_number,driver_name,driver_phone,quoted_cost,actual_freight,remarks,created_at,delivery_trip_pos(id,trip_id,purchase_order_id,allocated_cost,invoice_number,invoice_date,invoice_amount,invoice_attachment_url,delivery_note_url,delivery_status,correction_reason,delivered_at,purchase_orders(id,po_number,customer_name,delivery_location,delivery_date,status,po_value,po_attachment_url,invoice_number,invoice_date,invoice_amount,invoice_attachment_url))';
-    const [poRows, tripRows, transporterRows] = await Promise.all([
+    const [poRows, tripRows, transporterRows, role] = await Promise.all([
       api(`/rest/v1/purchase_orders?is_archived=eq.false&select=${poSelect}&order=po_received_date.desc`),
       api(`/rest/v1/delivery_trips?select=${tripSelect}&order=trip_date.desc,created_at.desc`),
-      api('/rest/v1/transporters?active=eq.true&select=id,name,phone&order=name.asc')
+      api('/rest/v1/transporters?active=eq.true&select=id,name,phone&order=name.asc'),
+      api('/rest/v1/rpc/po_tracker_role', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
     ]);
     orders = (poRows || []).map(mapOrder);
     trips = (tripRows || []).map(mapTrip);
     transporters = transporterRows || [];
+    currentRole = String(role || '').toLowerCase();
     $('lastRefreshTime').textContent = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
     setConnection(`${orders.length} POs · ${trips.filter(trip => ACTIVE_TRIP_STATUSES.has(trip.status)).length} active trips`);
     renderAll();
@@ -186,9 +189,17 @@ function filteredAvailableOrders() {
   const query = $('poSearch').value.trim().toLowerCase(); const confirmedOnly = $('confirmedOnly').checked;
   return availableOrders().filter(order => { const text = [order.po, order.customer, order.location, order.invoice].join(' ').toLowerCase(); return (!query || text.includes(query)) && (!confirmedOnly || order.appointmentDate); });
 }
+function canPrepareInvoice() { return currentRole === 'owner' || currentRole === 'executive'; }
 function renderOpenOrders() {
   const visible = filteredAvailableOrders(); const ids = new Set(visible.map(order => order.id)); [...state.selected].forEach(id => { if (!ids.has(id)) state.selected.delete(id); });
-  $('poTableBody').innerHTML = visible.map(order => `<tr><td><input class="row-select" type="checkbox" data-select-po="${order.id}" ${state.selected.has(order.id) ? 'checked' : ''} aria-label="Select PO ${safe(order.po)}" /></td><td><span class="po-number">${safe(order.po)}</span><span class="row-customer">${customerLogo(order.customer)}${safe(order.customer)}</span></td><td>${dateText(order.poDate)}</td><td><span class="status-pill ${statusClass(order.status)}">${safe(order.status)}</span></td><td><div class="appointment-cell">${appointmentMarkup(order)}<button class="edit-date-button" type="button" data-edit-appointment="${order.id}">Edit date</button></div></td><td>${safe(order.location)}</td><td class="value-cell">${money(order.value)}</td><td>${order.invoice ? `<strong>${safe(order.invoice)}</strong><span class="secondary-line">${dateText(order.invoiceDate)}</span>` : '—'}</td><td><div class="po-action-stack"><button class="view-button" type="button" data-view-po="${order.id}">View</button><button class="edit-po-button" type="button" data-edit-po="${order.id}">Edit</button></div></td></tr>`).join('');
+  $('poTableBody').innerHTML = visible.map(order => {
+    const invoiceReady = Boolean(order.invoice && order.invoiceDate && order.invoiceAmount > 0 && order.invoicePath);
+    const invoiceCell = invoiceReady
+      ? `<div class="invoice-ready-cell"><span class="invoice-ready-badge">Invoice ready</span><strong>${safe(order.invoice)}</strong><span class="secondary-line">${dateText(order.invoiceDate)} · ${money(order.invoiceAmount)}</span>${docButton(order.invoicePath, 'View / Print')}</div>`
+      : `<div class="invoice-ready-cell"><span class="invoice-missing-badge">Not prepared</span>${order.invoice ? `<strong>${safe(order.invoice)}</strong><span class="secondary-line">Complete the missing invoice details</span>` : '<span class="secondary-line">Accountant action required</span>'}</div>`;
+    const prepareAction = canPrepareInvoice() ? `<button class="prepare-invoice-button" type="button" data-prepare-invoice="${order.id}">${invoiceReady ? 'Update invoice' : 'Prepare invoice'}</button>` : '';
+    return `<tr><td><input class="row-select" type="checkbox" data-select-po="${order.id}" ${state.selected.has(order.id) ? 'checked' : ''} aria-label="Select PO ${safe(order.po)}" /></td><td><span class="po-number">${safe(order.po)}</span><span class="row-customer">${customerLogo(order.customer)}${safe(order.customer)}</span></td><td>${dateText(order.poDate)}</td><td><span class="status-pill ${statusClass(order.status)}">${safe(order.status)}</span></td><td><div class="appointment-cell">${appointmentMarkup(order)}<button class="edit-date-button" type="button" data-edit-appointment="${order.id}">Edit date</button></div></td><td>${safe(order.location)}</td><td class="value-cell">${money(order.value)}</td><td>${invoiceCell}</td><td><div class="po-action-stack"><button class="view-button" type="button" data-view-po="${order.id}">View</button><button class="edit-po-button" type="button" data-edit-po="${order.id}">Edit</button>${prepareAction}</div></td></tr>`;
+  }).join('');
   $('poEmpty').classList.toggle('hidden', visible.length !== 0); $('selectAll').checked = visible.length > 0 && visible.every(order => state.selected.has(order.id));
   const selected = orders.filter(order => state.selected.has(order.id)); $('selectedCount').textContent = `${selected.length} PO${selected.length === 1 ? '' : 's'} selected`; $('selectedValue').textContent = `${money(selected.reduce((sum, order) => sum + order.value, 0))} selected value`; $('selectionBar').classList.toggle('hidden', selected.length === 0); $('createTripButton').disabled = selected.length === 0; $('createTripButton').textContent = `Create new trip (${selected.length})`;
 }
@@ -261,6 +272,49 @@ async function saveManualPo(event) {
     $('manualPoDialog').close(); toast(`Manual PO ${poNumber} created.`); await loadData();
   } catch (error) { $('manualPoError').textContent = error.message; } finally { setDialogBusy('manualPoForm', false); }
 }
+function openPrepareInvoice(id) {
+  const order = orders.find(item => item.id === id); if (!order || !canPrepareInvoice()) return;
+  $('prepareInvoiceForm').reset(); $('prepareInvoiceError').textContent = ''; $('prepareInvoiceReadStatus').textContent = '';
+  $('prepareInvoicePoId').value = order.id; $('prepareInvoiceTitle').textContent = `${order.invoicePath ? 'Update' : 'Prepare'} invoice for PO ${order.po}`;
+  $('prepareInvoiceSummary').textContent = `${order.customer} · ${order.location} · PO value ${money(order.value)}`;
+  $('prepareInvoiceNumber').value = order.invoice || ''; $('prepareInvoiceDate').value = order.invoiceDate || ''; $('prepareInvoiceAmount').value = order.invoiceAmount || '';
+  $('prepareInvoiceFileNote').textContent = order.invoicePath ? 'An invoice is already attached. Choose a PDF only to replace it.' : 'Select the original Tally PDF, maximum 10 MB.';
+  $('prepareInvoiceExisting').classList.toggle('hidden', !order.invoicePath);
+  $('prepareInvoiceExisting').innerHTML = order.invoicePath ? `<span>Current invoice is ready for staff.</span>${docButton(order.invoicePath, 'View / Print current invoice')}` : '';
+  state.prepareInvoiceItems = []; state.prepareInvoiceState = 'idle'; $('prepareInvoiceDialog').showModal();
+  window.setTimeout(() => $('prepareInvoiceNumber').focus(), 0);
+}
+async function handlePreparedInvoiceFile() {
+  const order = orders.find(item => item.id === $('prepareInvoicePoId').value); const file = $('prepareInvoiceFile').files?.[0]; if (!order || !file) return;
+  const status = $('prepareInvoiceReadStatus'); state.prepareInvoiceItems = []; state.prepareInvoiceState = 'reading'; status.textContent = 'Reading invoice…';
+  if (file.type !== 'application/pdf' && !/\.pdf$/i.test(file.name)) { state.prepareInvoiceState = 'mismatch'; status.textContent = 'Invoice copy must be a PDF file.'; return; }
+  try {
+    const parsed = parseTallyInvoice(await readPdfLines(file), order.po);
+    if (parsed.invoiceNumber) $('prepareInvoiceNumber').value = parsed.invoiceNumber;
+    if (parsed.invoiceDate) $('prepareInvoiceDate').value = parsed.invoiceDate;
+    if (parsed.invoiceValue) $('prepareInvoiceAmount').value = parsed.invoiceValue.toFixed(2);
+    state.prepareInvoiceItems = parsed.items || [];
+    const actual = normalizePoNumber(parsed.poNumber); const expected = normalizePoNumber(order.po);
+    if (actual && actual !== expected) { state.prepareInvoiceState = 'mismatch'; status.textContent = `Wrong invoice: PO ${parsed.poNumber} does not match ${order.po}.`; return; }
+    state.prepareInvoiceState = parsed.invoiceNumber && parsed.invoiceDate ? 'matched' : 'warning';
+    status.textContent = state.prepareInvoiceState === 'matched' ? `✓ PO ${order.po} matched. Invoice is ready to save.` : 'PDF attached. Please verify the invoice number, date and amount before saving.';
+  } catch (error) { state.prepareInvoiceState = 'warning'; status.textContent = `PDF attached. ${error.message} Enter or verify the details manually.`; }
+}
+async function savePreparedInvoice(event) {
+  event.preventDefault(); const order = orders.find(item => item.id === $('prepareInvoicePoId').value); if (!order || !canPrepareInvoice()) return;
+  $('prepareInvoiceError').textContent = ''; setDialogBusy('prepareInvoiceForm', true);
+  try {
+    if (state.prepareInvoiceState === 'reading') throw new Error('Wait for invoice reading to finish.');
+    if (state.prepareInvoiceState === 'mismatch') throw new Error('The uploaded invoice belongs to a different PO.');
+    const invoiceNumber = $('prepareInvoiceNumber').value.trim(); const invoiceDate = $('prepareInvoiceDate').value; const invoiceAmount = Number($('prepareInvoiceAmount').value || 0); const file = $('prepareInvoiceFile').files?.[0];
+    if (!invoiceNumber || !invoiceDate || invoiceAmount <= 0) throw new Error('Enter invoice number, date and amount.');
+    if (!file && !order.invoicePath) throw new Error('Attach the original Tally invoice PDF.');
+    const invoicePath = file ? await uploadFile('prepared-invoices', 'open', order.id, file) : order.invoicePath;
+    await api('/rest/v1/rpc/prepare_open_po_invoice', { method: 'POST', headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify({ target_purchase_order: order.id, new_invoice_number: invoiceNumber, new_invoice_date: invoiceDate, new_invoice_amount: invoiceAmount, new_invoice_attachment_url: invoicePath }) });
+    if (state.prepareInvoiceItems.length && /^BMAG\//i.test(invoiceNumber)) await api('/rest/v1/rpc/import_dmart_invoice_items', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ payload: { invoice_number: invoiceNumber, po_number: order.po, invoice_date: invoiceDate, delivery_location: order.location, items: state.prepareInvoiceItems } }) }).catch(error => console.error('Analytics sync failed:', error));
+    $('prepareInvoiceDialog').close(); toast(`Invoice ${invoiceNumber} is ready for PO ${order.po}.`); await loadData();
+  } catch (error) { $('prepareInvoiceError').textContent = error.message; } finally { setDialogBusy('prepareInvoiceForm', false); }
+}
 function openAppointmentEdit(id) {
   const order = orders.find(item => item.id === id); if (!order) return;
   $('appointmentForm').reset(); $('appointmentError').textContent = ''; $('appointmentPoId').value = order.id; $('appointmentDate').value = order.appointmentDate || ''; $('appointmentSummary').textContent = `PO ${order.po} · ${order.customer} · ${order.location}`; $('appointmentDialog').showModal();
@@ -274,7 +328,8 @@ async function saveAppointmentDate(event) {
 
 function transporterOptions(selected = '') { return '<option value="">Choose transporter</option>' + transporters.map(item => `<option value="${safe(item.id)}" data-name="${safe(item.name)}" ${item.id === selected || item.name === selected ? 'selected' : ''}>${safe(item.name)}</option>`).join(''); }
 function planCard(order, link = null) {
-  return `<article class="uat-po-plan" data-plan-po="${order.id}" data-link-id="${safe(link?.id || '')}" data-existing-file="${safe(link?.invoicePath || order.invoicePath || '')}" data-invoice-state="idle" data-invoice-items="[]"><div class="uat-po-plan-head"><div><strong>PO ${safe(order.po)} · ${safe(order.customer)}</strong><span>${safe(order.location)} · ${money(order.value)}</span></div>${appointmentMarkup(order)}</div><div class="uat-po-fields"><label>Invoice number*<input data-plan-invoice value="${safe(link?.invoice || order.invoice || '')}" placeholder="Tally invoice number" /></label><label>Invoice date*<input data-plan-invoice-date type="date" value="${safe(link?.invoiceDate || order.invoiceDate || '')}" /></label><label>Invoice amount (₹)*<input data-plan-invoice-amount type="number" min="0" step="0.01" value="${Number(link?.invoiceAmount || order.invoiceAmount || 0) || ''}" /></label><label>Allocated cost (₹)<input data-plan-cost type="number" min="0" step="0.01" value="${Number(link?.allocatedCost || 0) || ''}" placeholder="Optional" /></label><label>Invoice copy*<input data-plan-file type="file" accept="application/pdf" /><small class="uat-file-note">${link?.invoicePath || order.invoicePath ? 'Invoice already attached. Upload only to replace it.' : 'Select the original Tally PDF.'}</small></label></div><div class="invoice-read-status"></div></article>`;
+  const invoicePath = link?.invoicePath || order.invoicePath || '';
+  return `<article class="uat-po-plan" data-plan-po="${order.id}" data-link-id="${safe(link?.id || '')}" data-existing-file="${safe(invoicePath)}" data-invoice-state="idle" data-invoice-items="[]"><div class="uat-po-plan-head"><div><strong>PO ${safe(order.po)} · ${safe(order.customer)}</strong><span>${safe(order.location)} · ${money(order.value)}</span></div>${appointmentMarkup(order)}</div><div class="uat-po-fields"><label>Invoice number*<input data-plan-invoice value="${safe(link?.invoice || order.invoice || '')}" placeholder="Tally invoice number" /></label><label>Invoice date*<input data-plan-invoice-date type="date" value="${safe(link?.invoiceDate || order.invoiceDate || '')}" /></label><label>Invoice amount (₹)*<input data-plan-invoice-amount type="number" min="0" step="0.01" value="${Number(link?.invoiceAmount || order.invoiceAmount || 0) || ''}" /></label><label>Allocated cost (₹)<input data-plan-cost type="number" min="0" step="0.01" value="${Number(link?.allocatedCost || 0) || ''}" placeholder="Optional" /></label><label>Invoice copy*<input data-plan-file type="file" accept="application/pdf" /><small class="uat-file-note">${invoicePath ? 'Prepared invoice reused automatically. Upload only to replace it.' : 'Select the original Tally PDF.'}</small></label>${invoicePath ? `<div class="prepared-plan-document">${docButton(invoicePath, 'View / Print prepared invoice')}</div>` : ''}</div><div class="invoice-read-status"></div></article>`;
 }
 function openCreateTrip() {
   const selected = orders.filter(order => state.selected.has(order.id)); if (!selected.length) return;
@@ -378,11 +433,12 @@ $('tripForm').addEventListener('submit', saveTrip); $('closeTripDialog').addEven
 $('completeForm').addEventListener('submit', completeTrip); $('closeCompleteDialog').addEventListener('click', () => closeDialog('completeDialog')); $('cancelCompleteButton').addEventListener('click', () => closeDialog('completeDialog'));
 $('completePoList').addEventListener('input', event => { if (event.target.matches('[data-complete-cost]')) updateCompletionTotal(); });
 $('openManualPoButton').addEventListener('click', openManualPo); $('manualPoForm').addEventListener('submit', saveManualPo); $('closeManualPoDialog').addEventListener('click', () => closeDialog('manualPoDialog')); $('cancelManualPoButton').addEventListener('click', () => closeDialog('manualPoDialog'));
+$('prepareInvoiceForm').addEventListener('submit', savePreparedInvoice); $('prepareInvoiceFile').addEventListener('change', handlePreparedInvoiceFile); $('closePrepareInvoiceDialog').addEventListener('click', () => closeDialog('prepareInvoiceDialog')); $('cancelPrepareInvoiceButton').addEventListener('click', () => closeDialog('prepareInvoiceDialog'));
 $('editPoForm').addEventListener('submit', saveEditedPo); $('closeEditPoDialog').addEventListener('click', () => closeDialog('editPoDialog')); $('cancelEditPoButton').addEventListener('click', () => closeDialog('editPoDialog'));
 $('appointmentForm').addEventListener('submit', saveAppointmentDate); $('closeAppointmentDialog').addEventListener('click', () => closeDialog('appointmentDialog')); $('cancelAppointmentButton').addEventListener('click', () => closeDialog('appointmentDialog'));
 $('tripPoList').addEventListener('change', event => { if (event.target.matches('[data-plan-file]')) handleInvoiceFile(event.target); });
 $('refreshButton').addEventListener('click', loadData); $('signOutButton').addEventListener('click', () => { clearInterval(refreshTimer); session = null; sessionStorage.removeItem(SESSION_KEY); location.reload(); });
-document.body.addEventListener('click', event => { const po = event.target.closest('[data-view-po]'); if (po) showPo(po.dataset.viewPo); const appointment = event.target.closest('[data-edit-appointment]'); if (appointment) openAppointmentEdit(appointment.dataset.editAppointment); const editPo = event.target.closest('[data-edit-po]'); if (editPo) openEditPo(editPo.dataset.editPo); const edit = event.target.closest('[data-edit-trip]'); if (edit) openEditTrip(edit.dataset.editTrip); const complete = event.target.closest('[data-complete-trip]'); if (complete) openCompleteTrip(complete.dataset.completeTrip); const remove = event.target.closest('[data-delete-trip]'); if (remove) deleteTrip(remove.dataset.deleteTrip); const documentButton = event.target.closest('[data-open-doc]'); if (documentButton) openDocument(documentButton.dataset.openDoc); });
+document.body.addEventListener('click', event => { const po = event.target.closest('[data-view-po]'); if (po) showPo(po.dataset.viewPo); const appointment = event.target.closest('[data-edit-appointment]'); if (appointment) openAppointmentEdit(appointment.dataset.editAppointment); const editPo = event.target.closest('[data-edit-po]'); if (editPo) openEditPo(editPo.dataset.editPo); const prepareInvoice = event.target.closest('[data-prepare-invoice]'); if (prepareInvoice) openPrepareInvoice(prepareInvoice.dataset.prepareInvoice); const edit = event.target.closest('[data-edit-trip]'); if (edit) openEditTrip(edit.dataset.editTrip); const complete = event.target.closest('[data-complete-trip]'); if (complete) openCompleteTrip(complete.dataset.completeTrip); const remove = event.target.closest('[data-delete-trip]'); if (remove) deleteTrip(remove.dataset.deleteTrip); const documentButton = event.target.closest('[data-open-doc]'); if (documentButton) openDocument(documentButton.dataset.openDoc); });
 $('loginForm').addEventListener('submit', async event => { event.preventDefault(); $('loginError').textContent = ''; try { const value = await authRequest('/auth/v1/token?grant_type=password', { email: $('email').value.trim(), password: $('password').value }); storeSession(value); showApp(value); } catch (error) { $('loginError').textContent = error.message; } });
 
 (async function bootstrap() { try { validateConfig(); const value = await restoreSession(); if (value) showApp(value); else showLogin(); } catch (error) { showLogin(); $('loginError').textContent = error.message; } })();
