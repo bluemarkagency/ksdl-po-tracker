@@ -23,8 +23,8 @@
       driverPhone: 'Driver phone', vehicleCost: 'Vehicle / tempo cost (₹)', optional: 'Optional', invoiceCostHeading: 'Invoice and delivery cost for each PO',
       invoiceCostHelp: 'Upload each Tally invoice PDF. The invoice number and date will be filled automatically and checked against the selected PO.',
       poLocation: 'PO / location', invoiceNumber: 'Invoice number*', invoiceDate: 'Invoice date*', invoiceAmount: 'Invoice amount (₹)', invoiceCopy: 'Invoice copy', allocatedCost: 'Allocated cost (₹)', cancel: 'Cancel',
-      deliveryCompleted: 'DELIVERY COMPLETED', completeDelivery: 'Complete delivery', finalTransportCost: 'Final transport cost (₹)', signedDeliverySlip: 'Signed delivery slip*',
-      finalTotalCost: 'Final total transport cost', completionNote: 'The total is calculated automatically from all PO costs. Each PO will receive its own delivery slip, final cost, invoice details and invoice copy in the owner tracker.',
+      deliveryCompleted: 'DELIVERY COMPLETED', completeDelivery: 'Complete delivery', finalTransportCost: 'Final transport cost (₹)', signedDeliverySlip: 'Delivery confirmation',
+      finalTotalCost: 'Final total transport cost', completionNote: 'The total is calculated automatically. DMart requires a signed slip; Blinkit, Zepto and BigBasket will be confirmed from their GRN email.',
       step4: 'STEP 4', posInTrip: 'POs in trip', reviewHint: 'Open the PO and invoice copies here to verify that the correct documents are attached.', tripDatePlain: 'Trip date',
       poLocationCopy: 'PO / location / PO copy', tempoDriver: 'Tempo / driver', invoiceAndCopy: 'Invoice / invoice copy', tempoCost: 'Tempo cost', action: 'Action',
       noPosInTrip: 'No POs are in a trip', noPosInTripHelp: 'Tick POs above and create the first delivery plan.', footerNote: 'This shared page lets the accountant verify documents and the sales representative plan and complete trips.',
@@ -37,10 +37,11 @@
       correctionRequested: 'Correction requested', pleaseReview: 'Please review this delivery.', noPosLinked: 'No POs linked', needsCorrection: 'Needs Correction',
       edit: 'Edit', deleteTrip: 'Delete entry', deleteTripConfirm: 'Delete this trip entry? Its POs will return to the open list so the trip can be recreated.', tripDeleted: 'Trip entry deleted. The POs are available for a new trip.', couldNotDeleteTrip: 'Could not delete this trip entry.',
       correctDelivery: 'Correct delivery', saveTripChanges: 'Save trip changes', completeEachDelivery: '{count} PO(s) in this trip — complete each delivery separately.',
+      grnDeliveryHelp: 'Customer GRN will confirm delivery. Enter the final transport cost; no delivery slip is required.', awaitingGrn: 'Awaiting GRN', awaitingGrnAction: 'Waiting for customer GRN',
       returnedByOwner: '{count} PO(s) returned by the owner — upload the corrected delivery slip and final cost.', tripNotFound: 'Trip not found. Refresh and try again.',
       uploadSlipForPo: 'Upload the signed delivery slip for PO {po}.', completingDelivery: 'Completing delivery…', tripChangesSaved: 'Trip changes saved.',
       tripCreated: 'Trip created — selected POs moved to POs in trip.', correctedResubmitted: 'Corrected delivery resubmitted to the owner.',
-      deliveryUpdated: 'Delivery completed — linked POs updated in the owner tracker.', readingInvoice: 'Reading invoice…',
+      deliveryUpdated: 'Delivery completed — linked POs updated in the owner tracker.', deliverySentForGrn: 'Transport cost saved. Email-GRN POs are now waiting for customer confirmation.', readingInvoice: 'Reading invoice…',
       selectAtLeastOne: 'Select at least one PO first.', waitForInvoice: 'Wait for invoice reading to finish for PO {po}.', replaceWrongInvoice: 'The uploaded invoice does not match PO {po}. Replace it before saving.',
       uploadVerifyInvoice: 'Upload and verify the invoice for PO {po}.', invoiceAmountRequired: 'Enter or verify the invoice amount for PO {po}.', selectTransporterError: 'Select a transporter from the Transporter Master.', editInvoiceFirst: 'Edit the trip and complete the invoice details for PO {po}.',
       planning: 'Planning', pending: 'Pending', delivered: 'Delivered', cancelled: 'Cancelled',
@@ -79,8 +80,8 @@
       driverPhone: 'ડ્રાઇવર ફોન', vehicleCost: 'વાહન / ટેમ્પો ખર્ચ (₹)', optional: 'વૈકલ્પિક', invoiceCostHeading: 'દરેક PO માટે ઇન્વૉઇસ અને ડિલિવરી ખર્ચ',
       invoiceCostHelp: 'દરેક Tally ઇન્વૉઇસ PDF અપલોડ કરો. ઇન્વૉઇસ નંબર અને તારીખ આપમેળે ભરાશે અને પસંદ કરેલા PO સાથે ચકાસાશે.',
       poLocation: 'PO / સ્થળ', invoiceNumber: 'ઇન્વૉઇસ નંબર*', invoiceDate: 'ઇન્વૉઇસ તારીખ*', invoiceAmount: 'ઇન્વૉઇસ રકમ (₹)', invoiceCopy: 'ઇન્વૉઇસ નકલ', allocatedCost: 'ફાળવેલ ખર્ચ (₹)', cancel: 'રદ કરો',
-      deliveryCompleted: 'ડિલિવરી પૂર્ણ', completeDelivery: 'ડિલિવરી પૂર્ણ કરો', finalTransportCost: 'અંતિમ ટ્રાન્સપોર્ટ ખર્ચ (₹)', signedDeliverySlip: 'સહીવાળી ડિલિવરી સ્લિપ*',
-      finalTotalCost: 'કુલ અંતિમ ટ્રાન્સપોર્ટ ખર્ચ', completionNote: 'બધા POના ખર્ચ પરથી કુલ આપમેળે ગણાશે. દરેક POની ડિલિવરી સ્લિપ, અંતિમ ખર્ચ, ઇન્વૉઇસ વિગતો અને નકલ ઓનર ટ્રેકરમાં જશે.',
+      deliveryCompleted: 'ડિલિવરી પૂર્ણ', completeDelivery: 'ડિલિવરી પૂર્ણ કરો', finalTransportCost: 'અંતિમ ટ્રાન્સપોર્ટ ખર્ચ (₹)', signedDeliverySlip: 'ડિલિવરી પુષ્ટિ',
+      finalTotalCost: 'કુલ અંતિમ ટ્રાન્સપોર્ટ ખર્ચ', completionNote: 'કુલ આપમેળે ગણાશે. DMart માટે સહીવાળી સ્લિપ જરૂરી છે; Blinkit, Zepto અને BigBasket તેમના GRN ઈમેલથી પુષ્ટિ થશે.',
       step4: 'પગલું 4', posInTrip: 'ટ્રિપમાં PO', reviewHint: 'સાચા દસ્તાવેજ જોડાયેલા છે કે નહીં તે તપાસવા PO અને ઇન્વૉઇસની નકલ અહીં ખોલો.', tripDatePlain: 'ટ્રિપ તારીખ',
       poLocationCopy: 'PO / સ્થળ / PO નકલ', tempoDriver: 'ટેમ્પો / ડ્રાઇવર', invoiceAndCopy: 'ઇન્વૉઇસ / ઇન્વૉઇસ નકલ', tempoCost: 'ટેમ્પો ખર્ચ', action: 'કાર્યवाही',
       noPosInTrip: 'કોઈ PO ટ્રિપમાં નથી', noPosInTripHelp: 'ઉપર PO પસંદ કરીને પ્રથમ ડિલિવરી પ્લાન બનાવો.', footerNote: 'આ પેજ પર એકાઉન્ટન્ટ દસ્તાવેજ તપાસી શકે છે અને સેલ્સ પ્રતિનિધિ ટ્રિપ બનાવી અને પૂર્ણ કરી શકે છે.',
@@ -93,10 +94,11 @@
       correctionRequested: 'સુધારો માંગેલ', pleaseReview: 'આ ડિલિવરી ફરી તપાસો.', noPosLinked: 'કોઈ PO જોડાયેલ નથી', needsCorrection: 'સુધારો જરૂરી',
       edit: 'સુધારો', deleteTrip: 'એન્ટ્રી કાઢી નાખો', deleteTripConfirm: 'આ ટ્રિપ એન્ટ્રી કાઢી નાખવી છે? તેના PO ફરી ઓપન યાદીમાં આવશે જેથી નવી ટ્રિપ બનાવી શકાય.', tripDeleted: 'ટ્રિપ એન્ટ્રી કાઢી નાખી. PO નવી ટ્રિપ માટે ઉપલબ્ધ છે.', couldNotDeleteTrip: 'આ ટ્રિપ એન્ટ્રી કાઢી શકાયી નથી.',
       correctDelivery: 'ડિલિવરી સુધારો', saveTripChanges: 'ટ્રિપ ફેરફાર સાચવો', completeEachDelivery: 'આ ટ્રિપના {count} PO — દરેક ડિલિવરી અલગથી પૂર્ણ કરો.',
+      grnDeliveryHelp: 'ગ્રાહકનો GRN ડિલિવરીની પુષ્ટિ કરશે. અંતિમ ટ્રાન્સપોર્ટ ખર્ચ દાખલ કરો; ડિલિવરી સ્લિપ જરૂરી નથી.', awaitingGrn: 'GRNની રાહમાં', awaitingGrnAction: 'ગ્રાહકના GRNની રાહમાં',
       returnedByOwner: 'ઓનરે {count} PO પાછા મોકલ્યા — સુધારેલી ડિલિવરી સ્લિપ અને અંતિમ ખર્ચ અપલોડ કરો.', tripNotFound: 'ટ્રિપ મળી નથી. રિફ્રેશ કરીને ફરી પ્રયાસ કરો.',
       uploadSlipForPo: 'PO {po} માટે સહીવાળી ડિલિવરી સ્લિપ અપલોડ કરો.', completingDelivery: 'ડિલિવરી પૂર્ણ થઈ રહી છે…', tripChangesSaved: 'ટ્રિપ ફેરફાર સાચવ્યા.',
       tripCreated: 'ટ્રિપ બની — પસંદ કરેલા PO ટ્રિપ વિભાગમાં ખસેડાયા.', correctedResubmitted: 'સુધારેલી ડિલિવરી ઓનરને ફરી મોકલાઈ.',
-      deliveryUpdated: 'ડિલિવરી પૂર્ણ — જોડાયેલા PO ઓનર ટ્રેકરમાં અપડેટ થયા.', readingInvoice: 'ઇન્વૉઇસ વાંચી રહ્યું છે…',
+      deliveryUpdated: 'ડિલિવરી પૂર્ણ — જોડાયેલા PO ઓનર ટ્રેકરમાં અપડેટ થયા.', deliverySentForGrn: 'ટ્રાન્સપોર્ટ ખર્ચ સાચવ્યો. ઈમેલ-GRN PO હવે ગ્રાહકની પુષ્ટિની રાહમાં છે.', readingInvoice: 'ઇન્વૉઇસ વાંચી રહ્યું છે…',
       selectAtLeastOne: 'પહેલા ઓછામાં ઓછો એક PO પસંદ કરો.', waitForInvoice: 'PO {po}નું ઇન્વૉઇસ વાંચવાનું પૂરું થાય ત્યાં સુધી રાહ જુઓ.', replaceWrongInvoice: 'અપલોડ કરેલું ઇન્વૉઇસ PO {po} સાથે મળતું નથી. સાચું ઇન્વૉઇસ અપલોડ કરો.',
       uploadVerifyInvoice: 'PO {po}નું ઇન્વૉઇસ અપલોડ કરીને ચકાસો.', invoiceAmountRequired: 'PO {po} માટે ઇન્વૉઇસ રકમ દાખલ કરો અથવા ચકાસો.', selectTransporterError: 'ટ્રાન્સપોર્ટર માસ્ટરમાંથી ટ્રાન્સપોર્ટર પસંદ કરો.', editInvoiceFirst: 'ટ્રિપ સુધારી PO {po}ની ઇન્વૉઇસ વિગતો પૂર્ણ કરો.',
       planning: 'આયોજન', pending: 'બાકી', delivered: 'ડિલિવર થયેલ', cancelled: 'રદ થયેલ',
@@ -135,8 +137,8 @@
       driverPhone: 'ड्राइवर फोन', vehicleCost: 'वाहन / टेम्पो खर्च (₹)', optional: 'वैकल्पिक', invoiceCostHeading: 'हर PO का इनवॉइस और डिलीवरी खर्च',
       invoiceCostHelp: 'हर Tally इनवॉइस PDF अपलोड करें। इनवॉइस नंबर और तारीख अपने आप भरेंगे और चुने गए PO से जाँच होगी।',
       poLocation: 'PO / स्थान', invoiceNumber: 'इनवॉइस नंबर*', invoiceDate: 'इनवॉइस तारीख*', invoiceAmount: 'इनवॉइस राशि (₹)', invoiceCopy: 'इनवॉइस कॉपी', allocatedCost: 'आवंटित खर्च (₹)', cancel: 'रद्द करें',
-      deliveryCompleted: 'डिलीवरी पूरी', completeDelivery: 'डिलीवरी पूरी करें', finalTransportCost: 'अंतिम ट्रांसपोर्ट खर्च (₹)', signedDeliverySlip: 'हस्ताक्षरित डिलीवरी स्लिप*',
-      finalTotalCost: 'कुल अंतिम ट्रांसपोर्ट खर्च', completionNote: 'सभी PO के खर्च से कुल अपने आप निकलेगा। हर PO की डिलीवरी स्लिप, अंतिम खर्च, इनवॉइस विवरण और कॉपी मालिक के ट्रैकर में जाएगी।',
+      deliveryCompleted: 'डिलीवरी पूरी', completeDelivery: 'डिलीवरी पूरी करें', finalTransportCost: 'अंतिम ट्रांसपोर्ट खर्च (₹)', signedDeliverySlip: 'डिलीवरी पुष्टि',
+      finalTotalCost: 'कुल अंतिम ट्रांसपोर्ट खर्च', completionNote: 'कुल अपने आप निकलेगा। DMart के लिए हस्ताक्षरित स्लिप जरूरी है; Blinkit, Zepto और BigBasket की पुष्टि उनके GRN ईमेल से होगी।',
       step4: 'चरण 4', posInTrip: 'ट्रिप में PO', reviewHint: 'सही दस्तावेज़ लगे हैं या नहीं, यह जाँचने के लिए PO और इनवॉइस कॉपी यहाँ खोलें।', tripDatePlain: 'ट्रिप तारीख',
       poLocationCopy: 'PO / स्थान / PO कॉपी', tempoDriver: 'टेम्पो / ड्राइवर', invoiceAndCopy: 'इनवॉइस / इनवॉइस कॉपी', tempoCost: 'टेम्पो खर्च', action: 'कार्रवाई',
       noPosInTrip: 'कोई PO ट्रिप में नहीं है', noPosInTripHelp: 'ऊपर PO चुनकर पहला डिलीवरी प्लान बनाएँ।', footerNote: 'इस पेज पर अकाउंटेंट दस्तावेज़ जाँच सकता है और सेल्स प्रतिनिधि ट्रिप बना और पूरी कर सकता है।',
@@ -149,10 +151,11 @@
       correctionRequested: 'सुधार माँगा गया', pleaseReview: 'इस डिलीवरी को फिर जाँचें।', noPosLinked: 'कोई PO जुड़ा नहीं', needsCorrection: 'सुधार जरूरी',
       edit: 'संपादित करें', deleteTrip: 'एंट्री हटाएँ', deleteTripConfirm: 'यह ट्रिप एंट्री हटाएँ? इसके PO फिर खुली सूची में आ जाएँगे ताकि ट्रिप दोबारा बनाई जा सके।', tripDeleted: 'ट्रिप एंट्री हटा दी गई। PO नई ट्रिप के लिए उपलब्ध हैं।', couldNotDeleteTrip: 'यह ट्रिप एंट्री हटाई नहीं जा सकी।',
       correctDelivery: 'डिलीवरी सुधारें', saveTripChanges: 'ट्रिप बदलाव सहेजें', completeEachDelivery: 'इस ट्रिप के {count} PO — हर डिलीवरी अलग से पूरी करें।',
+      grnDeliveryHelp: 'ग्राहक का GRN डिलीवरी की पुष्टि करेगा। अंतिम परिवहन लागत दर्ज करें; डिलीवरी स्लिप जरूरी नहीं है।', awaitingGrn: 'GRN की प्रतीक्षा', awaitingGrnAction: 'ग्राहक GRN की प्रतीक्षा',
       returnedByOwner: 'मालिक ने {count} PO वापस भेजे — सही डिलीवरी स्लिप और अंतिम खर्च अपलोड करें।', tripNotFound: 'ट्रिप नहीं मिली। रिफ्रेश करके फिर प्रयास करें।',
       uploadSlipForPo: 'PO {po} की हस्ताक्षरित डिलीवरी स्लिप अपलोड करें।', completingDelivery: 'डिलीवरी पूरी हो रही है…', tripChangesSaved: 'ट्रिप बदलाव सहेजे गए।',
       tripCreated: 'ट्रिप बनी — चुने गए PO ट्रिप सेक्शन में चले गए।', correctedResubmitted: 'सुधारी गई डिलीवरी मालिक को फिर भेजी गई।',
-      deliveryUpdated: 'डिलीवरी पूरी — जुड़े PO मालिक के ट्रैकर में अपडेट हुए।', readingInvoice: 'इनवॉइस पढ़ा जा रहा है…',
+      deliveryUpdated: 'डिलीवरी पूरी — जुड़े PO मालिक के ट्रैकर में अपडेट हुए।', deliverySentForGrn: 'परिवहन लागत सहेजी गई। ईमेल-GRN PO अब ग्राहक पुष्टि की प्रतीक्षा में हैं।', readingInvoice: 'इनवॉइस पढ़ा जा रहा है…',
       selectAtLeastOne: 'पहले कम से कम एक PO चुनें।', waitForInvoice: 'PO {po} का इनवॉइस पढ़ना पूरा होने तक रुकें।', replaceWrongInvoice: 'अपलोड किया गया इनवॉइस PO {po} से मेल नहीं खाता। सही इनवॉइस लगाएँ।',
       uploadVerifyInvoice: 'PO {po} का इनवॉइस अपलोड करके जाँचें।', invoiceAmountRequired: 'PO {po} की इनवॉइस राशि दर्ज करें या जाँचें।', selectTransporterError: 'ट्रांसपोर्टर मास्टर से ट्रांसपोर्टर चुनें।', editInvoiceFirst: 'ट्रिप संपादित करके PO {po} का इनवॉइस विवरण पूरा करें।',
       planning: 'योजना', pending: 'बाकी', delivered: 'डिलीवर हुआ', cancelled: 'रद्द',
@@ -740,8 +743,11 @@
     return records.filter(recordMatchesFilters);
   }
   function statusClass(status) { return String(status || '').toLowerCase().replaceAll(' ', '-'); }
+  function customerUsesEmailGrn(customerName) {
+    return /(blinkit|hands\s*on|zepto|big\s*basket|innovative\s*retail)/i.test(String(customerName || ''));
+  }
   function statusLabel(status) {
-    return ({ Received: t('received'), Scheduled: t('scheduled'), 'In Transit': t('inTransit'), Dispatched: t('inTransit'), 'Partially Delivered': t('partiallyDelivered'), 'Needs Correction': t('needsCorrection'), Pending: t('pending'), Delivered: t('delivered'), Cancelled: t('cancelled') })[status] || status || '—';
+    return ({ Received: t('received'), Scheduled: t('scheduled'), 'In Transit': t('inTransit'), Dispatched: t('inTransit'), 'Partially Delivered': t('partiallyDelivered'), 'Needs Correction': t('needsCorrection'), 'Awaiting GRN': t('awaitingGrn'), Pending: t('pending'), Delivered: t('delivered'), Cancelled: t('cancelled') })[status] || status || '—';
   }
 
   function renderOpenPos() {
@@ -821,7 +827,10 @@
         return `<div class="trip-invoice-row"><div><strong>${safe(link.purchase_orders?.po_number || 'PO')}:</strong> ${safe(invoiceNumber || '—')} · Invoice ${invoiceAmount == null ? '—' : money(invoiceAmount)} · Delivery ${money(link.allocated_cost)}</div>${invoiceCopy}</div>`;
       }).join('');
       const tempoCost = Number(trip.actual_freight || 0);
-      return `<tr class="${needsCorrection ? 'correction-trip' : ''}"><td>${localDate(trip.trip_date)}</td><td><div class="trip-po-list">${chips || safe(t('noPosLinked'))}</div></td><td>${safe(trip.vehicle_number || trip.transporter || '—')}<span class="po-secondary">${safe(trip.driver_name || '')}</span></td><td>${invoices || '—'}</td><td><span class="executive-status ${needsCorrection ? 'needs-correction' : statusClass(trip.status)}">${safe(needsCorrection ? t('needsCorrection') : statusLabel(trip.status))}</span></td><td>${tempoCost ? money(tempoCost) : '—'}</td><td><div class="trip-actions"><button class="text-btn edit-trip-btn" type="button" data-trip-id="${trip.id}">${safe(t('edit'))}</button><button class="complete-trip-btn" type="button" data-trip-id="${trip.id}">${safe(needsCorrection ? t('correctDelivery') : t('completeDelivery'))}</button><button class="text-btn danger delete-trip-btn" type="button" data-trip-id="${trip.id}">${safe(t('deleteTrip'))}</button></div></td></tr>`;
+      const completeAction = trip.status === 'Awaiting GRN' && !needsCorrection
+        ? `<span class="grn-waiting-note">${safe(t('awaitingGrnAction'))}</span>`
+        : `<button class="complete-trip-btn" type="button" data-trip-id="${trip.id}">${safe(needsCorrection ? t('correctDelivery') : t('completeDelivery'))}</button>`;
+      return `<tr class="${needsCorrection ? 'correction-trip' : ''}"><td>${localDate(trip.trip_date)}</td><td><div class="trip-po-list">${chips || safe(t('noPosLinked'))}</div></td><td>${safe(trip.vehicle_number || trip.transporter || '—')}<span class="po-secondary">${safe(trip.driver_name || '')}</span></td><td>${invoices || '—'}</td><td><span class="executive-status ${needsCorrection ? 'needs-correction' : statusClass(trip.status)}">${safe(needsCorrection ? t('needsCorrection') : statusLabel(trip.status))}</span></td><td>${tempoCost ? money(tempoCost) : '—'}</td><td><div class="trip-actions"><button class="text-btn edit-trip-btn" type="button" data-trip-id="${trip.id}">${safe(t('edit'))}</button>${completeAction}<button class="text-btn danger delete-trip-btn" type="button" data-trip-id="${trip.id}">${safe(t('deleteTrip'))}</button></div></td></tr>`;
     }).join('');
     $('tripEmptyState').classList.toggle('hidden', trips.length !== 0);
   }
@@ -906,6 +915,7 @@
   }
   function openCompleteTrip(tripId) {
     const trip = trips.find(item => item.id === tripId); if (!trip) return;
+    if (trip.status === 'Awaiting GRN' && !(trip.delivery_trip_pos || []).some(link => link.delivery_status === 'Needs Correction')) { toast(t('awaitingGrnAction')); return; }
     const correctionLinks = (trip.delivery_trip_pos || []).filter(link => link.delivery_status === 'Needs Correction');
     const links = correctionLinks.length ? correctionLinks : (trip.delivery_trip_pos || []);
     const incompleteInvoice = links.find(link =>
@@ -917,11 +927,14 @@
     if (incompleteInvoice) { toast(t('editInvoiceFirst', { po: incompleteInvoice.purchase_orders?.po_number || '' })); return; }
     completingTripId = tripId; $('completeTripForm').reset(); $('completeTripError').textContent = '';
     $('completeTripSummary').textContent = correctionLinks.length ? t('returnedByOwner', { count: links.length }) : t('completeEachDelivery', { count: links.length });
-    $('completeTripPoDetails').innerHTML = links.map(link => `<tr data-po-id="${link.purchase_order_id}">
+    $('completeTripPoDetails').innerHTML = links.map(link => {
+      const emailGrn = customerUsesEmailGrn(link.purchase_orders?.customer_name);
+      return `<tr data-po-id="${link.purchase_order_id}" data-email-grn="${emailGrn ? 'true' : 'false'}">
       <td><span class="po-main">${safe(link.purchase_orders?.po_number || 'PO')}</span><span class="po-secondary">${safe(link.purchase_orders?.delivery_location || t('locationPending'))}</span>${link.delivery_status === 'Needs Correction' ? `<span class="correction-note">${safe(t('ownerCorrection', { reason: link.correction_reason || t('pleaseReview') }))}</span>` : ''}</td>
       <td><input class="complete-po-cost" type="number" min="0" step="0.01" placeholder="0" value="${Number(link.allocated_cost || 0) || ''}" /></td>
-      <td><input class="complete-po-slip" type="file" accept="application/pdf,image/jpeg,image/png" required /></td>
-    </tr>`).join('');
+      <td>${emailGrn ? `<span class="grn-delivery-help">${safe(t('grnDeliveryHelp'))}</span>` : '<input class="complete-po-slip" type="file" accept="application/pdf,image/jpeg,image/png" required />'}</td>
+    </tr>`;
+    }).join('');
     updateCompleteTripTotal();
     $('completeTripDialog').showModal();
   }
@@ -929,15 +942,16 @@
     event.preventDefault(); const error = $('completeTripError'); error.textContent = '';
     const trip = trips.find(item => item.id === completingTripId);
     if (!trip) { error.textContent = t('tripNotFound'); return; }
-    const details = [...$('completeTripPoDetails').querySelectorAll('tr')].map(row => ({ poId: row.dataset.poId, finalCost: Number(row.querySelector('.complete-po-cost').value || 0), slip: row.querySelector('.complete-po-slip').files?.[0], poNumber: row.querySelector('.po-main')?.textContent || 'PO' }));
-    const missingSlip = details.find(detail => !detail.slip); if (missingSlip) { error.textContent = t('uploadSlipForPo', { po: missingSlip.poNumber }); return; }
+    const details = [...$('completeTripPoDetails').querySelectorAll('tr')].map(row => ({ poId: row.dataset.poId, finalCost: Number(row.querySelector('.complete-po-cost').value || 0), emailGrn: row.dataset.emailGrn === 'true', slip: row.querySelector('.complete-po-slip')?.files?.[0], poNumber: row.querySelector('.po-main')?.textContent || 'PO' }));
+    const missingSlip = details.find(detail => !detail.emailGrn && !detail.slip); if (missingSlip) { error.textContent = t('uploadSlipForPo', { po: missingSlip.poNumber }); return; }
     const button = $('completeTripBtn');
     try {
       button.disabled = true; button.textContent = t('completingDelivery');
-      const deliveries = await Promise.all(details.map(async detail => ({ purchase_order_id: detail.poId, note_path: await uploadTripDeliverySlip(trip.id, detail.poId, detail.slip), final_cost: detail.finalCost })));
+      const deliveries = await Promise.all(details.map(async detail => ({ purchase_order_id: detail.poId, note_path: detail.emailGrn ? null : await uploadTripDeliverySlip(trip.id, detail.poId, detail.slip), final_cost: detail.finalCost })));
       await api('/rest/v1/rpc/complete_delivery_trip', { method: 'POST', headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify({ trip: trip.id, deliveries }) });
       const corrected = (trip.delivery_trip_pos || []).some(link => link.delivery_status === 'Needs Correction');
-      closeCompleteTripDialog(); await loadData(); toast(corrected ? t('correctedResubmitted') : t('deliveryUpdated'));
+      const waitsForGrn = details.some(detail => detail.emailGrn);
+      closeCompleteTripDialog(); await loadData(); toast(corrected ? t('correctedResubmitted') : waitsForGrn ? t('deliverySentForGrn') : t('deliveryUpdated'));
     } catch (err) { error.textContent = err.message || t('couldNotComplete'); }
     finally { button.disabled = false; button.textContent = t('completeDelivery'); }
   }

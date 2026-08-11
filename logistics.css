@@ -89,3 +89,5 @@
 /* Open PO table: Assigned was removed and a compact PO edit action added. */
 .table-wrap table{min-width:1180px}
 .po-edit-btn{min-width:58px;white-space:nowrap}
+.executive-status.awaiting-grn{background:#fff4d6;color:#8a5a00;border-color:#f2cf79}
+.grn-waiting-note,.grn-delivery-help{display:inline-block;max-width:270px;color:#8a5a00;font-size:.78rem;font-weight:700;line-height:1.35}
