@@ -59,12 +59,15 @@
       </section>
       <div class="open-list-heading open-list-heading-with-action">
         <div><span class="section-label">AVAILABLE FOR DISPATCH</span><h2>Open purchase orders</h2><p>Use Edit to correct imported details, status or the confirmed appointment for any customer.</p></div>
-        <button id="openManualPoButton" class="primary-button" type="button">+ Create manual PO</button>
+        <div class="open-list-heading-actions">
+          <button id="openManualPoButton" class="quiet-button" type="button">+ Create manual PO</button>
+          <button id="createTripButton" class="primary-button" type="button" disabled>Create new trip (0)</button>
+        </div>
       </div>
       <section class="table-card">
         <div class="table-scroll"><table class="orders-table dispatch-table"><thead><tr><th><input id="selectAll" type="checkbox" aria-label="Select all visible POs" /></th><th>PO / Customer</th><th>PO date</th><th>Status</th><th>Confirmed appointment</th><th>Delivery location</th><th>PO value</th><th>Invoice</th><th>Action</th></tr></thead><tbody id="poTableBody"></tbody></table></div>
         <div id="poEmpty" class="empty-state hidden"><strong>No available POs</strong><span>Try another customer or filter.</span></div>
-        <div id="selectionBar" class="selection-bar hidden" aria-live="polite"><div><strong id="selectedCount">0 POs selected</strong><span id="selectedValue">₹0 selected value</span></div><div class="selection-actions"><button id="clearSelection" class="quiet-button" type="button">Clear selection</button><button id="createTripButton" class="primary-button" type="button">Create trip</button></div></div>
+        <div id="selectionBar" class="selection-bar hidden" aria-live="polite"><div><strong id="selectedCount">0 POs selected</strong><span id="selectedValue">₹0 selected value</span></div><div class="selection-actions"><button id="clearSelection" class="quiet-button" type="button">Clear selection</button></div></div>
       </section>
 
       <section class="in-trip-card" aria-labelledby="tripsTitle">
