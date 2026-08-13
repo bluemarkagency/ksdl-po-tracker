@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="mobile-filters.css" />
     <link rel="stylesheet" href="analytics.css?v=location-followup-20260804" />
     <link rel="stylesheet" href="owner-suite.css?v=owner-suite-20260811" />
-    <link rel="stylesheet" href="channel-insights.css?v=channel-insights-20260811" />
+    <link rel="stylesheet" href="channel-insights.css?v=channel-growth-20260813" />
   </head>
   <body class="owner-suite analytics-page">
     <section id="loginScreen" class="login-screen hidden">
@@ -77,6 +77,12 @@
           <article id="storeChannelBand" class="channel-band"></article>
           <article id="ecomChannelBand" class="channel-band ecommerce"></article>
         </div>
+        <div class="channel-subsection channel-growth-section">
+          <div class="channel-subsection-head"><div><h3>Overall sales growth</h3><span>Compares the selected period with the immediately preceding equal period.</span></div><div class="channel-trend-legend" aria-label="Sales channel legend"><span><i class="store"></i>Store</span><span><i class="ecommerce"></i>E-commerce</span></div></div>
+          <div id="channelGrowthSummary" class="channel-growth-summary"></div>
+          <div id="channelSalesTrend" class="channel-sales-trend" role="img" aria-label="Store and E-commerce sales trend"></div>
+          <p class="channel-chart-note">Invoiced orders use invoice amount and invoice date. Where invoice data is not yet available, the chart uses PO value and PO date. Cancelled POs are excluded.</p>
+        </div>
         <div class="channel-subsection">
           <div class="channel-subsection-head"><h3>Customer performance scorecard</h3><span id="channelCustomerCount">0 customers</span></div>
           <div class="table-wrap"><table class="channel-table"><thead><tr><th>Customer</th><th>Channel</th><th>POs</th><th>Business value</th><th>Avg order</th><th>Delivered</th><th>Open POs</th><th>Avg completion</th><th>Appointment hit rate</th><th>Period change</th></tr></thead><tbody id="channelCustomerBody"></tbody></table></div>
@@ -109,7 +115,7 @@
           <div id="articleRanking" class="ranking-list"></div>
         </article>
         <article class="analytics-card">
-          <div class="analytics-section-head"><div><span class="eyebrow">SALES TREND</span><h2>Monthly movement</h2><p>Taxable sales value from the selected invoice data.</p></div></div>
+          <div class="analytics-section-head"><div><span class="eyebrow">DMART PRODUCT TREND</span><h2>DMart monthly movement</h2><p>Taxable sales value from DMart invoice-line data only. Overall Store and E-commerce growth is shown above.</p></div></div>
           <div id="monthlyTrend" class="trend-chart"></div>
         </article>
       </section>
@@ -167,6 +173,6 @@
     </main>
 
     <div id="toast" class="toast" role="status"></div>
-    <script src="config.js"></script><script src="channel-insights.js?v=channel-insights-20260811"></script><script src="analytics.js?v=channel-insights-20260811"></script>
+    <script src="config.js"></script><script src="channel-insights.js?v=channel-growth-20260813"></script><script src="analytics.js?v=channel-growth-20260813"></script>
   </body>
 </html>

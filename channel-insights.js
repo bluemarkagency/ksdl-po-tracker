@@ -56,6 +56,7 @@
   }
 
   function orderDate(row) {
+    if (Number(row.invoice_amount || 0) > 0 && row.invoice_date) return String(row.invoice_date).slice(0, 10);
     return String(row.po_date || row.po_received_date || '').slice(0, 10);
   }
 
@@ -171,7 +172,61 @@
         previous.filter(row => row.customer === customer)
       )
     })).sort((left, right) => right.value - left.value || left.customer.localeCompare(right.customer));
-    return { all, current, previous, byChannel, customers, periodDays: Number(days) || 0 };
+    return {
+      all,
+      current,
+      previous,
+      overall: summarize(current, previous),
+      byChannel,
+      customers,
+      periodDays: Number(days) || 0
+    };
+  }
+
+  function trendBuckets(rows, days, todayValue) {
+    const all = activeRows(rows);
+    const today = dateValue(todayValue) || new Date();
+    const periodDays = Number(days) || 0;
+    const current = periodRows(all, periodDays, isoDate(today));
+    if (!current.length) return [];
+
+    const weekly = periodDays > 0 && periodDays <= 60;
+    const groups = new Map();
+    const addBucket = (bucketKey, label) => {
+      if (!groups.has(bucketKey)) groups.set(bucketKey, { key: bucketKey, label, Store: 0, 'E-commerce': 0, total: 0 });
+      return groups.get(bucketKey);
+    };
+
+    if (weekly) {
+      const start = addDays(today, -periodDays + 1);
+      for (let cursor = new Date(start); cursor <= today; cursor = addDays(cursor, 7)) {
+        const end = addDays(cursor, 6) > today ? today : addDays(cursor, 6);
+        const label = `${cursor.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}–${end.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`;
+        addBucket(isoDate(cursor), label);
+      }
+      current.forEach(row => {
+        const date = dateValue(row.business_date);
+        const index = Math.max(0, Math.floor(differenceDays(date, start) / 7));
+        const bucketStart = addDays(start, index * 7);
+        const bucket = addBucket(isoDate(bucketStart), bucketStart.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }));
+        bucket[row.channel] += row.business_value;
+        bucket.total += row.business_value;
+      });
+    } else {
+      const dates = current.map(row => dateValue(row.business_date)).filter(Boolean).sort((left, right) => left - right);
+      const first = periodDays ? addDays(today, -periodDays + 1) : dates[0];
+      for (let cursor = new Date(first.getFullYear(), first.getMonth(), 1); cursor <= today; cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1)) {
+        addBucket(isoDate(cursor).slice(0, 7), cursor.toLocaleDateString('en-IN', { month: 'short', year: '2-digit' }));
+      }
+      current.forEach(row => {
+        const date = dateValue(row.business_date);
+        const bucketKey = isoDate(new Date(date.getFullYear(), date.getMonth(), 1)).slice(0, 7);
+        const bucket = addBucket(bucketKey, date.toLocaleDateString('en-IN', { month: 'short', year: '2-digit' }));
+        bucket[row.channel] += row.business_value;
+        bucket.total += row.business_value;
+      });
+    }
+    return [...groups.values()].sort((left, right) => left.key.localeCompare(right.key));
   }
 
   function cadenceGroups(rows, channel) {
@@ -241,6 +296,7 @@
     ecomActions,
     isoDate,
     normalize,
-    rowValue
+    rowValue,
+    trendBuckets
   };
 });

@@ -806,6 +806,30 @@
     return `<span class="channel-growth ${className}">${prefix}${Number(value || 0).toFixed(0)}% vs prior</span>`;
   }
 
+  function channelGrowthCard(label, metrics, days, tone) {
+    const hasComparison = Number(days) > 0;
+    const previous = hasComparison ? `Previous ${money(metrics.previousValue)}` : `${number(metrics.poCount)} PO(s) in all history`;
+    return `<article class="channel-growth-card ${tone || ''}"><header><span>${safe(label)}</span>${channelGrowthMarkup(metrics.growth, hasComparison)}</header><strong>${money(metrics.value)}</strong><small>${safe(previous)}</small></article>`;
+  }
+
+  function renderChannelTrend(days, analysis) {
+    const buckets = CHANNELS.trendBuckets(purchaseOrders, days, localIsoDate(new Date()));
+    $('channelGrowthSummary').innerHTML = [
+      channelGrowthCard('Overall sales', analysis.overall, days, 'overall'),
+      channelGrowthCard('Store sales', analysis.byChannel.Store, days, 'store'),
+      channelGrowthCard('E-commerce sales', analysis.byChannel['E-commerce'], days, 'ecommerce')
+    ].join('');
+
+    const maximum = Math.max(...buckets.map(bucket => bucket.total), 1);
+    $('channelSalesTrend').innerHTML = buckets.map(bucket => {
+      const barHeight = bucket.total > 0 ? Math.max(bucket.total / maximum * 170, 5) : 2;
+      const storeShare = bucket.total > 0 ? bucket.Store / bucket.total * 100 : 0;
+      const ecomShare = bucket.total > 0 ? bucket['E-commerce'] / bucket.total * 100 : 0;
+      const description = `${bucket.label}: total ${money(bucket.total)}, Store ${money(bucket.Store)}, E-commerce ${money(bucket['E-commerce'])}`;
+      return `<div class="channel-trend-column" aria-label="${safe(description)}" title="${safe(description)}"><strong>${money(bucket.total)}</strong><div class="channel-trend-bar" style="height:${barHeight.toFixed(0)}px"><span class="ecommerce" style="height:${ecomShare.toFixed(2)}%"></span><span class="store" style="height:${storeShare.toFixed(2)}%"></span></div><span>${safe(bucket.label)}</span></div>`;
+    }).join('') || '<div class="action-empty"><strong>No sales trend available</strong><span>POs will appear here after they are imported into the main tracker.</span></div>';
+  }
+
   function channelBandMarkup(channel, metrics, customers, days) {
     const isStore = channel === 'Store';
     const accountText = isStore ? `${customers.length} Store customer${customers.length === 1 ? '' : 's'}` : `${customers.length} E-commerce customer${customers.length === 1 ? '' : 's'}`;
@@ -837,6 +861,7 @@
     const ecomCustomers = analysis.customers.filter(customer => customer.channel === 'E-commerce');
     $('storeChannelBand').innerHTML = channelBandMarkup('Store', analysis.byChannel.Store, storeCustomers, days);
     $('ecomChannelBand').innerHTML = channelBandMarkup('E-commerce', analysis.byChannel['E-commerce'], ecomCustomers, days);
+    renderChannelTrend(days, analysis);
 
     $('channelCustomerCount').textContent = `${analysis.customers.length} customer${analysis.customers.length === 1 ? '' : 's'}`;
     $('channelCustomerBody').innerHTML = analysis.customers.map(customer => {

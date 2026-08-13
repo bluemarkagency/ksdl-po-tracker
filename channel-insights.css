@@ -214,6 +214,32 @@
 
 .channel-data-note strong { color: var(--owner-navy); }
 
+.channel-growth-section { padding-top: 17px; }
+.channel-growth-section .channel-subsection-head > div:first-child span { display: block; margin-top: 3px; }
+.channel-growth-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 16px; }
+.channel-growth-card { padding: 13px; border: 1px solid #dce6e3; border-radius: 10px; background: #fbfdfc; }
+.channel-growth-card.overall { background: #f6f9f8; }
+.channel-growth-card.store { border-color: #c8ded8; background: #f5faf8; }
+.channel-growth-card.ecommerce { border-color: #cfdbef; background: #f5f8fe; }
+.channel-growth-card header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.channel-growth-card header > span:first-child { color: var(--owner-muted); font-size: .67rem; font-weight: 850; text-transform: uppercase; letter-spacing: .035em; }
+.channel-growth-card > strong { display: block; margin-top: 9px; color: var(--owner-navy); font-size: 1.22rem; letter-spacing: -.02em; }
+.channel-growth-card > small { display: block; margin-top: 3px; color: var(--owner-muted); font-size: .64rem; }
+.channel-trend-legend { display: flex; align-items: center; gap: 12px; color: var(--owner-muted); font-size: .67rem; font-weight: 800; }
+.channel-trend-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.channel-trend-legend i { width: 10px; height: 10px; border-radius: 3px; }
+.channel-trend-legend i.store { background: #23806f; }
+.channel-trend-legend i.ecommerce { background: #4169a9; }
+.channel-sales-trend { display: flex; min-height: 230px; align-items: flex-end; gap: 12px; overflow-x: auto; padding: 18px 5px 3px; border-bottom: 1px solid #e1e9e6; }
+.channel-trend-column { display: flex; min-width: 66px; height: 205px; flex: 1 0 66px; flex-direction: column; justify-content: flex-end; align-items: center; gap: 5px; }
+.channel-trend-column > strong { color: var(--owner-navy); font-size: .63rem; white-space: nowrap; }
+.channel-trend-column > span { color: var(--owner-muted); font-size: .63rem; white-space: nowrap; }
+.channel-trend-bar { display: flex; width: min(48px, 72%); min-height: 2px; flex-direction: column; justify-content: flex-end; overflow: hidden; border-radius: 7px 7px 2px 2px; background: #edf2f0; }
+.channel-trend-bar span { display: block; width: 100%; }
+.channel-trend-bar .store { background: #23806f; }
+.channel-trend-bar .ecommerce { background: #4169a9; }
+.channel-chart-note { margin: 9px 0 0; color: var(--owner-muted); font-size: .65rem; line-height: 1.4; }
+
 .existing-report-divider {
   display: flex;
   align-items: center;
@@ -238,6 +264,9 @@
   .channel-band-primary { grid-template-columns: 1fr 1fr; }
   .channel-metric-row { grid-template-columns: 1fr 1fr; }
   .channel-action-grid { grid-template-columns: 1fr; }
+  .channel-growth-summary { grid-template-columns: 1fr; }
+  .channel-growth-card header { align-items: flex-start; }
+  .channel-growth-section .channel-subsection-head { gap: 8px; }
   .channel-subsection-head { flex-direction: column; align-items: flex-start; gap: 3px; }
   .existing-report-divider { align-items: flex-start; flex-direction: column; gap: 3px; }
   .existing-report-divider::after { display: none; }
