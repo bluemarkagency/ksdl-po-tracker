@@ -29,6 +29,8 @@
   line-height: 1.5;
 }
 
+#channelGrowthPeriod { max-width: 330px; white-space: normal; text-align: right; line-height: 1.35; }
+
 .channel-period-control {
   display: flex;
   min-width: 150px;
@@ -230,14 +232,6 @@
 .channel-trend-legend i { width: 10px; height: 10px; border-radius: 3px; }
 .channel-trend-legend i.store { background: #23806f; }
 .channel-trend-legend i.ecommerce { background: #4169a9; }
-.channel-sales-trend { display: flex; min-height: 230px; align-items: flex-end; gap: 12px; overflow-x: auto; padding: 18px 5px 3px; border-bottom: 1px solid #e1e9e6; }
-.channel-trend-column { display: flex; min-width: 66px; height: 205px; flex: 1 0 66px; flex-direction: column; justify-content: flex-end; align-items: center; gap: 5px; }
-.channel-trend-column > strong { color: var(--owner-navy); font-size: .63rem; white-space: nowrap; }
-.channel-trend-column > span { color: var(--owner-muted); font-size: .63rem; white-space: nowrap; }
-.channel-trend-bar { display: flex; width: min(48px, 72%); min-height: 2px; flex-direction: column; justify-content: flex-end; overflow: hidden; border-radius: 7px 7px 2px 2px; background: #edf2f0; }
-.channel-trend-bar span { display: block; width: 100%; }
-.channel-trend-bar .store { background: #23806f; }
-.channel-trend-bar .ecommerce { background: #4169a9; }
 .channel-chart-note { margin: 9px 0 0; color: var(--owner-muted); font-size: .65rem; line-height: 1.4; }
 
 .existing-report-divider {
@@ -260,6 +254,7 @@
 @media (max-width: 680px) {
   .channel-insights-card { padding: 13px; }
   .channel-insights-head { flex-direction: column; }
+  #channelGrowthPeriod { width: 100%; max-width: none; text-align: left; }
   .channel-period-control { width: 100%; }
   .channel-band-primary { grid-template-columns: 1fr 1fr; }
   .channel-metric-row { grid-template-columns: 1fr 1fr; }

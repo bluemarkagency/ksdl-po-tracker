@@ -266,6 +266,22 @@
         && (!search || searchable.includes(search));
     });
   }
+  function nonDateFilteredPurchaseOrders() {
+    const search = $('analyticsSearch').value.trim().toLowerCase();
+    const location = $('analyticsLocation').value;
+    return purchaseOrders.filter(row => {
+      const rowLocation = locationName(row.delivery_location);
+      const searchable = [row.customer_name, row.po_number, row.invoice_number, rowLocation].join(' ').toLowerCase();
+      return (!location || rowLocation === location) && (!search || searchable.includes(search));
+    });
+  }
+  function filteredBusinessRows() {
+    if (!CHANNELS) return [];
+    const { from, to } = selectedDateBounds();
+    return nonDateFilteredPurchaseOrders().map(CHANNELS.normalize).filter(row => !row.cancelled && row.business_date
+      && (!from || row.business_date >= from)
+      && (!to || row.business_date <= to));
+  }
   function groupArticles(items) {
     const groups = new Map();
     items.forEach(row => {
@@ -308,6 +324,26 @@
     });
     return [...groups.entries()].sort((a, b) => a[0].localeCompare(b[0]));
   }
+  function monthlyBusinessGroups(items) {
+    const groups = new Map();
+    items.forEach(row => {
+      const month = String(row.business_date || '').slice(0, 7);
+      if (!month) return;
+      if (!groups.has(month)) groups.set(month, { month, Store: 0, 'E-commerce': 0, total: 0 });
+      const group = groups.get(month);
+      group[row.channel] += Number(row.business_value || 0);
+      group.total += Number(row.business_value || 0);
+    });
+    const populated = [...groups.keys()].sort();
+    if (!populated.length) return [];
+    const first = parseLocalDate(`${populated[0]}-01`);
+    const last = parseLocalDate(`${populated[populated.length - 1]}-01`);
+    for (let cursor = first; cursor <= last; cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1)) {
+      const month = localIsoDate(cursor).slice(0, 7);
+      if (!groups.has(month)) groups.set(month, { month, Store: 0, 'E-commerce': 0, total: 0 });
+    }
+    return [...groups.values()].sort((left, right) => left.month.localeCompare(right.month));
+  }
 
   function populateFilters() {
     const currentLocation = $('analyticsLocation').value;
@@ -343,12 +379,16 @@
       </div>`).join('') || '<div class="empty-state"><h3>No article data</h3><p>Change the filters or complete the product import.</p></div>';
   }
   function renderTrend(items) {
-    const months = monthlyGroups(items);
-    const maxValue = Math.max(...months.map(([, value]) => value), 1);
-    $('monthlyTrend').innerHTML = months.map(([month, value]) => {
-      const label = new Date(`${month}-01T00:00:00`).toLocaleDateString('en-IN', { month: 'short', year: '2-digit' });
-      return `<div class="trend-column"><span class="trend-value">${money(value)}</span><span class="trend-bar" style="height:${Math.max(value / maxValue * 180, 3).toFixed(0)}px"></span><span class="trend-label">${safe(label)}</span></div>`;
-    }).join('') || '<div class="empty-state"><h3>No monthly trend</h3><p>Invoice movement will appear after import.</p></div>';
+    const months = monthlyBusinessGroups(items);
+    const maxValue = Math.max(...months.map(month => month.total), 1);
+    $('monthlyTrend').innerHTML = months.map(month => {
+      const label = new Date(`${month.month}-01T00:00:00`).toLocaleDateString('en-IN', { month: 'short', year: '2-digit' });
+      const height = month.total > 0 ? Math.max(month.total / maxValue * 180, 3) : 2;
+      const storeShare = month.total > 0 ? month.Store / month.total * 100 : 0;
+      const ecomShare = month.total > 0 ? month['E-commerce'] / month.total * 100 : 0;
+      const detail = `${label}: total ${money(month.total)}, Store ${money(month.Store)}, E-commerce ${money(month['E-commerce'])}`;
+      return `<div class="trend-column" aria-label="${safe(detail)}" title="${safe(detail)}"><span class="trend-value">${money(month.total)}</span><span class="trend-bar overall-trend-bar" style="height:${height.toFixed(0)}px"><i class="ecommerce" style="height:${ecomShare.toFixed(2)}%"></i><i class="store" style="height:${storeShare.toFixed(2)}%"></i></span><span class="trend-label">${safe(label)}</span></div>`;
+    }).join('') || '<div class="empty-state"><h3>No overall sales found</h3><p>Change the date filter or import purchase orders into the main tracker.</p></div>';
   }
   function renderLocations(items, locations) {
     const totalSales = sum(items, row => row.taxable_amount);
@@ -806,37 +846,69 @@
     return `<span class="channel-growth ${className}">${prefix}${Number(value || 0).toFixed(0)}% vs prior</span>`;
   }
 
-  function channelGrowthCard(label, metrics, days, tone) {
-    const hasComparison = Number(days) > 0;
-    const previous = hasComparison ? `Previous ${money(metrics.previousValue)}` : `${number(metrics.poCount)} PO(s) in all history`;
-    return `<article class="channel-growth-card ${tone || ''}"><header><span>${safe(label)}</span>${channelGrowthMarkup(metrics.growth, hasComparison)}</header><strong>${money(metrics.value)}</strong><small>${safe(previous)}</small></article>`;
+  function businessComparisonPeriods(baseRows) {
+    const range = $('analyticsDateRange').value;
+    const selected = selectedDateBounds();
+    const dates = baseRows.map(CHANNELS.normalize).filter(row => !row.cancelled).map(row => row.business_date).filter(Boolean).sort();
+    let from = selected.from;
+    let to = selected.to;
+    let latestDataPeriod = false;
+    if (!from && !to && dates.length) {
+      const latest = parseLocalDate(dates[dates.length - 1]);
+      from = localIsoDate(new Date(latest.getFullYear(), latest.getMonth(), 1));
+      to = dates[dates.length - 1];
+      latestDataPeriod = true;
+    }
+    if (from && !to && dates.length) to = dates[dates.length - 1];
+    if (!from && to && dates.length) from = dates[0];
+    let start = parseLocalDate(from);
+    let end = parseLocalDate(to);
+    if (!start || !end) return { from: '', to: '', previousFrom: '', previousTo: '', label: 'No sales period' };
+    if (end < start) [start, end] = [end, start];
+
+    let previousStart;
+    let previousEnd;
+    const isCurrentPartial = range === 'current' || (latestDataPeriod && end.getFullYear() === new Date().getFullYear() && end.getMonth() === new Date().getMonth());
+    if (isCurrentPartial) {
+      previousStart = new Date(start.getFullYear(), start.getMonth() - 1, 1);
+      const previousMonthEnd = new Date(start.getFullYear(), start.getMonth(), 0).getDate();
+      previousEnd = new Date(start.getFullYear(), start.getMonth() - 1, Math.min(end.getDate(), previousMonthEnd));
+    } else if (range === 'last' || latestDataPeriod) {
+      previousStart = new Date(start.getFullYear(), start.getMonth() - 1, 1);
+      previousEnd = new Date(start.getFullYear(), start.getMonth(), 0);
+    } else {
+      const duration = Math.max(1, Math.round((end - start) / 86400000) + 1);
+      previousEnd = addDays(start, -1);
+      previousStart = addDays(previousEnd, -(duration - 1));
+    }
+    return {
+      from: localIsoDate(start),
+      to: localIsoDate(end),
+      previousFrom: localIsoDate(previousStart),
+      previousTo: localIsoDate(previousEnd),
+      label: `${formatShortDate(start)}–${formatShortDate(end)} vs ${formatShortDate(previousStart)}–${formatShortDate(previousEnd)}`
+    };
   }
 
-  function renderChannelTrend(days, analysis) {
-    const buckets = CHANNELS.trendBuckets(purchaseOrders, days, localIsoDate(new Date()));
+  function channelGrowthCard(label, metrics, tone) {
+    return `<article class="channel-growth-card ${tone || ''}"><header><span>${safe(label)}</span>${channelGrowthMarkup(metrics.growth, true)}</header><strong>${money(metrics.value)}</strong><small>Previous ${money(metrics.previousValue)}</small></article>`;
+  }
+
+  function renderChannelGrowth(analysis) {
     $('channelGrowthSummary').innerHTML = [
-      channelGrowthCard('Overall sales', analysis.overall, days, 'overall'),
-      channelGrowthCard('Store sales', analysis.byChannel.Store, days, 'store'),
-      channelGrowthCard('E-commerce sales', analysis.byChannel['E-commerce'], days, 'ecommerce')
+      channelGrowthCard('Overall sales', analysis.overall, 'overall'),
+      channelGrowthCard('Store sales', analysis.byChannel.Store, 'store'),
+      channelGrowthCard('E-commerce sales', analysis.byChannel['E-commerce'], 'ecommerce')
     ].join('');
-
-    const maximum = Math.max(...buckets.map(bucket => bucket.total), 1);
-    $('channelSalesTrend').innerHTML = buckets.map(bucket => {
-      const barHeight = bucket.total > 0 ? Math.max(bucket.total / maximum * 170, 5) : 2;
-      const storeShare = bucket.total > 0 ? bucket.Store / bucket.total * 100 : 0;
-      const ecomShare = bucket.total > 0 ? bucket['E-commerce'] / bucket.total * 100 : 0;
-      const description = `${bucket.label}: total ${money(bucket.total)}, Store ${money(bucket.Store)}, E-commerce ${money(bucket['E-commerce'])}`;
-      return `<div class="channel-trend-column" aria-label="${safe(description)}" title="${safe(description)}"><strong>${money(bucket.total)}</strong><div class="channel-trend-bar" style="height:${barHeight.toFixed(0)}px"><span class="ecommerce" style="height:${ecomShare.toFixed(2)}%"></span><span class="store" style="height:${storeShare.toFixed(2)}%"></span></div><span>${safe(bucket.label)}</span></div>`;
-    }).join('') || '<div class="action-empty"><strong>No sales trend available</strong><span>POs will appear here after they are imported into the main tracker.</span></div>';
   }
 
-  function channelBandMarkup(channel, metrics, customers, days) {
+  function channelBandMarkup(channel, metrics, customers) {
     const isStore = channel === 'Store';
     const accountText = isStore ? `${customers.length} Store customer${customers.length === 1 ? '' : 's'}` : `${customers.length} E-commerce customer${customers.length === 1 ? '' : 's'}`;
     const completion = metrics.averageCompletionDays == null ? '—' : `${metrics.averageCompletionDays.toFixed(1)} days`;
     const appointment = metrics.appointmentRate == null ? 'Needs data' : `${metrics.appointmentRate.toFixed(0)}%`;
     return `
-      <header><div><h3>${channel}</h3><p>${accountText}</p></div>${channelGrowthMarkup(metrics.growth, Number(days) > 0)}</header>
+      <header><div><h3>${channel}</h3><p>${accountText}</p></div>${channelGrowthMarkup(metrics.growth, true)}</header>
       <div class="channel-band-primary">
         <div><span>Business value</span><strong>${money(metrics.value)}</strong><small>Invoice amount when available, otherwise PO value</small></div>
         <div><span>Average order</span><strong>${money(metrics.averageOrder)}</strong><small>${number(metrics.poCount)} PO(s) in period</small></div>
@@ -855,20 +927,22 @@
 
   function renderChannelAnalytics() {
     if (!CHANNELS) return;
-    const days = Number($('channelAnalyticsPeriod').value || 30);
-    const analysis = CHANNELS.analyse(purchaseOrders, days, localIsoDate(new Date()));
+    const baseRows = nonDateFilteredPurchaseOrders();
+    const periods = businessComparisonPeriods(baseRows);
+    const analysis = CHANNELS.analyseRanges(baseRows, periods.from, periods.to, periods.previousFrom, periods.previousTo);
     const storeCustomers = analysis.customers.filter(customer => customer.channel === 'Store');
     const ecomCustomers = analysis.customers.filter(customer => customer.channel === 'E-commerce');
-    $('storeChannelBand').innerHTML = channelBandMarkup('Store', analysis.byChannel.Store, storeCustomers, days);
-    $('ecomChannelBand').innerHTML = channelBandMarkup('E-commerce', analysis.byChannel['E-commerce'], ecomCustomers, days);
-    renderChannelTrend(days, analysis);
+    $('channelGrowthPeriod').textContent = periods.label;
+    $('storeChannelBand').innerHTML = channelBandMarkup('Store', analysis.byChannel.Store, storeCustomers);
+    $('ecomChannelBand').innerHTML = channelBandMarkup('E-commerce', analysis.byChannel['E-commerce'], ecomCustomers);
+    renderChannelGrowth(analysis);
 
     $('channelCustomerCount').textContent = `${analysis.customers.length} customer${analysis.customers.length === 1 ? '' : 's'}`;
     $('channelCustomerBody').innerHTML = analysis.customers.map(customer => {
       const completion = customer.averageCompletionDays == null ? '—' : `${customer.averageCompletionDays.toFixed(1)} days`;
       const appointment = customer.appointmentRate == null ? 'Needs data' : `${customer.appointmentRate.toFixed(0)}%`;
-      const growth = !days ? 'All history' : customer.growth == null ? 'New' : `${customer.growth >= 0 ? '+' : ''}${customer.growth.toFixed(0)}%`;
-      return `<tr><td><span class="channel-account">${safe(customer.customer)}</span><span class="channel-account-sub">Last PO ${formatShortDate(customer.lastPoDate)}</span></td><td><span class="channel-chip ${customer.channel === 'E-commerce' ? 'ecommerce' : ''}">${safe(customer.channel)}</span></td><td>${number(customer.poCount)}</td><td><strong>${money(customer.value)}</strong></td><td>${money(customer.averageOrder)}</td><td>${customer.deliveryRate.toFixed(0)}%</td><td><strong>${number(customer.openCount)}</strong><span class="channel-account-sub">${money(customer.openValue)}</span></td><td>${completion}</td><td>${appointment}</td><td>${safe(growth)}</td></tr>`;
+      const growth = customer.growth == null ? 'New' : `${customer.growth >= 0 ? '+' : ''}${customer.growth.toFixed(0)}%`;
+      return `<tr><td><span class="channel-account">${safe(customer.customer)}</span><span class="channel-account-sub">Last activity ${formatShortDate(customer.lastPoDate)}</span></td><td><span class="channel-chip ${customer.channel === 'E-commerce' ? 'ecommerce' : ''}">${safe(customer.channel)}</span></td><td>${number(customer.poCount)}</td><td><strong>${money(customer.value)}</strong></td><td>${money(customer.averageOrder)}</td><td>${customer.deliveryRate.toFixed(0)}%</td><td><strong>${number(customer.openCount)}</strong><span class="channel-account-sub">${money(customer.openValue)}</span></td><td>${completion}</td><td>${appointment}</td><td>${safe(growth)}</td></tr>`;
     }).join('') || '<tr><td colspan="10"><div class="action-empty"><strong>No channel data</strong><span>POs will appear here after they are added to the main tracker.</span></div></td></tr>';
 
     const store = analysis.byChannel.Store;
@@ -889,7 +963,7 @@
       actions.push(channelActionCard('Delivery execution', 'Complete delivery dates consistently', 'Delivery-completed dates are needed to compare Store and E-commerce lead time accurately. Ask staff to close every delivered PO on the same day.'));
     }
 
-    const cadence = CHANNELS.cadenceGroups(purchaseOrders, 'E-commerce')
+    const cadence = CHANNELS.cadenceGroups(baseRows, 'E-commerce')
       .map(group => ({ ...group, timing: group.nextExpectedDate ? CHANNELS.differenceDays(group.nextExpectedDate, localIsoDate(new Date())) : null }))
       .filter(group => !group.openCount && group.timing != null && group.timing <= 0)
       .sort((a, b) => a.timing - b.timing)[0];
@@ -916,7 +990,7 @@
     renderSummary(items, articles);
     renderRecommendations(items, articles, locations);
     renderArticleRanking(items, articles);
-    renderTrend(items);
+    renderTrend(filteredBusinessRows());
     renderLocations(items, locations);
     renderOpportunityBoard();
     renderLocationMaster();
@@ -1017,7 +1091,6 @@
     ['analyticsDateFrom', 'analyticsDateTo'].forEach(id => { $(id).addEventListener('input', render); $(id).addEventListener('change', render); });
     $('clearAnalyticsFilters').addEventListener('click', clearFilters);
     $('exportAnalytics').addEventListener('click', exportCsv);
-    $('channelAnalyticsPeriod').addEventListener('change', renderChannelAnalytics);
     $('locationReviewBody').addEventListener('click', event => {
       const button = event.target.closest('.location-standardize-btn');
       if (button) standardizeObservedLocation(Number(button.dataset.locationIndex), button);

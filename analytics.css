@@ -21,3 +21,9 @@
 .followup-chip.recent{background:#e6f4ea;color:#087443}
 .followup-chip.needs-data{background:#edf1f0;color:#5d6966}
 @media(max-width:760px){.location-followup-tools{width:100%;justify-content:stretch}.location-followup-tools label{flex:1}.location-followup-tools .result-chip{align-self:end}}
+
+/* Overall Store and E-commerce monthly sales */
+.overall-trend-bar{display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden;background:#edf2f0}
+.overall-trend-bar i{display:block;width:100%;min-height:0}
+.overall-trend-bar .store{background:#23806f}
+.overall-trend-bar .ecommerce{background:#4169a9}

@@ -183,6 +183,35 @@
     };
   }
 
+  function rowsBetween(rows, from, to) {
+    return rows.filter(row => {
+      const date = row.business_date;
+      return (!from || date >= from) && (!to || date <= to);
+    });
+  }
+
+  function analyseRanges(rows, currentFrom, currentTo, previousFrom, previousTo) {
+    const all = activeRows(rows);
+    const current = rowsBetween(all, currentFrom, currentTo);
+    const previous = rowsBetween(all, previousFrom, previousTo);
+    const byChannel = {};
+    ['Store', 'E-commerce'].forEach(channel => {
+      byChannel[channel] = summarize(
+        current.filter(row => row.channel === channel),
+        previous.filter(row => row.channel === channel)
+      );
+    });
+    const customers = [...new Set(current.map(row => row.customer))].map(customer => ({
+      customer,
+      channel: channelName(customer),
+      ...summarize(
+        current.filter(row => row.customer === customer),
+        previous.filter(row => row.customer === customer)
+      )
+    })).sort((left, right) => right.value - left.value || left.customer.localeCompare(right.customer));
+    return { all, current, previous, overall: summarize(current, previous), byChannel, customers };
+  }
+
   function trendBuckets(rows, days, todayValue) {
     const all = activeRows(rows);
     const today = dateValue(todayValue) || new Date();
@@ -288,6 +317,7 @@
   return {
     addDays,
     analyse,
+    analyseRanges,
     cadenceGroups,
     channelName,
     customerName,

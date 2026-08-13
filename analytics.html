@@ -7,9 +7,9 @@
     <title>KSDL Sales Analytics</title>
     <link rel="stylesheet" href="styles.css?v=analytics-20260731" />
     <link rel="stylesheet" href="mobile-filters.css" />
-    <link rel="stylesheet" href="analytics.css?v=location-followup-20260804" />
+    <link rel="stylesheet" href="analytics.css?v=overall-sales-filter-20260813" />
     <link rel="stylesheet" href="owner-suite.css?v=owner-suite-20260811" />
-    <link rel="stylesheet" href="channel-insights.css?v=channel-growth-20260813" />
+    <link rel="stylesheet" href="channel-insights.css?v=overall-sales-filter-20260813" />
   </head>
   <body class="owner-suite analytics-page">
     <section id="loginScreen" class="login-screen hidden">
@@ -46,7 +46,7 @@
 
       <section class="analytics-filter-card" aria-label="Product analytics filters">
         <label class="analytics-search">Search<input id="analyticsSearch" placeholder="Article, location, invoice or PO" /></label>
-        <label>Invoice date<select id="analyticsDateRange"><option value="">All dates</option><option value="current">Current month</option><option value="last">Last month</option><option value="custom">Custom dates</option></select></label>
+        <label>Sales date<select id="analyticsDateRange"><option value="">All dates</option><option value="current">Current month</option><option value="last">Last month</option><option value="custom">Custom dates</option></select></label>
         <label>Location<select id="analyticsLocation"><option value="">All locations</option></select></label>
         <label>Article<select id="analyticsArticle"><option value="">All articles</option></select></label>
         <button id="clearAnalyticsFilters" class="text-btn" type="button">Clear</button>
@@ -71,17 +71,16 @@
       <section id="channelPerformance" class="channel-insights-card report-anchor" aria-label="Store and E-commerce performance">
         <div class="channel-insights-head">
           <div><span class="eyebrow">BUSINESS CHANNELS</span><h2>Store vs E-commerce performance</h2><p>DMart and Reliance are classified as Store. Blinkit, Zepto, BigBasket and Swiggy are classified as E-commerce. This view uses PO and invoice values from the main tracker.</p></div>
-          <label class="channel-period-control">Comparison period<select id="channelAnalyticsPeriod"><option value="30">Latest 30 days</option><option value="60">Latest 60 days</option><option value="90">Latest 90 days</option><option value="0">All history</option></select></label>
+          <span id="channelGrowthPeriod" class="result-chip">Date filter comparison</span>
         </div>
         <div class="channel-comparison">
           <article id="storeChannelBand" class="channel-band"></article>
           <article id="ecomChannelBand" class="channel-band ecommerce"></article>
         </div>
         <div class="channel-subsection channel-growth-section">
-          <div class="channel-subsection-head"><div><h3>Overall sales growth</h3><span>Compares the selected period with the immediately preceding equal period.</span></div><div class="channel-trend-legend" aria-label="Sales channel legend"><span><i class="store"></i>Store</span><span><i class="ecommerce"></i>E-commerce</span></div></div>
+          <div class="channel-subsection-head"><div><h3>Overall sales growth</h3><span>Compares the main date-filter period with the immediately preceding period.</span></div></div>
           <div id="channelGrowthSummary" class="channel-growth-summary"></div>
-          <div id="channelSalesTrend" class="channel-sales-trend" role="img" aria-label="Store and E-commerce sales trend"></div>
-          <p class="channel-chart-note">Invoiced orders use invoice amount and invoice date. Where invoice data is not yet available, the chart uses PO value and PO date. Cancelled POs are excluded.</p>
+          <p class="channel-chart-note">Invoiced orders use invoice amount and invoice date. Where invoice data is not yet available, the calculation uses PO value and PO date. Cancelled POs are excluded.</p>
         </div>
         <div class="channel-subsection">
           <div class="channel-subsection-head"><h3>Customer performance scorecard</h3><span id="channelCustomerCount">0 customers</span></div>
@@ -115,7 +114,7 @@
           <div id="articleRanking" class="ranking-list"></div>
         </article>
         <article class="analytics-card">
-          <div class="analytics-section-head"><div><span class="eyebrow">DMART PRODUCT TREND</span><h2>DMart monthly movement</h2><p>Taxable sales value from DMart invoice-line data only. Overall Store and E-commerce growth is shown above.</p></div></div>
+          <div class="analytics-section-head"><div><span class="eyebrow">OVERALL SALES TREND</span><h2>Overall monthly sales</h2><p>All tracked customers, split between Store and E-commerce. This chart follows the main date filter.</p></div><div class="channel-trend-legend" aria-label="Sales channel legend"><span><i class="store"></i>Store</span><span><i class="ecommerce"></i>E-commerce</span></div></div>
           <div id="monthlyTrend" class="trend-chart"></div>
         </article>
       </section>
@@ -173,6 +172,6 @@
     </main>
 
     <div id="toast" class="toast" role="status"></div>
-    <script src="config.js"></script><script src="channel-insights.js?v=channel-growth-20260813"></script><script src="analytics.js?v=channel-growth-20260813"></script>
+    <script src="config.js"></script><script src="channel-insights.js?v=overall-sales-filter-20260813"></script><script src="analytics.js?v=overall-sales-filter-20260813"></script>
   </body>
 </html>
