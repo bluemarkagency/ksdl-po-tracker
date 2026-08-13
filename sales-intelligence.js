@@ -478,7 +478,7 @@
 
   function intelligenceBandMarkup(channel, primaryLabel, primaryValue, primaryHelp, secondaryLabel, secondaryValue, metrics) {
     return `
-      <header><div><h3>${safe(channel)}</h3><p>${channel === 'Store' ? 'DMart location decisions' : 'Blinkit, Zepto, BigBasket and other accounts'}</p></div><span class="channel-growth ${metrics.attention ? 'down' : ''}">${safe(metrics.headline)}</span></header>
+      <header><div><h3>${safe(channel)}</h3><p>${channel === 'Store' ? 'DMart and Reliance account decisions' : 'Blinkit, Zepto, BigBasket and other accounts'}</p></div><span class="channel-growth ${metrics.attention ? 'down' : ''}">${safe(metrics.headline)}</span></header>
       <div class="channel-band-primary">
         <div><span>${safe(primaryLabel)}</span><strong>${safe(primaryValue)}</strong><small>${safe(primaryHelp)}</small></div>
         <div><span>${safe(secondaryLabel)}</span><strong>${safe(secondaryValue)}</strong><small>${safe(metrics.secondaryHelp)}</small></div>

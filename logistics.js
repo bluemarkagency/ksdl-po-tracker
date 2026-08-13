@@ -27,10 +27,11 @@ const canonicalCustomer = value => {
   if (/blinkit|hands\s*on/i.test(name)) return 'Blinkit';
   if (/zepto|kiranakart/i.test(name)) return 'Zepto';
   if (/big\s*basket|innovative\s+retail/i.test(name)) return 'BigBasket';
+  if (/reliance|\bRRL\b/i.test(name)) return 'Reliance';
   if (/^dmart$/i.test(name)) return 'DMart';
   return name || 'Unknown';
 };
-const usesEmailGrn = customer => ['Blinkit', 'Zepto', 'BigBasket'].includes(canonicalCustomer(customer));
+const usesEmailGrn = customer => ['Blinkit', 'Zepto', 'BigBasket', 'Reliance'].includes(canonicalCustomer(customer));
 
 function validateConfig() {
   if (!BASE_URL || !PUBLIC_KEY) throw new Error('Supabase configuration is missing.');
@@ -150,17 +151,17 @@ function linkedPoIds() { return new Set(trips.flatMap(trip => trip.pos.map(link 
 function customerMatches(value) { return state.customer === 'All' || value === state.customer; }
 function allAvailableOrders() { const linked = linkedPoIds(); return orders.filter(order => !BLOCKED_PO_STATUSES.has(order.status) && !linked.has(order.id)); }
 function availableOrders() { return allAvailableOrders().filter(order => customerMatches(order.customer)); }
-function customerLogo(customer) { return `<span class="customer-logo ${customer === 'Blinkit' ? 'blinkit-logo' : customer === 'Zepto' ? 'zepto-logo' : customer === 'BigBasket' ? 'bigbasket-logo' : customer === 'DMart' ? 'dmart-logo' : 'all-logo'}">${safe(customer[0] || '?')}</span>`; }
+function customerLogo(customer) { return `<span class="customer-logo ${customer === 'Blinkit' ? 'blinkit-logo' : customer === 'Zepto' ? 'zepto-logo' : customer === 'BigBasket' ? 'bigbasket-logo' : customer === 'Reliance' ? 'reliance-logo' : customer === 'DMart' ? 'dmart-logo' : 'all-logo'}">${safe(customer[0] || '?')}</span>`; }
 function renderCustomerSwitcher() {
-  const extra = [...new Set(orders.map(order => order.customer).filter(name => !['DMart', 'Blinkit', 'Zepto', 'BigBasket'].includes(name)))];
-  const names = ['All', 'DMart', 'Blinkit', 'Zepto', 'BigBasket', ...extra];
+  const extra = [...new Set(orders.map(order => order.customer).filter(name => !['DMart', 'Reliance', 'Blinkit', 'Zepto', 'BigBasket'].includes(name)))];
+  const names = ['All', 'DMart', 'Reliance', 'Blinkit', 'Zepto', 'BigBasket', ...extra];
   const available = allAvailableOrders();
   $('customerSwitcher').innerHTML = names.map(name => { const count = name === 'All' ? available.length : available.filter(order => order.customer === name).length; return `<button class="customer-chip ${state.customer === name ? 'active' : ''} ${count === 0 ? 'live-customer-empty' : ''}" type="button" data-customer="${safe(name)}">${name === 'All' ? '<span class="customer-logo all-logo">A</span>' : customerLogo(name)}<span>${name === 'All' ? 'All customers' : safe(name)}</span><strong>${count}</strong></button>`; }).join('');
   document.querySelectorAll('[data-customer]').forEach(button => button.addEventListener('click', () => { state.customer = button.dataset.customer; state.selected.clear(); renderAll(); }));
 }
 function appointmentMarkup(order) {
   if (!order.appointmentDate) return '<div class="appointment-block awaiting"><strong>Awaiting appointment</strong><span>Follow up required</span></div>';
-  const source = order.customer === 'Blinkit' ? 'Partners Biz confirmation' : order.customer === 'Zepto' ? 'Zepto schedule confirmation' : order.customer === 'BigBasket' ? 'BigBasket confirmation' : 'Confirmed appointment';
+  const source = order.customer === 'Blinkit' ? 'Partners Biz confirmation' : order.customer === 'Zepto' ? 'Zepto schedule confirmation' : order.customer === 'BigBasket' ? 'BigBasket confirmation' : order.customer === 'Reliance' ? 'Reliance DAS confirmation' : 'Confirmed appointment';
   return `<div class="appointment-block"><strong>${dateText(order.appointmentDate)}</strong><span>${source}</span></div>`;
 }
 function scheduleMatches(order, period) {
@@ -402,7 +403,7 @@ function openCompleteTrip(id) {
   const trip = trips.find(item => item.id === id); if (!trip) return; if (trip.status === 'Awaiting GRN' && !tripNeedsCorrection(trip)) return toast('This trip is waiting for the customer GRN email.');
   state.completeTripId = id; $('completeError').textContent = ''; const correctionLinks = trip.pos.filter(link => link.deliveryStatus === 'Needs Correction'); const links = correctionLinks.length ? correctionLinks : trip.pos; const hasEmailGrn = links.some(link => usesEmailGrn(link.customer)); const hasSlipCustomer = links.some(link => !usesEmailGrn(link.customer)); $('completeSummary').textContent = `${links.length} PO${links.length === 1 ? '' : 's'} · ${trip.vehicle}`; $('finalTripCost').value = trip.actualFreight || trip.quotedCost || ''; const evenCost = (trip.actualFreight || trip.quotedCost || 0) / Math.max(1, links.length);
   $('completePoList').innerHTML = links.map(link => { const emailGrn = usesEmailGrn(link.customer); return `<article class="uat-complete-po" data-complete-po="${link.purchaseOrderId}" data-customer="${safe(link.customer)}"><div class="uat-po-plan-head"><div><strong>PO ${safe(link.po)} · ${safe(link.customer)}</strong><span>${safe(link.location)} · ${link.invoice ? `Invoice ${safe(link.invoice)}` : 'Invoice pending'}</span></div><span>${emailGrn ? 'Email GRN-controlled' : 'Delivery slip required'}</span></div><div class="uat-complete-fields"><label>Final PO cost (₹)<input data-complete-cost type="number" min="0" step="0.01" value="${Number(link.allocatedCost || evenCost || 0) || ''}" /></label>${emailGrn ? `<div class="uat-blinkit-rule">No delivery slip. ${safe(link.customer)} will move to Awaiting GRN.</div>` : '<label>Delivery slip*<input data-complete-note type="file" accept="application/pdf,image/jpeg,image/png" required /></label>'}</div></article>`; }).join('');
-  $('completionRule').innerHTML = hasEmailGrn && hasSlipCustomer ? '<strong>Mixed trip:</strong> DMart POs will be delivered after the signed slip is saved; email-GRN POs will wait for customer confirmation.' : hasEmailGrn ? '<strong>Email GRN customers:</strong> enter the final costs. Delivery is confirmed automatically from the customer GRN email.' : '<strong>DMart:</strong> upload a signed delivery slip and final cost for each PO.'; $('completeDialog').showModal();
+  $('completionRule').innerHTML = hasEmailGrn && hasSlipCustomer ? '<strong>Mixed trip:</strong> slip-controlled POs will be delivered after the signed slip is saved; email-GRN POs will wait for customer confirmation.' : hasEmailGrn ? '<strong>Email GRN customers:</strong> enter the final costs. Delivery is confirmed automatically from the customer GRN email.' : '<strong>Delivery slip required:</strong> upload a signed delivery slip and final cost for each PO.'; $('completeDialog').showModal();
   updateCompletionTotal();
 }
 function updateCompletionTotal() { $('finalTripCost').value = [...document.querySelectorAll('[data-complete-cost]')].reduce((sum, input) => sum + Number(input.value || 0), 0).toFixed(2); }
@@ -410,7 +411,7 @@ async function completeTrip(event) {
   event.preventDefault(); const trip = trips.find(item => item.id === state.completeTripId); if (!trip) return; $('completeError').textContent = '';
   const cards = [...document.querySelectorAll('[data-complete-po]')];
   try {
-    setDialogBusy('completeForm', true); const deliveries = await Promise.all(cards.map(async card => { const poId = card.dataset.completePo; const emailGrn = usesEmailGrn(card.dataset.customer); const file = card.querySelector('[data-complete-note]')?.files?.[0]; if (!emailGrn && !file) throw new Error('Upload every required DMart delivery slip.'); return { purchase_order_id: poId, note_path: emailGrn ? null : await uploadFile('trip-delivery-slips', trip.id, poId, file), final_cost: Number(card.querySelector('[data-complete-cost]').value || 0) }; }));
+    setDialogBusy('completeForm', true); const deliveries = await Promise.all(cards.map(async card => { const poId = card.dataset.completePo; const emailGrn = usesEmailGrn(card.dataset.customer); const file = card.querySelector('[data-complete-note]')?.files?.[0]; if (!emailGrn && !file) throw new Error('Upload every required signed delivery slip.'); return { purchase_order_id: poId, note_path: emailGrn ? null : await uploadFile('trip-delivery-slips', trip.id, poId, file), final_cost: Number(card.querySelector('[data-complete-cost]').value || 0) }; }));
     await api('/rest/v1/rpc/complete_delivery_trip', { method: 'POST', headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify({ trip: trip.id, deliveries }) }); $('completeDialog').close(); toast(cards.some(card => usesEmailGrn(card.dataset.customer)) ? 'Transport cost saved. Email-GRN POs are awaiting customer confirmation.' : 'Delivery completed and owner tracker updated.'); await loadData();
   } catch (error) { $('completeError').textContent = error.message; } finally { setDialogBusy('completeForm', false); }
 }

@@ -22,11 +22,12 @@
     if (/\b(blinkit|hands on trades?)\b/.test(normalized)) return 'Blinkit';
     if (/\bzepto\b/.test(normalized)) return 'Zepto';
     if (/\b(big ?basket|innovative retail)\b/.test(normalized)) return 'BigBasket';
+    if (/\b(reliance|rrl|reliance retail)\b/.test(normalized)) return 'Reliance';
     return source || 'Customer pending';
   }
 
   function channelName(customer) {
-    return customerName(customer) === 'DMart' ? 'Store' : 'E-commerce';
+    return ['DMart', 'Reliance'].includes(customerName(customer)) ? 'Store' : 'E-commerce';
   }
 
   function dateValue(value) {

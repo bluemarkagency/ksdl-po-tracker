@@ -808,7 +808,7 @@
 
   function channelBandMarkup(channel, metrics, customers, days) {
     const isStore = channel === 'Store';
-    const accountText = isStore ? 'DMart store deliveries' : `${customers.length} E-commerce customer${customers.length === 1 ? '' : 's'}`;
+    const accountText = isStore ? `${customers.length} Store customer${customers.length === 1 ? '' : 's'}` : `${customers.length} E-commerce customer${customers.length === 1 ? '' : 's'}`;
     const completion = metrics.averageCompletionDays == null ? '—' : `${metrics.averageCompletionDays.toFixed(1)} days`;
     const appointment = metrics.appointmentRate == null ? 'Needs data' : `${metrics.appointmentRate.toFixed(0)}%`;
     return `
@@ -851,7 +851,7 @@
     const actions = [];
     const totalValue = store.value + ecom.value;
     const ecomShare = totalValue ? ecom.value / totalValue * 100 : 0;
-    actions.push(channelActionCard('Channel mix', 'Keep channel decisions separate', `E-commerce contributes ${ecomShare.toFixed(0)}% of tracked business value in this period. Compare its customer cadence and appointments separately from DMart store-level CBS movement.`));
+    actions.push(channelActionCard('Channel mix', 'Keep channel decisions separate', `E-commerce contributes ${ecomShare.toFixed(0)}% of tracked business value in this period. Compare account cadence and appointments separately from the DMart-only CBS movement detail.`));
 
     const executionCandidates = [
       { name: 'Store', ...store },
