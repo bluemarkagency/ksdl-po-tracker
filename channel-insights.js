@@ -23,6 +23,7 @@
     if (/\bzepto\b/.test(normalized)) return 'Zepto';
     if (/\b(big ?basket|innovative retail)\b/.test(normalized)) return 'BigBasket';
     if (/\b(reliance|rrl|reliance retail)\b/.test(normalized)) return 'Reliance';
+    if (/\b(swiggy|scootsy|swiggy instamart)\b/.test(normalized)) return 'Swiggy';
     return source || 'Customer pending';
   }
 

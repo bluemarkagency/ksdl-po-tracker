@@ -28,10 +28,11 @@ const canonicalCustomer = value => {
   if (/zepto|kiranakart/i.test(name)) return 'Zepto';
   if (/big\s*basket|innovative\s+retail/i.test(name)) return 'BigBasket';
   if (/reliance|\bRRL\b/i.test(name)) return 'Reliance';
+  if (/swiggy|scootsy/i.test(name)) return 'Swiggy';
   if (/^dmart$/i.test(name)) return 'DMart';
   return name || 'Unknown';
 };
-const usesEmailGrn = customer => ['Blinkit', 'Zepto', 'BigBasket', 'Reliance'].includes(canonicalCustomer(customer));
+const usesEmailGrn = customer => ['Blinkit', 'Zepto', 'BigBasket', 'Reliance', 'Swiggy'].includes(canonicalCustomer(customer));
 
 function validateConfig() {
   if (!BASE_URL || !PUBLIC_KEY) throw new Error('Supabase configuration is missing.');
@@ -151,17 +152,17 @@ function linkedPoIds() { return new Set(trips.flatMap(trip => trip.pos.map(link 
 function customerMatches(value) { return state.customer === 'All' || value === state.customer; }
 function allAvailableOrders() { const linked = linkedPoIds(); return orders.filter(order => !BLOCKED_PO_STATUSES.has(order.status) && !linked.has(order.id)); }
 function availableOrders() { return allAvailableOrders().filter(order => customerMatches(order.customer)); }
-function customerLogo(customer) { return `<span class="customer-logo ${customer === 'Blinkit' ? 'blinkit-logo' : customer === 'Zepto' ? 'zepto-logo' : customer === 'BigBasket' ? 'bigbasket-logo' : customer === 'Reliance' ? 'reliance-logo' : customer === 'DMart' ? 'dmart-logo' : 'all-logo'}">${safe(customer[0] || '?')}</span>`; }
+function customerLogo(customer) { return `<span class="customer-logo ${customer === 'Blinkit' ? 'blinkit-logo' : customer === 'Zepto' ? 'zepto-logo' : customer === 'BigBasket' ? 'bigbasket-logo' : customer === 'Reliance' ? 'reliance-logo' : customer === 'Swiggy' ? 'swiggy-logo' : customer === 'DMart' ? 'dmart-logo' : 'all-logo'}">${safe(customer[0] || '?')}</span>`; }
 function renderCustomerSwitcher() {
-  const extra = [...new Set(orders.map(order => order.customer).filter(name => !['DMart', 'Reliance', 'Blinkit', 'Zepto', 'BigBasket'].includes(name)))];
-  const names = ['All', 'DMart', 'Reliance', 'Blinkit', 'Zepto', 'BigBasket', ...extra];
+  const extra = [...new Set(orders.map(order => order.customer).filter(name => !['DMart', 'Reliance', 'Blinkit', 'Zepto', 'BigBasket', 'Swiggy'].includes(name)))];
+  const names = ['All', 'DMart', 'Reliance', 'Blinkit', 'Zepto', 'BigBasket', 'Swiggy', ...extra];
   const available = allAvailableOrders();
   $('customerSwitcher').innerHTML = names.map(name => { const count = name === 'All' ? available.length : available.filter(order => order.customer === name).length; return `<button class="customer-chip ${state.customer === name ? 'active' : ''} ${count === 0 ? 'live-customer-empty' : ''}" type="button" data-customer="${safe(name)}">${name === 'All' ? '<span class="customer-logo all-logo">A</span>' : customerLogo(name)}<span>${name === 'All' ? 'All customers' : safe(name)}</span><strong>${count}</strong></button>`; }).join('');
   document.querySelectorAll('[data-customer]').forEach(button => button.addEventListener('click', () => { state.customer = button.dataset.customer; state.selected.clear(); renderAll(); }));
 }
 function appointmentMarkup(order) {
   if (!order.appointmentDate) return '<div class="appointment-block awaiting"><strong>Awaiting appointment</strong><span>Follow up required</span></div>';
-  const source = order.customer === 'Blinkit' ? 'Partners Biz confirmation' : order.customer === 'Zepto' ? 'Zepto schedule confirmation' : order.customer === 'BigBasket' ? 'BigBasket confirmation' : order.customer === 'Reliance' ? 'Reliance DAS confirmation' : 'Confirmed appointment';
+  const source = order.customer === 'Blinkit' ? 'Partners Biz confirmation' : order.customer === 'Zepto' ? 'Zepto schedule confirmation' : order.customer === 'BigBasket' ? 'BigBasket confirmation' : order.customer === 'Reliance' ? 'Reliance DAS confirmation' : order.customer === 'Swiggy' ? 'Scootsy vendor portal confirmation' : 'Confirmed appointment';
   return `<div class="appointment-block"><strong>${dateText(order.appointmentDate)}</strong><span>${source}</span></div>`;
 }
 function scheduleMatches(order, period) {

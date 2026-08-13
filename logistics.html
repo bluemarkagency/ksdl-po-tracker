@@ -38,7 +38,7 @@
         <article><span>Available POs</span><strong id="availableKpi">0</strong><small>Ready for dispatch</small></article>
         <article class="confirmed"><span>Today’s appointments</span><strong id="todayKpi">0</strong><small id="todayLabel">—</small></article>
         <article><span>Active trips</span><strong id="activeTripKpi">0</strong><small>In transit or awaiting GRN</small></article>
-        <article class="attention"><span>Awaiting GRN</span><strong id="awaitingGrnKpi">0</strong><small>Blinkit / Zepto receipt pending</small></article>
+        <article class="attention"><span>Awaiting GRN</span><strong id="awaitingGrnKpi">0</strong><small>Customer email receipt pending</small></article>
       </section>
 
       <section class="schedule-board" aria-labelledby="scheduleTitle">
@@ -82,7 +82,7 @@
       <form id="manualPoForm">
         <div class="dialog-head"><div><span class="section-label">MANUAL PURCHASE ORDER</span><h2>Create a new PO</h2><p>Use this for a PO received by WhatsApp, printed copy or directly from a store.</p></div><button id="closeManualPoDialog" class="icon-button" type="button" aria-label="Close">×</button></div>
         <div class="edit-po-grid">
-          <label>Customer name*<input id="manualPoCustomer" list="manualPoCustomerOptions" required autocomplete="organization" placeholder="DMart, Reliance, Blinkit, Zepto or BigBasket" /><datalist id="manualPoCustomerOptions"><option value="DMart"></option><option value="Reliance"></option><option value="Blinkit"></option><option value="Zepto"></option><option value="BigBasket"></option></datalist></label>
+          <label>Customer name*<input id="manualPoCustomer" list="manualPoCustomerOptions" required autocomplete="organization" placeholder="DMart, Reliance, Blinkit, Zepto, BigBasket or Swiggy" /><datalist id="manualPoCustomerOptions"><option value="DMart"></option><option value="Reliance"></option><option value="Blinkit"></option><option value="Zepto"></option><option value="BigBasket"></option><option value="Swiggy"></option></datalist></label>
           <label>PO number*<input id="manualPoNumber" required autocomplete="off" placeholder="Enter customer PO number" /></label>
           <label>PO date*<input id="manualPoDate" type="date" required /></label>
           <label>PO received date*<input id="manualPoReceivedDate" type="date" required /></label>

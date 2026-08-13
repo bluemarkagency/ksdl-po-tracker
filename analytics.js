@@ -878,7 +878,7 @@
     const ecomLeader = ecomCustomers[0];
     if (ecomLeader && ecom.value > 0) {
       const share = ecomLeader.value / ecom.value * 100;
-      actions.push(channelActionCard('Account concentration', share >= 60 ? 'Reduce E-commerce concentration risk' : 'Protect the leading E-commerce account', `${ecomLeader.customer} contributes ${share.toFixed(0)}% of E-commerce value. ${share >= 60 ? 'Build Blinkit, Zepto and BigBasket more evenly.' : 'Preserve service while developing the remaining accounts.'}`));
+      actions.push(channelActionCard('Account concentration', share >= 60 ? 'Reduce E-commerce concentration risk' : 'Protect the leading E-commerce account', `${ecomLeader.customer} contributes ${share.toFixed(0)}% of E-commerce value. ${share >= 60 ? 'Build Blinkit, Zepto, BigBasket and Swiggy more evenly.' : 'Preserve service while developing the remaining accounts.'}`));
     }
     $('channelAnalyticsActions').innerHTML = actions.slice(0, 4).join('');
   }
