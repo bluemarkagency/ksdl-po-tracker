@@ -7,7 +7,7 @@
     <title>Blue Mark Agency · Dispatch &amp; Invoice Review</title>
     <link rel="stylesheet" href="logistics-base.css" />
     <link rel="stylesheet" href="logistics-live.css" />
-    <link rel="stylesheet" href="logistics.css" />
+    <link rel="stylesheet" href="logistics.css?v=revised-po-upload-20260813" />
   </head>
   <body>
     <section id="loginView" class="live-login hidden">
@@ -136,10 +136,12 @@
           <label>Delivery location*<input id="editPoLocation" required /></label>
           <label>PO value (₹)<input id="editPoValue" type="number" min="0" step="0.01" inputmode="decimal" /></label>
           <label>Status*<select id="editPoStatus" required><option value="Received">Received</option><option value="Scheduled">Scheduled</option><option value="In Transit">In Transit</option><option value="Delivered">Delivered</option><option value="Partially Delivered">Partially Delivered</option><option value="Cancelled">Cancelled</option></select></label>
+          <label class="wide-field revised-po-field">Upload revised PO copy<input id="editPoFile" type="file" accept="application/pdf,image/jpeg,image/png" /><small>Optional. Select a PDF, JPG or PNG only when the customer sends a revised PO. Maximum 10 MB.</small></label>
+          <div id="editPoCurrentCopy" class="wide-field edit-po-current-copy hidden"></div>
           <label class="wide-field">Remarks<textarea id="editPoRemarks" rows="3" placeholder="Optional operational note"></textarea></label>
         </div>
         <p id="editPoError" class="live-error" aria-live="polite"></p>
-        <div class="dialog-actions"><button id="cancelEditPoButton" type="button">Cancel</button><button id="saveEditPoButton" class="primary-button" type="submit">Save PO changes</button></div>
+        <div class="dialog-actions edit-po-actions"><button id="deleteEditPoButton" class="danger-button permanent-delete-button hidden" type="button">Delete permanently</button><button id="cancelEditPoButton" type="button">Cancel</button><button id="saveEditPoButton" class="primary-button" type="submit">Save PO changes</button></div>
       </form>
     </dialog>
 
@@ -192,6 +194,6 @@
     <div id="toast" class="toast" role="status"></div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="config.js"></script>
-    <script src="logistics.js"></script>
+    <script src="logistics.js?v=revised-po-upload-20260813"></script>
   </body>
 </html>

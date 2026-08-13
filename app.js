@@ -122,7 +122,11 @@ function initialise() {
     record.poValue = Number(record.poValue || 0);
     record.transportAmount = Number(record.transportAmount || 0);
     const note = form.get('deliveryNote');
+    const poCopy = form.get('poAttachment');
     try {
+      if (poCopy && poCopy.size) {
+        if (!['application/pdf', 'image/jpeg', 'image/png'].includes(poCopy.type) && !/\.(pdf|jpe?g|png)$/i.test(poCopy.name)) throw new Error('PO copy must be a PDF, JPG or PNG file.');
+      }
       if (note && note.size) {
         record.deliveryNoteUrl = await uploadDeliveryNote(record.id, note);
         record.deliveryNoteLink = await signedDeliveryNoteUrl_(record.deliveryNoteUrl);
@@ -135,7 +139,7 @@ function initialise() {
       await persist(record, false, isNew);
       $('poDialog').close();
       render();
-      toast(note && note.size ? 'Delivery note uploaded — PO marked Delivered' : 'PO saved');
+      toast(note && note.size ? 'Delivery note uploaded — PO marked Delivered' : poCopy && poCopy.size ? 'PO saved with the revised copy' : 'PO saved');
     } catch (error) {
       toast(error.message || 'Could not save PO');
     }

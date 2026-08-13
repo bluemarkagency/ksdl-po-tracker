@@ -191,6 +191,7 @@ function filteredAvailableOrders() {
   return availableOrders().filter(order => { const text = [order.po, order.customer, order.location, order.invoice].join(' ').toLowerCase(); return (!query || text.includes(query)) && (!confirmedOnly || order.appointmentDate); });
 }
 function canPrepareInvoice() { return currentRole === 'owner' || currentRole === 'executive'; }
+function canPermanentlyDeletePo() { return ['owner', 'accountant', 'executive', 'sales_representative', 'staff'].includes(currentRole); }
 function renderOpenOrders() {
   const visible = filteredAvailableOrders(); const ids = new Set(visible.map(order => order.id)); [...state.selected].forEach(id => { if (!ids.has(id)) state.selected.delete(id); });
   $('poTableBody').innerHTML = visible.map(order => {
@@ -237,15 +238,34 @@ function openEditPo(id) {
   const order = orders.find(item => item.id === id); if (!order) return;
   $('editPoForm').reset(); $('editPoError').textContent = ''; $('editPoId').value = order.id; $('editPoTitle').textContent = `Edit PO ${order.po}`;
   $('editPoCustomer').value = order.customerRaw || order.customer; $('editPoNumber').value = order.po; $('editPoDate').value = order.poDate || ''; $('editPoReceivedDate').value = order.receivedDate || order.poDate || ''; $('editPoAppointment').value = order.appointmentDate || ''; $('editPoLocation').value = order.location === 'Location pending' ? '' : order.location; $('editPoValue').value = order.value || ''; $('editPoStatus').value = order.status || ''; $('editPoRemarks').value = order.remarks || '';
+  $('editPoCurrentCopy').classList.toggle('hidden', !order.poPath);
+  $('editPoCurrentCopy').innerHTML = order.poPath ? `<span>Current PO copy will remain unless you upload a revised copy.</span>${docButton(order.poPath, 'View current PO')}` : '<span>No PO copy is currently attached.</span>';
+  $('deleteEditPoButton').classList.toggle('hidden', !canPermanentlyDeletePo());
   $('editPoDialog').showModal();
 }
 async function saveEditedPo(event) {
   event.preventDefault(); const order = orders.find(item => item.id === $('editPoId').value); if (!order) return;
   $('editPoError').textContent = ''; setDialogBusy('editPoForm', true);
   try {
-    await api('/rest/v1/rpc/update_open_purchase_order', { method: 'POST', headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify({ target_po_id: order.id, new_customer_name: $('editPoCustomer').value.trim(), new_po_number: order.po, new_po_date: $('editPoDate').value, new_po_received_date: $('editPoReceivedDate').value, new_appointment_date: $('editPoAppointment').value || null, new_delivery_location: $('editPoLocation').value.trim(), new_po_value: Number($('editPoValue').value || 0), new_assigned_to: order.assignedTo || null, new_remarks: $('editPoRemarks').value.trim() || null, new_po_attachment_url: null }) });
+    const revisedPo = $('editPoFile').files?.[0];
+    if (revisedPo && !['application/pdf', 'image/jpeg', 'image/png'].includes(revisedPo.type) && !/\.(pdf|jpe?g|png)$/i.test(revisedPo.name)) throw new Error('Revised PO copy must be a PDF, JPG or PNG file.');
+    const revisedPoPath = revisedPo ? await uploadFile('manual-po-copies', 'revised', order.id, revisedPo) : null;
+    await api('/rest/v1/rpc/update_open_purchase_order', { method: 'POST', headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify({ target_po_id: order.id, new_customer_name: $('editPoCustomer').value.trim(), new_po_number: order.po, new_po_date: $('editPoDate').value, new_po_received_date: $('editPoReceivedDate').value, new_appointment_date: $('editPoAppointment').value || null, new_delivery_location: $('editPoLocation').value.trim(), new_po_value: Number($('editPoValue').value || 0), new_assigned_to: order.assignedTo || null, new_remarks: $('editPoRemarks').value.trim() || null, new_po_attachment_url: revisedPoPath }) });
     if ($('editPoStatus').value !== order.status) await api('/rest/v1/rpc/update_open_purchase_order_status', { method: 'POST', headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify({ target_po_id: order.id, new_status: $('editPoStatus').value }) });
-    $('editPoDialog').close(); toast(`PO ${order.po} updated.`); await loadData();
+    $('editPoDialog').close(); toast(revisedPo ? `PO ${order.po} updated with the revised copy.` : `PO ${order.po} updated.`); await loadData();
+  } catch (error) { $('editPoError').textContent = error.message; } finally { setDialogBusy('editPoForm', false); }
+}
+async function permanentlyDeleteEditedPo() {
+  const order = orders.find(item => item.id === $('editPoId').value); if (!order) return;
+  if (!canPermanentlyDeletePo()) { $('editPoError').textContent = 'Only an authorised owner, accountant or sales representative can permanently delete a PO.'; return; }
+  const replacement = prompt(`PO ${order.po} will disappear from the active tracker and will be blocked from automatic re-import. Enter the replacement PO number, if any:`, '');
+  if (replacement === null) return;
+  const replacementPo = replacement.trim();
+  if (!confirm(`Permanently delete PO ${order.po}${replacementPo ? ` and record ${replacementPo} as its replacement` : ''}? This cannot be undone from the app.`)) return;
+  $('editPoError').textContent = ''; setDialogBusy('editPoForm', true);
+  try {
+    await api('/rest/v1/rpc/permanently_remove_po', { method: 'POST', headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify({ po_id: order.id, reason: 'Cancelled, superseded or entered incorrectly', replacement_po: replacementPo || null }) });
+    state.selected.delete(order.id); $('editPoDialog').close(); toast(`PO ${order.po} permanently removed and blocked from re-import.`); await loadData();
   } catch (error) { $('editPoError').textContent = error.message; } finally { setDialogBusy('editPoForm', false); }
 }
 
@@ -437,7 +457,7 @@ $('completeForm').addEventListener('submit', completeTrip); $('closeCompleteDial
 $('completePoList').addEventListener('input', event => { if (event.target.matches('[data-complete-cost]')) updateCompletionTotal(); });
 $('openManualPoButton').addEventListener('click', openManualPo); $('manualPoForm').addEventListener('submit', saveManualPo); $('closeManualPoDialog').addEventListener('click', () => closeDialog('manualPoDialog')); $('cancelManualPoButton').addEventListener('click', () => closeDialog('manualPoDialog'));
 $('prepareInvoiceForm').addEventListener('submit', savePreparedInvoice); $('prepareInvoiceFile').addEventListener('change', handlePreparedInvoiceFile); $('closePrepareInvoiceDialog').addEventListener('click', () => closeDialog('prepareInvoiceDialog')); $('cancelPrepareInvoiceButton').addEventListener('click', () => closeDialog('prepareInvoiceDialog'));
-$('editPoForm').addEventListener('submit', saveEditedPo); $('closeEditPoDialog').addEventListener('click', () => closeDialog('editPoDialog')); $('cancelEditPoButton').addEventListener('click', () => closeDialog('editPoDialog'));
+$('editPoForm').addEventListener('submit', saveEditedPo); $('deleteEditPoButton').addEventListener('click', permanentlyDeleteEditedPo); $('closeEditPoDialog').addEventListener('click', () => closeDialog('editPoDialog')); $('cancelEditPoButton').addEventListener('click', () => closeDialog('editPoDialog'));
 $('appointmentForm').addEventListener('submit', saveAppointmentDate); $('closeAppointmentDialog').addEventListener('click', () => closeDialog('appointmentDialog')); $('cancelAppointmentButton').addEventListener('click', () => closeDialog('appointmentDialog'));
 $('tripPoList').addEventListener('change', event => { if (event.target.matches('[data-plan-file]')) handleInvoiceFile(event.target); });
 $('refreshButton').addEventListener('click', loadData); $('signOutButton').addEventListener('click', () => { clearInterval(refreshTimer); session = null; sessionStorage.removeItem(SESSION_KEY); location.reload(); });

@@ -98,7 +98,7 @@
         <label>Customer name*<input name="customerName" required placeholder="e.g. DMart" /></label>
         <label>PO number*<input name="poNumber" required placeholder="e.g. DM-45678" /></label>
         <label>Delivery location<input name="deliveryLocation" placeholder="Auto-captured from PO, or enter manually" /></label>
-        <label class="span-2">PO copy <small>Optional: PDF, JPG or PNG received through WhatsApp or from the store. This does not change delivery status.</small><input name="poAttachment" type="file" accept="application/pdf,image/jpeg,image/png" /></label>
+        <label class="span-2">PO copy / revised PO copy <small>Optional: upload the latest PDF, JPG or PNG received through WhatsApp or from the store. When editing, a selected file replaces the PO copy shown in the tracker.</small><input name="poAttachment" type="file" accept="application/pdf,image/jpeg,image/png" /></label>
         <label>PO date*<input name="poDate" type="date" required /></label>
         <label>PO received date*<input name="poReceivedDate" type="date" required /></label>
         <label>Appointment date<input name="deliveryDate" type="date" /></label>
@@ -118,6 +118,6 @@
       <div class="modal-actions"><button type="button" id="deleteBtn" class="danger hidden">Delete permanently</button><span></span><button type="button" id="cancelBtn">Cancel</button><button class="primary">Save PO</button></div>
     </form></dialog>
     <div id="toast" class="toast" role="status"></div>
-    <script src="config.js"></script><script src="app.js?v=modasa-location-20260731"></script>
+    <script src="config.js"></script><script src="app.js?v=revised-po-upload-20260813"></script>
   </body>
 </html>

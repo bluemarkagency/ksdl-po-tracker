@@ -49,6 +49,10 @@ button:disabled { cursor: not-allowed; opacity: .55; }
 .edit-po-grid .wide-field { grid-column: 1 / -1; }
 .edit-po-grid .appointment-field { padding: 9px; border: 1px solid #d8c98a; border-radius: 8px; background: #fffbed; color: #6c501c; }
 .edit-po-grid small { display: block; margin-top: 4px; font-size: 9px; font-weight: 550; }
+.edit-po-grid .revised-po-field { padding: 12px; border: 1px dashed #91b9af; border-radius: 10px; background: #f3faf8; color: var(--green); }
+.edit-po-current-copy { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border-radius: 9px; background: #f4f6f5; color: var(--muted); font-size: 12px; }
+.edit-po-current-copy .doc-link-button { width: auto !important; }
+.edit-po-actions .permanent-delete-button { margin-right: auto; }
 .invoice-read-status { min-height: 18px; margin-top: 7px; color: var(--muted); font-size: 11px; font-weight: 700; }
 [data-invoice-state="matched"] .invoice-read-status { color: #176342; }
 [data-invoice-state="mismatch"] { border-color: #dc9999; background: #fff7f7; }
@@ -96,6 +100,6 @@ button:disabled { cursor: not-allowed; opacity: .55; }
   .dispatch-table .select-cell::before { display: none; }
   .dispatch-table .po-identity-cell { display: block; padding: 0 42px 11px 0; }
   .dispatch-table .po-identity-cell::before { display: none; }
-  .uat-trip-row { grid-template-columns: 1fr 1fr; }.uat-trip-row > div:first-child { grid-column: 1 / -1; }.uat-trip-actions { grid-template-columns: 1fr 1fr; }.uat-po-fields, .uat-complete-fields, .edit-po-grid, .prepare-invoice-grid { grid-template-columns: 1fr; }.edit-po-grid .wide-field, .prepare-invoice-grid .wide-field { grid-column: auto; }.uat-po-plan-head { flex-direction: column; }.trip-po-doc-row { grid-template-columns: 1fr; }.trip-docs { justify-content: flex-start; }.prepared-invoice-existing { align-items: flex-start; flex-direction: column; }.trip-invoice-ready { align-items: flex-start; flex-direction: column; }.trip-invoice-ready .doc-link-button { width: 100% !important; }
+  .uat-trip-row { grid-template-columns: 1fr 1fr; }.uat-trip-row > div:first-child { grid-column: 1 / -1; }.uat-trip-actions { grid-template-columns: 1fr 1fr; }.uat-po-fields, .uat-complete-fields, .edit-po-grid, .prepare-invoice-grid { grid-template-columns: 1fr; }.edit-po-grid .wide-field, .prepare-invoice-grid .wide-field { grid-column: auto; }.edit-po-current-copy { align-items: flex-start; flex-direction: column; }.edit-po-current-copy .doc-link-button { width: 100% !important; }.edit-po-actions { display: grid; grid-template-columns: 1fr 1fr; }.edit-po-actions .permanent-delete-button { grid-column: 1 / -1; width: 100%; margin: 0; }.uat-po-plan-head { flex-direction: column; }.trip-po-doc-row { grid-template-columns: 1fr; }.trip-docs { justify-content: flex-start; }.prepared-invoice-existing { align-items: flex-start; flex-direction: column; }.trip-invoice-ready { align-items: flex-start; flex-direction: column; }.trip-invoice-ready .doc-link-button { width: 100% !important; }
 }
 @media (max-width: 460px) { .uat-kpis { grid-template-columns: 1fr; }.open-list-heading-actions { flex-direction: column; }.open-list-heading-actions button { width: 100%; }.uat-trip-row { grid-template-columns: 1fr; }.uat-trip-row > div:first-child { grid-column: auto; }.uat-trip-actions { grid-template-columns: 1fr 1fr; } }
