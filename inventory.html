@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#124e45" />
+    <title>KSDL Inventory Control</title>
+    <link rel="stylesheet" href="styles.css?v=inventory-20260814" />
+    <link rel="stylesheet" href="mobile-filters.css" />
+    <link rel="stylesheet" href="owner-suite.css?v=owner-suite-20260811" />
+    <link rel="stylesheet" href="inventory.css?v=tally-stock-20260814" />
+  </head>
+  <body class="owner-suite inventory-page">
+    <section id="loginScreen" class="login-screen hidden">
+      <form id="loginForm" class="login-card">
+        <span class="eyebrow">KSDL DISTRIBUTION</span>
+        <h1>Inventory Control</h1>
+        <p>Owner or accountant sign-in is required.</p>
+        <label>Email<input id="emailInput" type="email" autocomplete="username" required autofocus /></label>
+        <label>Password<input id="passwordInput" type="password" autocomplete="current-password" required /></label>
+        <p id="loginError" class="error" aria-live="polite"></p>
+        <button>Sign in</button>
+      </form>
+    </section>
+
+    <main id="app" class="app-shell hidden">
+      <header class="topbar owner-suite-header">
+        <div class="owner-heading">
+          <div class="owner-brand-mark" aria-hidden="true">BM</div>
+          <div><span class="owner-context">Live from TallyPrime · Gujarat</span><h1>Inventory Control</h1><p class="page-intro">Monitor the exact PCS and CBS balances reported by BLUE MARK AGENCY - GUJARAT.</p></div>
+        </div>
+        <div class="top-actions owner-header-actions">
+          <span id="connectionStatus" class="connection-status">Connecting…</span>
+          <span id="signedInAs" class="connection-status"></span>
+          <button id="refreshBtn" type="button">Refresh</button>
+          <button id="signOutBtn" class="text-btn" type="button">Sign out</button>
+        </div>
+      </header>
+
+      <nav class="owner-suite-nav" aria-label="Owner workspace">
+        <a href="index.html">Purchase Orders</a>
+        <a href="logistics.html">Dispatch &amp; Invoices</a>
+        <a href="payments.html">Transport Payments</a>
+        <a href="receivables.html">Receivables</a>
+        <a class="active" href="inventory.html" aria-current="page">Inventory</a>
+        <a href="analytics.html">Sales Analytics</a>
+        <a href="sales-intelligence.html">Sales Intelligence</a>
+      </nav>
+
+      <section id="syncBanner" class="sync-banner waiting" aria-live="polite">
+        <div><strong id="syncHeadline">Waiting for the first Tally sync</strong><span id="syncDetail">Run the Windows connector after completing the secure setup.</span></div>
+        <span id="syncMachine" class="sync-machine">Tally source</span>
+      </section>
+
+      <section class="summary-grid inventory-summary" aria-label="Inventory summary">
+        <article><span>Stock items</span><strong id="stockItemCount">0</strong><small id="stockGroupCount">0 product groups</small></article>
+        <article><span>Closing stock</span><strong id="closingCbs">0 CBS</strong><small id="closingPcs">0 PCS</small></article>
+        <article><span>Stock value</span><strong id="stockValue">₹0</strong><small>Tally closing value</small></article>
+        <article class="attention"><span>Zero / blank stock</span><strong id="zeroStockCount">0</strong><small id="blankStockCount">0 blank balances</small></article>
+        <article><span>7-day net movement</span><strong id="sevenDayMovement">0 CBS</strong><small id="movementCoverage">Waiting for history</small></article>
+      </section>
+
+      <section class="inventory-toolbar" aria-label="Inventory filters">
+        <label class="inventory-search">Search article<input id="inventorySearch" type="search" placeholder="Example: Sandal Soap or Talc" /></label>
+        <label>Product group<select id="groupFilter"><option value="">All groups</option></select></label>
+        <label>Stock status<select id="stockFilter"><option value="">All stock</option><option value="available">Available</option><option value="low">Low stock</option><option value="zero">Zero stock</option><option value="blank">Blank balance</option></select></label>
+        <label>Low-stock level<input id="lowStockLevel" type="number" min="0" step="1" value="5" inputmode="numeric" /><small>CBS or fewer</small></label>
+        <button id="clearFilters" class="text-btn" type="button">Clear</button>
+        <button id="exportInventory" type="button">Export CSV</button>
+      </section>
+
+      <section class="inventory-actions" aria-labelledby="attentionTitle">
+        <div class="inventory-section-head"><div><span class="eyebrow">OWNER ATTENTION</span><h2 id="attentionTitle">Stock actions</h2><p>Calculated privately from your synced Tally balances.</p></div></div>
+        <div id="actionList" class="stock-action-list"></div>
+      </section>
+
+      <section class="inventory-card" aria-labelledby="stockTableTitle">
+        <div class="inventory-section-head table-heading"><div><span class="eyebrow">CURRENT STOCK</span><h2 id="stockTableTitle">Tally stock summary</h2><p id="inventoryResultCount">0 articles</p></div><span class="source-chip">Tally is source of truth</span></div>
+        <div class="table-wrap"><table class="inventory-table"><thead><tr><th>Article</th><th>Product group</th><th>Closing CBS</th><th>Closing PCS</th><th>Tally balance</th><th>Stock value</th><th>Status</th><th>Last synced</th></tr></thead><tbody id="inventoryBody"></tbody></table></div>
+        <div id="inventoryEmpty" class="empty-state hidden"><h3>No stock records found</h3><p>Change the filters, or complete the first Windows Tally sync.</p></div>
+      </section>
+
+      <section class="inventory-card movement-card" aria-labelledby="movementTitle">
+        <div class="inventory-section-head table-heading"><div><span class="eyebrow">STOCK HISTORY</span><h2 id="movementTitle">Seven-day net stock movement</h2><p>Latest closing CBS compared with the earliest available daily snapshot in the last seven days.</p></div><span id="historyPeriod" class="source-chip">Waiting for history</span></div>
+        <div class="table-wrap"><table class="inventory-table movement-table"><thead><tr><th>Article</th><th>Earlier CBS</th><th>Current CBS</th><th>Net change</th><th>Direction</th></tr></thead><tbody id="movementBody"></tbody></table></div>
+        <div id="movementEmpty" class="empty-state hidden"><h3>History will build automatically</h3><p>The connector stores one updated snapshot per article per day without duplicating every 30-minute sync.</p></div>
+      </section>
+
+      <p class="inventory-footnote">PCS and CBS are stored exactly as Tally reports them. CBS is never recalculated from the item denominator.</p>
+    </main>
+
+    <div id="toast" class="toast" role="status"></div>
+    <script src="config.js"></script><script src="inventory.js?v=tally-stock-20260814"></script>
+  </body>
+</html>
