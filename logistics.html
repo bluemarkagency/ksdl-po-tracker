@@ -7,7 +7,7 @@
     <title>Blue Mark Agency · Dispatch &amp; Invoice Review</title>
     <link rel="stylesheet" href="logistics-base.css" />
     <link rel="stylesheet" href="logistics-live.css" />
-    <link rel="stylesheet" href="logistics.css?v=revised-po-upload-20260813" />
+    <link rel="stylesheet" href="logistics.css?v=missing-trip-exception-20260817" />
   </head>
   <body>
     <section id="loginView" class="live-login hidden">
@@ -51,6 +51,11 @@
         </div>
         <div class="agenda-heading"><strong id="agendaTitle">Today’s delivery plan</strong><span id="agendaCount">0 POs</span></div>
         <div id="agendaList" class="agenda-list"></div><div id="agendaEmpty" class="agenda-empty hidden">No available POs in this period.</div>
+      </section>
+
+      <section id="missingTripCard" class="missing-trip-card hidden" aria-labelledby="missingTripTitle">
+        <div class="missing-trip-heading"><div><span class="section-label">ACTION REQUIRED · FROM 18 AUG 2026</span><h2 id="missingTripTitle">GRN received without a dispatch trip</h2><p>The customer has confirmed delivery, but no trip was recorded. Add the transporter and cost so operations and payment records stay complete.</p></div><strong id="missingTripCount">0 actions</strong></div>
+        <div id="missingTripList" class="missing-trip-list"></div>
       </section>
 
       <section class="toolbar compact-toolbar uat-toolbar" aria-label="Available PO filters">
@@ -174,7 +179,7 @@
         <div class="dialog-head"><div><span class="section-label">PLAN DELIVERY</span><h2 id="tripDialogTitle">Create a new trip</h2><p id="tripSummary"></p></div><button id="closeTripDialog" class="icon-button" type="button" aria-label="Close">×</button></div>
         <div class="trip-form-grid"><label>Trip date*<input id="tripDate" type="date" required /></label><label>Transporter<select id="tripTransporter"><option value="">Choose transporter</option></select></label><label>Vehicle number<input id="tripVehicle" placeholder="GJ-01-AB-1234" /></label><label>Driver name<input id="tripDriver" placeholder="Driver name" /></label><label>Driver phone<input id="tripPhone" inputmode="tel" placeholder="+91" /></label><label>Estimated tempo cost (₹)<input id="tripCost" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Optional" /></label></div>
         <div id="tripPoList" class="trip-po-list"></div>
-        <p class="dialog-note">Invoices prepared against Open POs are filled automatically. Staff can view or print them and only need to upload a file when an invoice was not prepared or must be replaced.</p>
+        <p id="tripDialogNote" class="dialog-note">Invoices prepared against Open POs are filled automatically. Staff can view or print them and only need to upload a file when an invoice was not prepared or must be replaced.</p>
         <p id="tripError" class="live-error" aria-live="polite"></p>
         <div class="dialog-actions"><button id="cancelTripButton" type="button">Cancel</button><button id="saveTripButton" class="primary-button" type="submit">Save trip</button></div>
       </form>
@@ -194,6 +199,6 @@
     <div id="toast" class="toast" role="status"></div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="config.js"></script>
-    <script src="logistics.js?v=revised-po-upload-20260813"></script>
+    <script src="logistics.js?v=missing-trip-exception-20260817"></script>
   </body>
 </html>
