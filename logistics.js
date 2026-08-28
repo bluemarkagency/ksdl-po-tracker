@@ -482,7 +482,8 @@ document.body.addEventListener('click', event => { const po = event.target.close
 $('loginForm').addEventListener('submit', async event => {
   event.preventDefault();
   const error = $('loginError');
-  const button = $('loginButton');
+  // Keep login working even while GitHub Pages is briefly serving an older HTML file.
+  const button = $('loginButton') || event.submitter || document.querySelector('#loginForm button[type="submit"]');
   const email = $('email').value.trim();
   const password = $('password').value;
   error.textContent = '';
@@ -496,8 +497,10 @@ $('loginForm').addEventListener('submit', async event => {
     $('email').focus();
     return;
   }
-  button.disabled = true;
-  button.textContent = 'Signing in…';
+  if (button) {
+    button.disabled = true;
+    button.textContent = 'Signing in…';
+  }
   error.textContent = 'Checking your login…';
   try {
     const value = await authRequest('/auth/v1/token?grant_type=password', { email, password });
@@ -506,8 +509,10 @@ $('loginForm').addEventListener('submit', async event => {
   } catch (caught) {
     error.textContent = caught.message || 'Unable to sign in. Please try again.';
   } finally {
-    button.disabled = false;
-    button.textContent = 'Sign in';
+    if (button) {
+      button.disabled = false;
+      button.textContent = 'Sign in';
+    }
   }
 });
 
