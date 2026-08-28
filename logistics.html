@@ -11,7 +11,7 @@
   </head>
   <body>
     <section id="loginView" class="live-login hidden">
-      <form id="loginForm" class="live-login-card">
+      <form id="loginForm" class="live-login-card" novalidate>
         <div class="brand-mark">BM</div>
         <p class="brand-name">Blue Mark Agency</p>
         <h1>Dispatch &amp; Invoice Review</h1>
@@ -19,7 +19,7 @@
         <label>Email<input id="email" type="email" autocomplete="username" required autofocus /></label>
         <label>Password<input id="password" type="password" autocomplete="current-password" required /></label>
         <p id="loginError" class="live-error" aria-live="polite"></p>
-        <button class="primary-button" type="submit">Sign in</button>
+        <button id="loginButton" class="primary-button" type="submit">Sign in</button>
       </form>
     </section>
 

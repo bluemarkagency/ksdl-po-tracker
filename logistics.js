@@ -479,6 +479,36 @@ $('appointmentForm').addEventListener('submit', saveAppointmentDate); $('closeAp
 $('tripPoList').addEventListener('change', event => { if (event.target.matches('[data-plan-file]')) handleInvoiceFile(event.target); });
 $('refreshButton').addEventListener('click', loadData); $('signOutButton').addEventListener('click', () => { clearInterval(refreshTimer); session = null; sessionStorage.removeItem(SESSION_KEY); location.reload(); });
 document.body.addEventListener('click', event => { const po = event.target.closest('[data-view-po]'); if (po) showPo(po.dataset.viewPo); const appointment = event.target.closest('[data-edit-appointment]'); if (appointment) openAppointmentEdit(appointment.dataset.editAppointment); const editPo = event.target.closest('[data-edit-po]'); if (editPo) openEditPo(editPo.dataset.editPo); const prepareInvoice = event.target.closest('[data-prepare-invoice]'); if (prepareInvoice) openPrepareInvoice(prepareInvoice.dataset.prepareInvoice); const missingTrip = event.target.closest('[data-record-missing-trip]'); if (missingTrip) openRecordMissingTrip(missingTrip.dataset.recordMissingTrip); const edit = event.target.closest('[data-edit-trip]'); if (edit) openEditTrip(edit.dataset.editTrip); const complete = event.target.closest('[data-complete-trip]'); if (complete) openCompleteTrip(complete.dataset.completeTrip); const remove = event.target.closest('[data-delete-trip]'); if (remove) deleteTrip(remove.dataset.deleteTrip); const documentButton = event.target.closest('[data-open-doc]'); if (documentButton) openDocument(documentButton.dataset.openDoc); });
-$('loginForm').addEventListener('submit', async event => { event.preventDefault(); $('loginError').textContent = ''; try { const value = await authRequest('/auth/v1/token?grant_type=password', { email: $('email').value.trim(), password: $('password').value }); storeSession(value); showApp(value); } catch (error) { $('loginError').textContent = error.message; } });
+$('loginForm').addEventListener('submit', async event => {
+  event.preventDefault();
+  const error = $('loginError');
+  const button = $('loginButton');
+  const email = $('email').value.trim();
+  const password = $('password').value;
+  error.textContent = '';
+  if (!email || !password) {
+    error.textContent = 'Enter both your email address and password.';
+    (!email ? $('email') : $('password')).focus();
+    return;
+  }
+  if (!/^\S+@\S+\.\S+$/.test(email)) {
+    error.textContent = 'Enter a valid email address.';
+    $('email').focus();
+    return;
+  }
+  button.disabled = true;
+  button.textContent = 'Signing in…';
+  error.textContent = 'Checking your login…';
+  try {
+    const value = await authRequest('/auth/v1/token?grant_type=password', { email, password });
+    storeSession(value);
+    showApp(value);
+  } catch (caught) {
+    error.textContent = caught.message || 'Unable to sign in. Please try again.';
+  } finally {
+    button.disabled = false;
+    button.textContent = 'Sign in';
+  }
+});
 
 (async function bootstrap() { try { validateConfig(); const value = await restoreSession(); if (value) showApp(value); else showLogin(); } catch (error) { showLogin(); $('loginError').textContent = error.message; } })();
