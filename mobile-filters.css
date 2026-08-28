@@ -21,9 +21,14 @@
   display: block;
   width: fit-content;
   margin-top: 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
   color: var(--green);
   font-size: 12px;
   font-weight: 700;
+  cursor: pointer;
+  text-align: left;
 }
 
 .tracker-nav-link {
