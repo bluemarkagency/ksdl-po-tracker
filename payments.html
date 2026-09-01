@@ -35,7 +35,7 @@
       </section>
 
       <section class="payment-card transport-analysis-card">
-        <div class="section-head"><div><span class="eyebrow">TRANSPORT COST CONTROL</span><h2>Cost benchmark by customer and delivery location</h2><p>Compare the latest completed PO cost against the average for the same customer and location. An over-average flag needs at least three completed deliveries in the selected period.</p></div></div>
+        <div class="section-head"><div><span class="eyebrow">TRANSPORT COST CONTROL</span><h2>Cost benchmark by CBS and distance</h2><p>Compare each latest delivery with completed deliveries having a similar load and route distance. This separates a genuine long-distance or high-CBS cost from a possible overcharge.</p></div><button id="manageDistanceBtn" class="primary" type="button">Manage location distances</button></div>
         <div class="cost-analysis-filters">
           <label>Customer<select id="costCustomerFilter"><option value="">All customers</option></select></label>
           <label>Transporter<select id="costTransporterFilter"><option value="">All transporters</option></select></label>
@@ -44,13 +44,14 @@
           <button id="clearCostFilters" class="text-btn" type="button">Clear</button>
         </div>
         <div class="cost-benchmark-summary" aria-label="Transport cost benchmark summary">
-          <article><span>Completed deliveries</span><strong id="costDeliveryCount">0</strong><small>With final PO cost</small></article>
-          <article><span>Average PO cost</span><strong id="costAverageAmount">₹0</strong><small>Selected deliveries</small></article>
-          <article class="attention"><span>Above-average alerts</span><strong id="costAlertCount">0</strong><small>More than 10% above benchmark</small></article>
-          <article><span>Potential excess</span><strong id="costPotentialExcess">₹0</strong><small>Latest PO cost above benchmark</small></article>
+          <article><span>Ready for review</span><strong id="costDeliveryCount">0</strong><small>CBS and distance available</small></article>
+          <article><span>Average cost / CBS</span><strong id="costAverageAmount">₹0</strong><small>Selected deliveries</small></article>
+          <article class="attention"><span>Above-benchmark alerts</span><strong id="costAlertCount">0</strong><small>More than 10% above comparable loads</small></article>
+          <article><span>Potential excess</span><strong id="costPotentialExcess">₹0</strong><small>Latest delivery cost above benchmark</small></article>
         </div>
-        <div class="table-wrap"><table class="payment-table cost-analysis-table"><thead><tr><th>Customer / location</th><th>Transporter</th><th>Deliveries</th><th>Transporter average</th><th>Latest PO cost</th><th>Location average</th><th>Latest difference</th><th>Review</th></tr></thead><tbody id="costAnalysisBody"></tbody></table></div>
-        <div id="costAnalysisEmpty" class="empty-state"><h3>No completed cost data</h3><p>Complete deliveries with a final allocated cost to start the transport-cost comparison.</p></div>
+        <p id="distanceMasterNote" class="distance-master-note">Enter the usual one-way km from Blue Mark Agency to the delivery location. The cost-per-km figure uses the return journey too (round-trip km).</p>
+        <div class="table-wrap"><table class="payment-table cost-analysis-table"><thead><tr><th>Customer / location</th><th>Transporter</th><th>Load</th><th>Route distance</th><th>Latest cost &amp; efficiency</th><th>Comparable average</th><th>Difference</th><th>Review</th></tr></thead><tbody id="costAnalysisBody"></tbody></table></div>
+        <div id="costAnalysisEmpty" class="empty-state"><h3>No completed cost data</h3><p>Complete deliveries with a final allocated cost to start the CBS-and-distance comparison.</p></div>
       </section>
 
       <section class="payment-card">
@@ -106,7 +107,13 @@
       <p id="rejectDeliveryError" class="error" aria-live="polite"></p><div class="modal-actions"><span></span><button id="cancelRejectDeliveryBtn" type="button">Cancel</button><button class="danger" type="submit">Send back</button></div>
     </form></dialog>
 
+    <dialog id="distanceDialog" class="payment-dialog"><form id="distanceForm">
+      <div class="modal-header"><div><span class="eyebrow">ROUTE MASTER</span><h2>Delivery location distances</h2><p>Enter the usual one-way distance in kilometres from Blue Mark Agency. Update it only when the normal route changes.</p></div><button id="closeDistanceDialog" class="icon-btn" type="button" aria-label="Close">×</button></div>
+      <div class="table-wrap"><table class="payment-table distance-table"><thead><tr><th>Delivery location</th><th>One-way distance (km)</th><th>Action</th></tr></thead><tbody id="distanceLocationBody"></tbody></table></div>
+      <p id="distanceError" class="error" aria-live="polite"></p><div class="modal-actions"><span></span><button id="closeDistanceBtn" type="button">Close</button></div>
+    </form></dialog>
+
     <div id="toast" class="toast" role="status"></div>
-    <script src="config.js"></script><script src="payments.js?v=transport-cost-control-20260901"></script>
+    <script src="config.js"></script><script src="payments.js?v=cbs-distance-cost-control-20260901"></script>
   </body>
 </html>

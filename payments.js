@@ -7,7 +7,7 @@
   const SESSION_KEY = 'ksdl-po-tracker-session';
   const PAYMENT_BUCKET = 'transport-payments';
   const INR = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
-  let session = null, refreshPromise = null, transporters = [], payables = [], settlements = [], settledLinkIds = new Set(), selectedPayableIds = new Set();
+  let session = null, refreshPromise = null, transporters = [], payables = [], settlements = [], settledLinkIds = new Set(), selectedPayableIds = new Set(), cbsByPurchaseOrder = new Map(), locationDistances = new Map(), distanceMasterAvailable = true;
 
   const $ = id => document.getElementById(id);
   const money = value => INR.format(Number(value || 0));
@@ -18,6 +18,8 @@
     const location = String(value || '').replace(/\s+/g, ' ').trim();
     return /^modasa(?:\b|[,\-])/i.test(location) ? 'Modasa' : location;
   };
+  const locationKey = value => normalizeDeliveryLocation(value).toLowerCase();
+  const customerKey = value => String(value || '').replace(/\s+/g, ' ').trim().toLowerCase();
   const profileOf = transporter => Array.isArray(transporter?.transporter_payment_profiles) ? transporter.transporter_payment_profiles[0] : transporter?.transporter_payment_profiles;
   function show(id) { $(id).classList.remove('hidden'); } function hide(id) { $(id).classList.add('hidden'); }
   function headers(extra = {}) { return { apikey: PUBLIC_KEY, Authorization: `Bearer ${session?.access_token || PUBLIC_KEY}`, ...extra }; }
@@ -70,11 +72,14 @@
 
   async function loadData() {
     $('connectionStatus').textContent = 'Loading payment register…';
-    const [master, delivered, items, register] = await Promise.all([
+    distanceMasterAvailable = true;
+    const [master, delivered, items, register, cbsRows, distanceRows] = await Promise.all([
       api('/rest/v1/transporters?select=*,transporter_payment_profiles(*)&order=name.asc'),
       api('/rest/v1/delivery_trip_pos?select=id,trip_id,purchase_order_id,allocated_cost,delivered_at,delivery_status,purchase_orders(id,po_number,customer_name,delivery_location,delivery_date),delivery_trips!inner(id,trip_date,transporter_id,transporter,vehicle_number,status)&delivery_status=eq.Delivered&delivery_trips.status=eq.Delivered&order=delivered_at.desc'),
       api('/rest/v1/transport_payment_items?select=delivery_trip_po_id'),
-      api('/rest/v1/transport_payment_settlements?select=*,transporters(id,name),transport_payment_items(id,amount,purchase_orders(po_number,delivery_location),delivery_trips(trip_date,vehicle_number))&order=created_at.desc')
+      api('/rest/v1/transport_payment_settlements?select=*,transporters(id,name),transport_payment_items(id,amount,purchase_orders(po_number,delivery_location),delivery_trips(trip_date,vehicle_number))&order=created_at.desc'),
+      api('/rest/v1/dmart_invoice_items?select=purchase_order_id,quantity_cbs').catch(() => []),
+      api('/rest/v1/transport_location_distances?select=canonical_name,distance_km').catch(() => { distanceMasterAvailable = false; return []; })
     ]);
     transporters = Array.isArray(master) ? master : [];
     payables = (Array.isArray(delivered) ? delivered : []).map(item => ({
@@ -95,6 +100,9 @@
       }))
     }));
     settledLinkIds = new Set((Array.isArray(items) ? items : []).map(item => item.delivery_trip_po_id)); selectedPayableIds = new Set([...selectedPayableIds].filter(id => !settledLinkIds.has(id)));
+    cbsByPurchaseOrder = new Map();
+    (Array.isArray(cbsRows) ? cbsRows : []).forEach(row => cbsByPurchaseOrder.set(row.purchase_order_id, Number(cbsByPurchaseOrder.get(row.purchase_order_id) || 0) + Number(row.quantity_cbs || 0)));
+    locationDistances = new Map((Array.isArray(distanceRows) ? distanceRows : []).map(row => [locationKey(row.canonical_name), Number(row.distance_km || 0)]));
     await Promise.all(transporters.map(async transporter => { const profile = profileOf(transporter); if (profile?.qr_code_url) profile.qrLink = await signedUrl(profile.qr_code_url).catch(() => ''); }));
     await Promise.all(settlements.map(async settlement => { if (settlement.payment_proof_url) settlement.proofLink = await signedUrl(settlement.payment_proof_url).catch(() => ''); }));
     $('connectionStatus').textContent = 'Cloud synced'; render();
@@ -105,12 +113,16 @@
   function asRecord(value) { return Array.isArray(value) ? (value[0] || {}) : (value || {}); }
   function deliveredOn(item) { return String(item.delivered_at || '').slice(0, 10) || item.purchase_orders?.delivery_date || ''; }
   function average(values) { return values.length ? values.reduce((total, value) => total + Number(value || 0), 0) / values.length : 0; }
+  function cbsBand(value) { if (value <= 5) return '1–5 CBS'; if (value <= 15) return '6–15 CBS'; if (value <= 30) return '16–30 CBS'; return '31+ CBS'; }
+  function distanceBand(value) { if (value <= 10) return '0–10 km'; if (value <= 25) return '11–25 km'; if (value <= 50) return '26–50 km'; return '51+ km'; }
   function costDeliveries() {
     return payables.map(item => {
       const trip = asRecord(item.delivery_trips), po = asRecord(item.purchase_orders), master = transporterById(trip.transporter_id);
+      const location = normalizeDeliveryLocation(po.delivery_location) || 'Location pending';
       return {
-        id: item.id, deliveredOn: deliveredOn(item), customer: po.customer_name || 'Customer pending', location: normalizeDeliveryLocation(po.delivery_location) || 'Location pending',
-        transporterId: trip.transporter_id || '', transporter: master?.name || trip.transporter || 'Transporter pending', cost: Number(item.allocated_cost || 0)
+        id: item.id, poId: po.id || item.purchase_order_id, deliveredOn: deliveredOn(item), customer: po.customer_name || 'Customer pending', location,
+        transporterId: trip.transporter_id || '', transporter: master?.name || trip.transporter || 'Transporter pending', cost: Number(item.allocated_cost || 0),
+        cbs: Number(cbsByPurchaseOrder.get(po.id || item.purchase_order_id) || 0), distance: Number(locationDistances.get(locationKey(location)) || 0)
       };
     }).filter(item => Number.isFinite(item.cost) && item.cost > 0 && item.deliveredOn);
   }
@@ -123,32 +135,64 @@
     setSelectOptions('costTransporterFilter', [...new Set(all.map(item => item.transporter))].sort((a, b) => a.localeCompare(b)), $('costTransporterFilter').value, 'All transporters');
     const customer = $('costCustomerFilter').value, transporter = $('costTransporterFilter').value, from = $('costFrom').value, to = $('costTo').value;
     const selected = all.filter(item => (!customer || item.customer === customer) && (!transporter || item.transporter === transporter) && (!from || item.deliveredOn >= from) && (!to || item.deliveredOn <= to));
-    const byLocation = new Map(), byTransporter = new Map();
+    const comparableByCustomer = new Map(), comparableAllCustomers = new Map(), byTransporter = new Map();
     selected.forEach(item => {
-      const locationKey = `${item.customer}||${item.location}`, transporterKey = `${locationKey}||${item.transporter}`;
-      if (!byLocation.has(locationKey)) byLocation.set(locationKey, []); byLocation.get(locationKey).push(item);
+      if (item.cbs > 0 && item.distance > 0) {
+        const bands = `${cbsBand(item.cbs)}||${distanceBand(item.distance)}`, customerBand = `${customerKey(item.customer)}||${bands}`;
+        if (!comparableByCustomer.has(customerBand)) comparableByCustomer.set(customerBand, []); comparableByCustomer.get(customerBand).push(item);
+        if (!comparableAllCustomers.has(bands)) comparableAllCustomers.set(bands, []); comparableAllCustomers.get(bands).push(item);
+      }
+      const transporterKey = `${customerKey(item.customer)}||${locationKey(item.location)}||${item.transporter}`;
       if (!byTransporter.has(transporterKey)) byTransporter.set(transporterKey, []); byTransporter.get(transporterKey).push(item);
     });
     const rows = [...byTransporter.values()].map(items => {
       const latestItems = [...items].sort((left, right) => right.deliveredOn.localeCompare(left.deliveredOn));
-      const latest = latestItems[0], locationItems = byLocation.get(`${latest.customer}||${latest.location}`) || [];
-      const benchmark = average(locationItems.map(item => item.cost)), transporterAverage = average(items.map(item => item.cost)), difference = latest.cost - benchmark;
-      const differencePercent = benchmark ? difference / benchmark * 100 : 0, enoughHistory = locationItems.length >= 3;
-      const review = !enoughHistory ? 'Limited history' : differencePercent > 10 ? 'Over average' : differencePercent < -10 ? 'Below average' : 'Within average';
-      return { ...latest, deliveries: items.length, transporterAverage, benchmark, difference, differencePercent, enoughHistory, review };
+      const latest = latestItems[0], bands = latest.cbs > 0 && latest.distance > 0 ? `${cbsBand(latest.cbs)}||${distanceBand(latest.distance)}` : '';
+      const customerPool = bands ? (comparableByCustomer.get(`${customerKey(latest.customer)}||${bands}`) || []).filter(item => item.id !== latest.id) : [];
+      const allCustomerPool = bands ? (comparableAllCustomers.get(bands) || []).filter(item => item.id !== latest.id) : [];
+      const pool = customerPool.length >= 3 ? customerPool : allCustomerPool;
+      const benchmark = average(pool.map(item => item.cost)), difference = latest.cost - benchmark, differencePercent = benchmark ? difference / benchmark * 100 : 0;
+      const review = latest.distance <= 0 ? 'Needs distance' : latest.cbs <= 0 ? 'Needs CBS' : pool.length < 3 ? 'Limited history' : differencePercent > 10 ? 'Over average' : differencePercent < -10 ? 'Below average' : 'Within average';
+      return { ...latest, deliveries: items.length, benchmark, benchmarkCount: pool.length, benchmarkScope: customerPool.length >= 3 ? 'Same customer' : 'All customers', difference, differencePercent, review };
     }).sort((left, right) => {
-      const priority = row => row.review === 'Over average' ? 0 : row.review === 'Limited history' ? 2 : 1;
+      const priority = row => row.review === 'Over average' ? 0 : /Needs|Limited/.test(row.review) ? 2 : 1;
       return priority(left) - priority(right) || right.difference - left.difference || left.customer.localeCompare(right.customer) || left.location.localeCompare(right.location);
     });
     const alerts = rows.filter(row => row.review === 'Over average'), excess = alerts.reduce((total, row) => total + Math.max(0, row.difference), 0);
-    $('costDeliveryCount').textContent = selected.length; $('costAverageAmount').textContent = money(average(selected.map(item => item.cost))); $('costAlertCount').textContent = alerts.length; $('costPotentialExcess').textContent = money(excess);
+    const ready = selected.filter(item => item.cbs > 0 && item.distance > 0);
+    $('costDeliveryCount').textContent = `${ready.length}/${selected.length}`; $('costAverageAmount').textContent = ready.length ? `${money(average(ready.map(item => item.cost / item.cbs)))}/CBS` : '—'; $('costAlertCount').textContent = alerts.length; $('costPotentialExcess').textContent = money(excess);
     $('costAnalysisBody').innerHTML = rows.map(row => {
       const differenceClass = row.review === 'Over average' ? 'above' : row.review === 'Below average' ? 'below' : 'within';
       const reviewClass = row.review === 'Over average' ? 'over' : row.review === 'Below average' ? 'below' : row.review === 'Within average' ? 'within' : 'limited';
-      const differenceText = row.enoughHistory ? `${row.difference >= 0 ? '+' : '−'}${money(Math.abs(row.difference))} (${row.differencePercent >= 0 ? '+' : ''}${Math.round(row.differencePercent)}%)` : 'Need 3 deliveries';
-      return `<tr><td><strong>${safe(row.customer)}</strong><span class="cost-location">${safe(row.location)}</span></td><td>${safe(row.transporter)}</td><td>${row.deliveries}<span class="muted-line">Latest ${iso(row.deliveredOn)}</span></td><td>${money(row.transporterAverage)}</td><td><strong>${money(row.cost)}</strong></td><td>${money(row.benchmark)}<span class="muted-line">${byLocation.get(`${row.customer}||${row.location}`).length} delivery benchmark</span></td><td><span class="cost-difference ${differenceClass}">${differenceText}</span></td><td><span class="cost-review ${reviewClass}">${safe(row.review)}</span></td></tr>`;
+      const differenceText = row.benchmarkCount >= 3 ? `${row.difference >= 0 ? '+' : '−'}${money(Math.abs(row.difference))} (${row.differencePercent >= 0 ? '+' : ''}${Math.round(row.differencePercent)}%)` : row.review === 'Needs distance' ? 'Add distance' : row.review === 'Needs CBS' ? 'CBS pending' : 'Need 3 matches';
+      const load = row.cbs > 0 ? `${Math.round(row.cbs * 10) / 10} CBS<span class="muted-line">${cbsBand(row.cbs)}</span>` : '—';
+      const distance = row.distance > 0 ? `${Math.round(row.distance * 10) / 10} km one-way<span class="muted-line">${Math.round(row.distance * 2 * 10) / 10} km round trip · ${distanceBand(row.distance)}</span>` : '—';
+      const comparable = row.benchmarkCount ? `${money(row.benchmark)}<span class="muted-line">${row.benchmarkCount} ${safe(row.benchmarkScope)} match${row.benchmarkCount === 1 ? '' : 'es'}</span>` : '—';
+      const efficiency = `<strong>${money(row.cost)}</strong><span class="muted-line">${row.cbs > 0 ? `${money(row.cost / row.cbs)} / CBS` : 'CBS pending'} · ${row.distance > 0 ? `${money(row.cost / (row.distance * 2))} / round-trip km` : 'distance pending'}</span>`;
+      return `<tr><td><strong>${safe(row.customer)}</strong><span class="cost-location">${safe(row.location)}</span></td><td>${safe(row.transporter)}<span class="muted-line">${row.deliveries} delivery record${row.deliveries === 1 ? '' : 's'}</span></td><td>${load}</td><td>${distance}</td><td>${efficiency}</td><td>${comparable}</td><td><span class="cost-difference ${differenceClass}">${differenceText}</span></td><td><span class="cost-review ${reviewClass}">${safe(row.review)}</span></td></tr>`;
     }).join('');
+    $('distanceMasterNote').textContent = distanceMasterAvailable ? 'Enter the usual one-way km from Blue Mark Agency to the delivery location. The cost-per-km figure uses the return journey too (round-trip km).' : 'Distance setup is not active yet. Run the supplied one-time SQL file, then reload this page.';
     $('costAnalysisEmpty').classList.toggle('hidden', rows.length > 0);
+  }
+  function distanceLocations() {
+    return [...new Map(costDeliveries().map(item => [locationKey(item.location), item.location])).values()].sort((left, right) => left.localeCompare(right));
+  }
+  function renderDistanceMaster() {
+    const locations = distanceLocations();
+    $('distanceLocationBody').innerHTML = locations.map(location => `<tr><td><strong>${safe(location)}</strong></td><td><input class="distance-input" type="number" min="0.1" max="1000" step="0.1" inputmode="decimal" value="${locationDistances.get(locationKey(location)) || ''}" placeholder="e.g. 18" /></td><td><button class="text-btn save-distance" data-location="${safe(location)}" type="button">Save</button></td></tr>`).join('') || '<tr><td colspan="3">No completed delivery locations yet.</td></tr>';
+  }
+  function openDistanceDialog() {
+    if (!distanceMasterAvailable) { toast('Run the one-time Transport Location Distances SQL first, then refresh this page.'); return; }
+    $('distanceError').textContent = ''; renderDistanceMaster(); $('distanceDialog').showModal();
+  }
+  async function saveDistance(location, button) {
+    const input = button.closest('tr')?.querySelector('.distance-input'), distance = Number(input?.value);
+    if (!Number.isFinite(distance) || distance <= 0 || distance > 1000) { $('distanceError').textContent = 'Enter a valid one-way distance in kilometres.'; return; }
+    try {
+      button.disabled = true; button.textContent = 'Saving…'; $('distanceError').textContent = '';
+      await api('/rest/v1/transport_location_distances?on_conflict=canonical_name', { method: 'POST', headers: { 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ canonical_name: location, distance_km: distance, updated_at: new Date().toISOString() }) });
+      locationDistances.set(locationKey(location), distance); renderCostAnalysis(); button.textContent = 'Saved'; setTimeout(() => { button.textContent = 'Save'; button.disabled = false; }, 900);
+    } catch (error) { button.disabled = false; button.textContent = 'Save'; $('distanceError').textContent = error.message || 'Could not save the distance.'; }
   }
   function filteredPayables() {
     const transporterId = $('payableTransporterFilter').value, from = $('payableFrom').value, to = $('payableTo').value;
@@ -257,6 +301,7 @@
     $('addTransporterBtn').addEventListener('click', () => openTransporterDialog()); $('transporterBody').addEventListener('click', event => { const button = event.target.closest('.edit-transporter'); if (button) openTransporterDialog(button.dataset.id); }); $('transporterForm').addEventListener('submit', saveTransporter); $('closeTransporterDialog').addEventListener('click', () => $('transporterDialog').close()); $('cancelTransporterBtn').addEventListener('click', () => $('transporterDialog').close());
     ['payableTransporterFilter', 'payableFrom', 'payableTo'].forEach(id => { $(id).addEventListener('change', renderPayables); $(id).addEventListener('input', renderPayables); }); $('clearPayableFilters').addEventListener('click', () => { $('payableTransporterFilter').value = ''; $('payableFrom').value = ''; $('payableTo').value = ''; renderPayables(); });
     ['costCustomerFilter', 'costTransporterFilter', 'costFrom', 'costTo'].forEach(id => { $(id).addEventListener('change', renderCostAnalysis); $(id).addEventListener('input', renderCostAnalysis); }); $('clearCostFilters').addEventListener('click', () => { $('costCustomerFilter').value = ''; $('costTransporterFilter').value = ''; $('costFrom').value = ''; $('costTo').value = ''; renderCostAnalysis(); });
+    $('manageDistanceBtn').addEventListener('click', openDistanceDialog); $('distanceLocationBody').addEventListener('click', event => { const button = event.target.closest('.save-distance'); if (button) saveDistance(button.dataset.location, button); }); $('closeDistanceDialog').addEventListener('click', () => $('distanceDialog').close()); $('closeDistanceBtn').addEventListener('click', () => $('distanceDialog').close());
     $('payableBody').addEventListener('change', event => { if (!event.target.matches('.payable-choice')) return; if (event.target.checked) selectedPayableIds.add(event.target.value); else selectedPayableIds.delete(event.target.value); renderPayables(); }); $('payableBody').addEventListener('click', event => { const saveButton = event.target.closest('.save-payable-cost'), returnButton = event.target.closest('.return-delivery'); if (saveButton) savePayableCost(saveButton.dataset.id, saveButton); else if (returnButton) openRejectDelivery(returnButton.dataset.id); }); $('selectAllPayables').addEventListener('change', event => { filteredPayables().forEach(item => event.target.checked ? selectedPayableIds.add(item.id) : selectedPayableIds.delete(item.id)); renderPayables(); }); $('createSettlementBtn').addEventListener('click', createSettlement);
     $('settlementBody').addEventListener('click', event => { const approve = event.target.closest('.approve-settlement'), pay = event.target.closest('.pay-settlement'), reconcile = event.target.closest('.reconcile-settlement'); if (approve) approveSettlement(approve.dataset.id); else if (pay) openPaymentDialog(pay.dataset.id); else if (reconcile) reconcileSettlement(reconcile.dataset.id); }); $('paymentForm').addEventListener('submit', savePayment); $('closePaymentDialog').addEventListener('click', () => $('paymentDialog').close()); $('cancelPaymentBtn').addEventListener('click', () => $('paymentDialog').close());
     $('rejectDeliveryForm').addEventListener('submit', rejectDelivery); $('closeRejectDeliveryDialog').addEventListener('click', () => $('rejectDeliveryDialog').close()); $('cancelRejectDeliveryBtn').addEventListener('click', () => $('rejectDeliveryDialog').close());
