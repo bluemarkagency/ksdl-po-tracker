@@ -462,7 +462,7 @@
     return value == null || value === '' ? '—' : `${NUMBER.format(Number(value))} days`;
   }
   function formatAverageDays_(value) {
-    return value == null || value === '' ? '—' : `${Number(value).toFixed(1)} days`;
+    return value == null || value === '' ? '—' : `${Math.round(Number(value))} days`;
   }
   function parseLocalDate(value) {
     const parts = String(value || '').slice(0, 10).split('-').map(Number);
@@ -905,7 +905,7 @@
   function channelBandMarkup(channel, metrics, customers) {
     const isStore = channel === 'Store';
     const accountText = isStore ? `${customers.length} Store customer${customers.length === 1 ? '' : 's'}` : `${customers.length} E-commerce customer${customers.length === 1 ? '' : 's'}`;
-    const completion = metrics.averageCompletionDays == null ? '—' : `${metrics.averageCompletionDays.toFixed(1)} days`;
+    const completion = metrics.averageCompletionDays == null ? '—' : `${Math.round(metrics.averageCompletionDays)} days`;
     const appointment = metrics.appointmentRate == null ? 'Needs data' : `${metrics.appointmentRate.toFixed(0)}%`;
     return `
       <header><div><h3>${channel}</h3><p>${accountText}</p></div>${channelGrowthMarkup(metrics.growth, true)}</header>
@@ -939,7 +939,7 @@
 
     $('channelCustomerCount').textContent = `${analysis.customers.length} customer${analysis.customers.length === 1 ? '' : 's'}`;
     $('channelCustomerBody').innerHTML = analysis.customers.map(customer => {
-      const completion = customer.averageCompletionDays == null ? '—' : `${customer.averageCompletionDays.toFixed(1)} days`;
+      const completion = customer.averageCompletionDays == null ? '—' : `${Math.round(customer.averageCompletionDays)} days`;
       const appointment = customer.appointmentRate == null ? 'Needs data' : `${customer.appointmentRate.toFixed(0)}%`;
       const growth = customer.growth == null ? 'New' : `${customer.growth >= 0 ? '+' : ''}${customer.growth.toFixed(0)}%`;
       return `<tr><td><span class="channel-account">${safe(customer.customer)}</span><span class="channel-account-sub">Last activity ${formatShortDate(customer.lastPoDate)}</span></td><td><span class="channel-chip ${customer.channel === 'E-commerce' ? 'ecommerce' : ''}">${safe(customer.channel)}</span></td><td>${number(customer.poCount)}</td><td><strong>${money(customer.value)}</strong></td><td>${money(customer.averageOrder)}</td><td>${customer.deliveryRate.toFixed(0)}%</td><td><strong>${number(customer.openCount)}</strong><span class="channel-account-sub">${money(customer.openValue)}</span></td><td>${completion}</td><td>${appointment}</td><td>${safe(growth)}</td></tr>`;
@@ -958,7 +958,7 @@
     ].filter(item => item.averageCompletionDays != null);
     if (executionCandidates.length === 2) {
       const slower = executionCandidates.sort((a, b) => b.averageCompletionDays - a.averageCompletionDays)[0];
-      actions.push(channelActionCard('Delivery execution', `Improve ${slower.name} completion speed`, `${slower.name} averages ${slower.averageCompletionDays.toFixed(1)} days from PO to completion. Review appointments, invoice readiness and transport planning for the slowest orders.`));
+      actions.push(channelActionCard('Delivery execution', `Improve ${slower.name} completion speed`, `${slower.name} averages ${Math.round(slower.averageCompletionDays)} days from PO to completion. Review appointments, invoice readiness and transport planning for the slowest orders.`));
     } else {
       actions.push(channelActionCard('Delivery execution', 'Complete delivery dates consistently', 'Delivery-completed dates are needed to compare Store and E-commerce lead time accurately. Ask staff to close every delivered PO on the same day.'));
     }

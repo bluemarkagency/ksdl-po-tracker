@@ -102,6 +102,54 @@
 
   function transporterById(id) { return transporters.find(item => item.id === id); }
   function outstandingPayables() { return payables.filter(item => !settledLinkIds.has(item.id)); }
+  function asRecord(value) { return Array.isArray(value) ? (value[0] || {}) : (value || {}); }
+  function deliveredOn(item) { return String(item.delivered_at || '').slice(0, 10) || item.purchase_orders?.delivery_date || ''; }
+  function average(values) { return values.length ? values.reduce((total, value) => total + Number(value || 0), 0) / values.length : 0; }
+  function costDeliveries() {
+    return payables.map(item => {
+      const trip = asRecord(item.delivery_trips), po = asRecord(item.purchase_orders), master = transporterById(trip.transporter_id);
+      return {
+        id: item.id, deliveredOn: deliveredOn(item), customer: po.customer_name || 'Customer pending', location: normalizeDeliveryLocation(po.delivery_location) || 'Location pending',
+        transporterId: trip.transporter_id || '', transporter: master?.name || trip.transporter || 'Transporter pending', cost: Number(item.allocated_cost || 0)
+      };
+    }).filter(item => Number.isFinite(item.cost) && item.cost > 0 && item.deliveredOn);
+  }
+  function setSelectOptions(id, values, selected, allLabel) {
+    const element = $(id); element.innerHTML = `<option value="">${allLabel}</option>` + values.map(value => `<option value="${safe(value)}">${safe(value)}</option>`).join(''); element.value = values.includes(selected) ? selected : '';
+  }
+  function renderCostAnalysis() {
+    const all = costDeliveries();
+    setSelectOptions('costCustomerFilter', [...new Set(all.map(item => item.customer))].sort((a, b) => a.localeCompare(b)), $('costCustomerFilter').value, 'All customers');
+    setSelectOptions('costTransporterFilter', [...new Set(all.map(item => item.transporter))].sort((a, b) => a.localeCompare(b)), $('costTransporterFilter').value, 'All transporters');
+    const customer = $('costCustomerFilter').value, transporter = $('costTransporterFilter').value, from = $('costFrom').value, to = $('costTo').value;
+    const selected = all.filter(item => (!customer || item.customer === customer) && (!transporter || item.transporter === transporter) && (!from || item.deliveredOn >= from) && (!to || item.deliveredOn <= to));
+    const byLocation = new Map(), byTransporter = new Map();
+    selected.forEach(item => {
+      const locationKey = `${item.customer}||${item.location}`, transporterKey = `${locationKey}||${item.transporter}`;
+      if (!byLocation.has(locationKey)) byLocation.set(locationKey, []); byLocation.get(locationKey).push(item);
+      if (!byTransporter.has(transporterKey)) byTransporter.set(transporterKey, []); byTransporter.get(transporterKey).push(item);
+    });
+    const rows = [...byTransporter.values()].map(items => {
+      const latestItems = [...items].sort((left, right) => right.deliveredOn.localeCompare(left.deliveredOn));
+      const latest = latestItems[0], locationItems = byLocation.get(`${latest.customer}||${latest.location}`) || [];
+      const benchmark = average(locationItems.map(item => item.cost)), transporterAverage = average(items.map(item => item.cost)), difference = latest.cost - benchmark;
+      const differencePercent = benchmark ? difference / benchmark * 100 : 0, enoughHistory = locationItems.length >= 3;
+      const review = !enoughHistory ? 'Limited history' : differencePercent > 10 ? 'Over average' : differencePercent < -10 ? 'Below average' : 'Within average';
+      return { ...latest, deliveries: items.length, transporterAverage, benchmark, difference, differencePercent, enoughHistory, review };
+    }).sort((left, right) => {
+      const priority = row => row.review === 'Over average' ? 0 : row.review === 'Limited history' ? 2 : 1;
+      return priority(left) - priority(right) || right.difference - left.difference || left.customer.localeCompare(right.customer) || left.location.localeCompare(right.location);
+    });
+    const alerts = rows.filter(row => row.review === 'Over average'), excess = alerts.reduce((total, row) => total + Math.max(0, row.difference), 0);
+    $('costDeliveryCount').textContent = selected.length; $('costAverageAmount').textContent = money(average(selected.map(item => item.cost))); $('costAlertCount').textContent = alerts.length; $('costPotentialExcess').textContent = money(excess);
+    $('costAnalysisBody').innerHTML = rows.map(row => {
+      const differenceClass = row.review === 'Over average' ? 'above' : row.review === 'Below average' ? 'below' : 'within';
+      const reviewClass = row.review === 'Over average' ? 'over' : row.review === 'Below average' ? 'below' : row.review === 'Within average' ? 'within' : 'limited';
+      const differenceText = row.enoughHistory ? `${row.difference >= 0 ? '+' : '−'}${money(Math.abs(row.difference))} (${row.differencePercent >= 0 ? '+' : ''}${Math.round(row.differencePercent)}%)` : 'Need 3 deliveries';
+      return `<tr><td><strong>${safe(row.customer)}</strong><span class="cost-location">${safe(row.location)}</span></td><td>${safe(row.transporter)}</td><td>${row.deliveries}<span class="muted-line">Latest ${iso(row.deliveredOn)}</span></td><td>${money(row.transporterAverage)}</td><td><strong>${money(row.cost)}</strong></td><td>${money(row.benchmark)}<span class="muted-line">${byLocation.get(`${row.customer}||${row.location}`).length} delivery benchmark</span></td><td><span class="cost-difference ${differenceClass}">${differenceText}</span></td><td><span class="cost-review ${reviewClass}">${safe(row.review)}</span></td></tr>`;
+    }).join('');
+    $('costAnalysisEmpty').classList.toggle('hidden', rows.length > 0);
+  }
   function filteredPayables() {
     const transporterId = $('payableTransporterFilter').value, from = $('payableFrom').value, to = $('payableTo').value;
     return outstandingPayables().filter(item => { const delivered = item.purchase_orders?.delivery_date || String(item.delivered_at || '').slice(0, 10); return (!transporterId || item.delivery_trips?.transporter_id === transporterId) && (!from || delivered >= from) && (!to || delivered <= to); });
@@ -166,7 +214,7 @@
     const drafts = byStatus('Draft'), approved = byStatus('Approved'), paid = byStatus('Paid'), monthPaid = settlements.filter(item => ['Paid', 'Reconciled'].includes(item.status) && String(item.payment_date || '').startsWith(month));
     $('draftAmount').textContent = money(sum(drafts)); $('draftCount').textContent = `${drafts.length} settlements`; $('approvedAmount').textContent = money(sum(approved)); $('approvedCount').textContent = `${approved.length} approved`; $('paidAmount').textContent = money(sum(paid)); $('paidCount').textContent = `${paid.length} payments`; $('monthPaidAmount').textContent = money(sum(monthPaid));
   }
-  function render() { renderTransporters(); renderPayables(); renderSettlements(); renderSummary(); }
+  function render() { renderTransporters(); renderCostAnalysis(); renderPayables(); renderSettlements(); renderSummary(); }
 
   function openTransporterDialog(id = '') {
     $('transporterForm').reset(); $('transporterId').value = id; $('transporterError').textContent = ''; const transporter = transporterById(id), profile = profileOf(transporter); $('transporterDialogTitle').textContent = transporter ? 'Edit transporter' : 'Add transporter';
@@ -208,6 +256,7 @@
     $('loginForm').addEventListener('submit', async event => { event.preventDefault(); $('loginError').textContent = ''; try { await signIn($('emailInput').value.trim(), $('passwordInput').value); await start(); } catch (err) { $('loginError').textContent = err.message || 'Sign in failed.'; } }); $('signOutBtn').addEventListener('click', signOut); $('refreshBtn').addEventListener('click', loadData);
     $('addTransporterBtn').addEventListener('click', () => openTransporterDialog()); $('transporterBody').addEventListener('click', event => { const button = event.target.closest('.edit-transporter'); if (button) openTransporterDialog(button.dataset.id); }); $('transporterForm').addEventListener('submit', saveTransporter); $('closeTransporterDialog').addEventListener('click', () => $('transporterDialog').close()); $('cancelTransporterBtn').addEventListener('click', () => $('transporterDialog').close());
     ['payableTransporterFilter', 'payableFrom', 'payableTo'].forEach(id => { $(id).addEventListener('change', renderPayables); $(id).addEventListener('input', renderPayables); }); $('clearPayableFilters').addEventListener('click', () => { $('payableTransporterFilter').value = ''; $('payableFrom').value = ''; $('payableTo').value = ''; renderPayables(); });
+    ['costCustomerFilter', 'costTransporterFilter', 'costFrom', 'costTo'].forEach(id => { $(id).addEventListener('change', renderCostAnalysis); $(id).addEventListener('input', renderCostAnalysis); }); $('clearCostFilters').addEventListener('click', () => { $('costCustomerFilter').value = ''; $('costTransporterFilter').value = ''; $('costFrom').value = ''; $('costTo').value = ''; renderCostAnalysis(); });
     $('payableBody').addEventListener('change', event => { if (!event.target.matches('.payable-choice')) return; if (event.target.checked) selectedPayableIds.add(event.target.value); else selectedPayableIds.delete(event.target.value); renderPayables(); }); $('payableBody').addEventListener('click', event => { const saveButton = event.target.closest('.save-payable-cost'), returnButton = event.target.closest('.return-delivery'); if (saveButton) savePayableCost(saveButton.dataset.id, saveButton); else if (returnButton) openRejectDelivery(returnButton.dataset.id); }); $('selectAllPayables').addEventListener('change', event => { filteredPayables().forEach(item => event.target.checked ? selectedPayableIds.add(item.id) : selectedPayableIds.delete(item.id)); renderPayables(); }); $('createSettlementBtn').addEventListener('click', createSettlement);
     $('settlementBody').addEventListener('click', event => { const approve = event.target.closest('.approve-settlement'), pay = event.target.closest('.pay-settlement'), reconcile = event.target.closest('.reconcile-settlement'); if (approve) approveSettlement(approve.dataset.id); else if (pay) openPaymentDialog(pay.dataset.id); else if (reconcile) reconcileSettlement(reconcile.dataset.id); }); $('paymentForm').addEventListener('submit', savePayment); $('closePaymentDialog').addEventListener('click', () => $('paymentDialog').close()); $('cancelPaymentBtn').addEventListener('click', () => $('paymentDialog').close());
     $('rejectDeliveryForm').addEventListener('submit', rejectDelivery); $('closeRejectDeliveryDialog').addEventListener('click', () => $('rejectDeliveryDialog').close()); $('cancelRejectDeliveryBtn').addEventListener('click', () => $('rejectDeliveryDialog').close());

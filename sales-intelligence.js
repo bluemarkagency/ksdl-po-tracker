@@ -234,7 +234,7 @@
         <td><span class="signal-chip ${item.priorityClass}">${safe(item.priority)}</span></td>
         <td><span class="cell-main">${safe(item.delivery_location)}</span><span class="cell-sub">${number(item.po_count)} historical PO(s)</span></td>
         <td>${shortDate(item.last_po_date)}<span class="cell-sub">${item.daysSincePo == null ? '—' : `${item.daysSincePo} days ago`}</span></td>
-        <td><span class="number-cell">${item.averageGap.toFixed(1)} days</span><span class="cell-sub">Variation ${Number(item.stddev_days_between_pos || 0).toFixed(1)} days</span></td>
+        <td><span class="number-cell">${Math.round(item.averageGap)} days</span><span class="cell-sub">Variation ${Math.round(Number(item.stddev_days_between_pos || 0))} days</span></td>
         <td><strong>${shortDate(item.expectedDate)}</strong></td>
         <td><strong>${safe(timingLabel(item))}</strong></td>
         <td><strong>${money(item.expectedValue)}</strong></td>

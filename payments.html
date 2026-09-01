@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="mobile-filters.css" />
     <link rel="stylesheet" href="payments.css?v=20260722-7" />
+    <link rel="stylesheet" href="transport-cost-analysis.css?v=20260901" />
   </head>
   <body>
     <section id="loginScreen" class="login-screen hidden">
@@ -31,6 +32,25 @@
         <article class="attention"><span>Awaiting payment</span><strong id="approvedAmount">₹0</strong><small id="approvedCount">0 approved</small></article>
         <article><span>Paid, not reconciled</span><strong id="paidAmount">₹0</strong><small id="paidCount">0 payments</small></article>
         <article><span>Paid this month</span><strong id="monthPaidAmount">₹0</strong><small>Including reconciled</small></article>
+      </section>
+
+      <section class="payment-card transport-analysis-card">
+        <div class="section-head"><div><span class="eyebrow">TRANSPORT COST CONTROL</span><h2>Cost benchmark by customer and delivery location</h2><p>Compare the latest completed PO cost against the average for the same customer and location. An over-average flag needs at least three completed deliveries in the selected period.</p></div></div>
+        <div class="cost-analysis-filters">
+          <label>Customer<select id="costCustomerFilter"><option value="">All customers</option></select></label>
+          <label>Transporter<select id="costTransporterFilter"><option value="">All transporters</option></select></label>
+          <label>Delivered from<input id="costFrom" type="date" /></label>
+          <label>Delivered to<input id="costTo" type="date" /></label>
+          <button id="clearCostFilters" class="text-btn" type="button">Clear</button>
+        </div>
+        <div class="cost-benchmark-summary" aria-label="Transport cost benchmark summary">
+          <article><span>Completed deliveries</span><strong id="costDeliveryCount">0</strong><small>With final PO cost</small></article>
+          <article><span>Average PO cost</span><strong id="costAverageAmount">₹0</strong><small>Selected deliveries</small></article>
+          <article class="attention"><span>Above-average alerts</span><strong id="costAlertCount">0</strong><small>More than 10% above benchmark</small></article>
+          <article><span>Potential excess</span><strong id="costPotentialExcess">₹0</strong><small>Latest PO cost above benchmark</small></article>
+        </div>
+        <div class="table-wrap"><table class="payment-table cost-analysis-table"><thead><tr><th>Customer / location</th><th>Transporter</th><th>Deliveries</th><th>Transporter average</th><th>Latest PO cost</th><th>Location average</th><th>Latest difference</th><th>Review</th></tr></thead><tbody id="costAnalysisBody"></tbody></table></div>
+        <div id="costAnalysisEmpty" class="empty-state"><h3>No completed cost data</h3><p>Complete deliveries with a final allocated cost to start the transport-cost comparison.</p></div>
       </section>
 
       <section class="payment-card">
@@ -87,6 +107,6 @@
     </form></dialog>
 
     <div id="toast" class="toast" role="status"></div>
-    <script src="config.js"></script><script src="payments.js?v=modasa-location-20260731"></script>
+    <script src="config.js"></script><script src="payments.js?v=transport-cost-control-20260901"></script>
   </body>
 </html>
