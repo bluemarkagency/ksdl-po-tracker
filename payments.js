@@ -7,7 +7,7 @@
   const SESSION_KEY = 'ksdl-po-tracker-session';
   const PAYMENT_BUCKET = 'transport-payments';
   const INR = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
-  let session = null, refreshPromise = null, transporters = [], payables = [], settlements = [], settledLinkIds = new Set(), selectedPayableIds = new Set(), cbsByPurchaseOrder = new Map(), locationDistances = new Map(), distanceMasterAvailable = true;
+  let session = null, refreshPromise = null, paymentRefreshTimer = null, transporters = [], payables = [], settlements = [], settledLinkIds = new Set(), selectedPayableIds = new Set(), cbsByPurchaseOrder = new Map(), locationDistances = new Map(), distanceMasterAvailable = true;
 
   const $ = id => document.getElementById(id);
   const money = value => INR.format(Number(value || 0));
@@ -60,7 +60,7 @@
   }
   function toast(message) { const el = $('toast'); el.textContent = message; el.classList.add('show'); clearTimeout(toast.timer); toast.timer = setTimeout(() => el.classList.remove('show'), 3000); }
   async function signIn(email, password) { saveSession(await api('/auth/v1/token?grant_type=password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) })); }
-  async function signOut() { try { await api('/auth/v1/logout', { method: 'POST' }); } catch (_) { /* local sign-out still succeeds */ } session = null; sessionStorage.removeItem(SESSION_KEY); hide('app'); show('loginScreen'); }
+  async function signOut() { try { await api('/auth/v1/logout', { method: 'POST' }); } catch (_) { /* local sign-out still succeeds */ } clearInterval(paymentRefreshTimer); paymentRefreshTimer = null; session = null; sessionStorage.removeItem(SESSION_KEY); hide('app'); show('loginScreen'); }
   async function ensureOwner() { const role = await api('/rest/v1/rpc/po_tracker_role', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }); if (role !== 'owner') throw new Error('Only the owner can access transport payments.'); }
 
   async function uploadPrivateFile(folder, ownerId, file) {
@@ -105,13 +105,19 @@
     locationDistances = new Map((Array.isArray(distanceRows) ? distanceRows : []).map(row => [locationKey(row.canonical_name), Number(row.distance_km || 0)]));
     await Promise.all(transporters.map(async transporter => { const profile = profileOf(transporter); if (profile?.qr_code_url) profile.qrLink = await signedUrl(profile.qr_code_url).catch(() => ''); }));
     await Promise.all(settlements.map(async settlement => { if (settlement.payment_proof_url) settlement.proofLink = await signedUrl(settlement.payment_proof_url).catch(() => ''); }));
-    $('connectionStatus').textContent = 'Cloud synced'; render();
+    $('connectionStatus').textContent = `Cloud synced ${new Date().toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })}`; render();
   }
 
   function transporterById(id) { return transporters.find(item => item.id === id); }
   function outstandingPayables() { return payables.filter(item => !settledLinkIds.has(item.id)); }
   function asRecord(value) { return Array.isArray(value) ? (value[0] || {}) : (value || {}); }
   function deliveredOn(item) { return String(item.delivered_at || '').slice(0, 10) || item.purchase_orders?.delivery_date || ''; }
+  function deliveredAt(item) {
+    const timestamp = Date.parse(String(item.delivered_at || ''));
+    if (Number.isFinite(timestamp)) return timestamp;
+    const date = deliveredOn(item);
+    return date ? Date.parse(`${date}T12:00:00`) : 0;
+  }
   function average(values) { return values.length ? values.reduce((total, value) => total + Number(value || 0), 0) / values.length : 0; }
   function cbsBand(value) { if (value <= 5) return '1–5 CBS'; if (value <= 15) return '6–15 CBS'; if (value <= 30) return '16–30 CBS'; return '31+ CBS'; }
   function distanceBand(value) { if (value <= 10) return '0–10 km'; if (value <= 25) return '11–25 km'; if (value <= 50) return '26–50 km'; return '51+ km'; }
@@ -120,7 +126,7 @@
       const trip = asRecord(item.delivery_trips), po = asRecord(item.purchase_orders), master = transporterById(trip.transporter_id);
       const location = normalizeDeliveryLocation(po.delivery_location) || 'Location pending';
       return {
-        id: item.id, poId: po.id || item.purchase_order_id, deliveredOn: deliveredOn(item), customer: po.customer_name || 'Customer pending', location,
+        id: item.id, poId: po.id || item.purchase_order_id, deliveredOn: deliveredOn(item), deliveredAt: deliveredAt(item), customer: po.customer_name || 'Customer pending', location,
         transporterId: trip.transporter_id || '', transporter: master?.name || trip.transporter || 'Transporter pending', cost: Number(item.allocated_cost || 0),
         cbs: Number(cbsByPurchaseOrder.get(po.id || item.purchase_order_id) || 0), distance: Number(locationDistances.get(locationKey(location)) || 0)
       };
@@ -146,7 +152,7 @@
       if (!byTransporter.has(transporterKey)) byTransporter.set(transporterKey, []); byTransporter.get(transporterKey).push(item);
     });
     const rows = [...byTransporter.values()].map(items => {
-      const latestItems = [...items].sort((left, right) => right.deliveredOn.localeCompare(left.deliveredOn));
+      const latestItems = [...items].sort((left, right) => right.deliveredAt - left.deliveredAt || String(right.id).localeCompare(String(left.id)));
       const latest = latestItems[0], bands = latest.cbs > 0 && latest.distance > 0 ? `${cbsBand(latest.cbs)}||${distanceBand(latest.distance)}` : '';
       const customerPool = bands ? (comparableByCustomer.get(`${customerKey(latest.customer)}||${bands}`) || []).filter(item => item.id !== latest.id) : [];
       const allCustomerPool = bands ? (comparableAllCustomers.get(bands) || []).filter(item => item.id !== latest.id) : [];
@@ -171,7 +177,7 @@
       const efficiency = `<strong>${money(row.cost)}</strong><span class="muted-line">${row.cbs > 0 ? `${money(row.cost / row.cbs)} / CBS` : 'CBS pending'} · ${row.distance > 0 ? `${money(row.cost / (row.distance * 2))} / round-trip km` : 'distance pending'}</span>`;
       return `<tr><td><strong>${safe(row.customer)}</strong><span class="cost-location">${safe(row.location)}</span></td><td>${safe(row.transporter)}<span class="muted-line">${row.deliveries} delivery record${row.deliveries === 1 ? '' : 's'}</span></td><td>${load}</td><td>${distance}</td><td>${efficiency}</td><td>${comparable}</td><td><span class="cost-difference ${differenceClass}">${differenceText}</span></td><td><span class="cost-review ${reviewClass}">${safe(row.review)}</span></td></tr>`;
     }).join('');
-    $('distanceMasterNote').textContent = distanceMasterAvailable ? 'Enter the usual one-way km from Blue Mark Agency to the delivery location. The cost-per-km figure uses the return journey too (round-trip km).' : 'Distance setup is not active yet. Run the supplied one-time SQL file, then reload this page.';
+    $('distanceMasterNote').textContent = distanceMasterAvailable ? 'Only confirmed Delivered trips are benchmarked. A completed email-GRN trip joins the benchmark after its customer GRN arrives. Enter the usual one-way km from Blue Mark Agency to the delivery location; cost per km uses the return journey too.' : 'Distance setup is not active yet. Run the supplied one-time SQL file, then reload this page.';
     $('costAnalysisEmpty').classList.toggle('hidden', rows.length > 0);
   }
   function distanceLocations() {
@@ -306,8 +312,14 @@
     $('settlementBody').addEventListener('click', event => { const approve = event.target.closest('.approve-settlement'), pay = event.target.closest('.pay-settlement'), reconcile = event.target.closest('.reconcile-settlement'); if (approve) approveSettlement(approve.dataset.id); else if (pay) openPaymentDialog(pay.dataset.id); else if (reconcile) reconcileSettlement(reconcile.dataset.id); }); $('paymentForm').addEventListener('submit', savePayment); $('closePaymentDialog').addEventListener('click', () => $('paymentDialog').close()); $('cancelPaymentBtn').addEventListener('click', () => $('paymentDialog').close());
     $('rejectDeliveryForm').addEventListener('submit', rejectDelivery); $('closeRejectDeliveryDialog').addEventListener('click', () => $('rejectDeliveryDialog').close()); $('cancelRejectDeliveryBtn').addEventListener('click', () => $('rejectDeliveryDialog').close());
   }
-  async function start() { await ensureOwner(); $('signedInAs').textContent = session.user?.email || ''; hide('loginScreen'); show('app'); await loadData(); }
+  function startAutoRefresh() {
+    clearInterval(paymentRefreshTimer);
+    paymentRefreshTimer = setInterval(() => {
+      if (!document.hidden && session?.access_token) loadData().catch(() => {});
+    }, 60000);
+  }
+  async function start() { await ensureOwner(); $('signedInAs').textContent = session.user?.email || ''; hide('loginScreen'); show('app'); await loadData(); startAutoRefresh(); }
 
-  bindEvents(); try { session = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null'); } catch (_) { session = null; }
+  bindEvents(); document.addEventListener('visibilitychange', () => { if (!document.hidden && session?.access_token) loadData().catch(() => {}); }); try { session = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null'); } catch (_) { session = null; }
   if (session?.access_token && session?.refresh_token) start().catch(err => { hide('app'); show('loginScreen'); $('loginError').textContent = err.message; }); else { sessionStorage.removeItem(SESSION_KEY); show('loginScreen'); }
 })();
