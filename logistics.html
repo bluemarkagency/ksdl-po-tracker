@@ -7,7 +7,7 @@
     <title>Blue Mark Agency · Dispatch &amp; Invoice Review</title>
     <link rel="stylesheet" href="logistics-base.css" />
     <link rel="stylesheet" href="logistics-live.css" />
-    <link rel="stylesheet" href="logistics.css?v=missing-trip-exception-20260817" />
+    <link rel="stylesheet" href="logistics.css?v=dispatch-viewer-20260922" />
   </head>
   <body>
     <section id="loginView" class="live-login hidden">
@@ -28,6 +28,7 @@
         <div class="brand-block"><div class="brand-mark" aria-hidden="true">BM</div><div><p class="brand-name">Blue Mark Agency</p><h1>Dispatch &amp; Invoice Review</h1></div></div>
         <div class="top-actions live-top-actions"><span id="connectionStatus" class="live-data-badge">Connecting…</span><span id="currentUser" class="live-user"></span><button id="refreshButton" class="quiet-button" type="button">Refresh</button><button id="signOutButton" class="quiet-button" type="button">Sign out</button></div>
       </header>
+      <p id="dispatchViewerNotice" class="dispatch-viewer-notice hidden" role="status">Read-only Dispatch Viewer — you can monitor purchase orders, trips and attached documents, but cannot change operations.</p>
 
       <section class="customer-bar" aria-label="Customer selection">
         <div><span class="section-label">CUSTOMER VIEW</span><div id="customerSwitcher" class="customer-switcher"></div></div>
@@ -199,6 +200,6 @@
     <div id="toast" class="toast" role="status"></div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="config.js"></script>
-    <script src="logistics.js?v=missing-trip-exception-20260817"></script>
+    <script src="logistics.js?v=dispatch-viewer-20260922"></script>
   </body>
 </html>
