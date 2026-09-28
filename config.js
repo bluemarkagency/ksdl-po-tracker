@@ -8,6 +8,8 @@
 window.PO_TRACKER_CONFIG = {
   SUPABASE_URL: 'https://tlashjovostkwziffsjk.supabase.co',
   SUPABASE_ANON_KEY: 'sb_publishable_vQtB0Y6QcUK9tC_IaJynyg_UZ7r2kHM',
+  // Paste the Google Apps Script Web App URL after deploying manual-gmail-sync-webapp.gs.
+  GMAIL_SYNC_WEB_APP_URL: 'https://bluemarkagency.github.io/ksdl-po-tracker/logistics.html',
   REQUIRE_SECURE_LOGIN: true,
   SIMPLE_PIN: ''
 };

@@ -6,12 +6,15 @@ const NOTE_BUCKET = 'delivery-notes';
 const ACTIVE_TRIP_STATUSES = new Set(['Dispatched', 'Awaiting GRN']);
 const BLOCKED_PO_STATUSES = new Set(['In Transit', 'Delivered', 'Cancelled']);
 const GRN_TRIP_GUARD_START = '2026-08-18';
+const GMAIL_SYNC_WEB_APP_URL = String(CONFIG.GMAIL_SYNC_WEB_APP_URL || '').trim();
+const GMAIL_SYNC_COOLDOWN_MS = 60 * 1000;
 let session = null;
 let orders = [];
 let trips = [];
 let transporters = [];
 let currentRole = '';
 let refreshTimer = null;
+let gmailSyncCooldownTimer = null;
 const state = { customer: 'All', schedule: 'Today', selected: new Set(), editTripId: null, missingTripOrderId: null, completeTripId: null, prepareInvoiceItems: [], prepareInvoiceState: 'idle' };
 
 const $ = id => document.getElementById(id);
@@ -199,6 +202,45 @@ function filteredAvailableOrders() {
 function canPrepareInvoice() { return currentRole === 'owner' || currentRole === 'executive'; }
 function isDispatchViewer() { return currentRole === 'dispatch_viewer'; }
 function canPermanentlyDeletePo() { return ['owner', 'accountant', 'executive', 'sales_representative', 'staff'].includes(currentRole); }
+function canTriggerGmailSync() {
+  return ['owner', 'accountant'].includes(currentRole) && /^https:\/\/script\.google\.com\//i.test(GMAIL_SYNC_WEB_APP_URL);
+}
+function updateGmailSyncButton() {
+  const button = $('syncGmailButton');
+  if (!button) return;
+  button.classList.toggle('hidden', !canTriggerGmailSync());
+  if (!canTriggerGmailSync()) return;
+  if (!button.disabled) button.textContent = 'Sync Gmail now';
+}
+function startGmailSync() {
+  if (!canTriggerGmailSync()) return;
+  const button = $('syncGmailButton');
+  if (button.disabled) return;
+  if (!session?.access_token) return toast('Please sign in again before starting Gmail sync.');
+
+  // The web app validates this short-lived signed-in user token before it can
+  // run a Gmail scan. No Gmail, Supabase secret or password is exposed here.
+  button.disabled = true;
+  button.textContent = 'Gmail sync started…';
+  setConnection('Gmail refresh started…');
+  fetch(GMAIL_SYNC_WEB_APP_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    cache: 'no-store',
+    headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+    body: JSON.stringify({ access_token: session.access_token })
+  }).catch(() => {
+    toast('Could not contact the Gmail sync service. Check your internet connection and try again.');
+  });
+  toast('Checking Gmail for all customers now. New POs usually appear within a minute.');
+  window.setTimeout(() => loadData(), 35 * 1000);
+  window.setTimeout(() => loadData(), 70 * 1000);
+  gmailSyncCooldownTimer = window.setTimeout(() => {
+    button.disabled = false;
+    button.textContent = 'Sync Gmail now';
+    gmailSyncCooldownTimer = null;
+  }, GMAIL_SYNC_COOLDOWN_MS);
+}
 function renderOpenOrders() {
   const visible = filteredAvailableOrders(); const ids = new Set(visible.map(order => order.id)); [...state.selected].forEach(id => { if (!ids.has(id)) state.selected.delete(id); });
   $('poTableBody').innerHTML = visible.map(order => {
@@ -241,7 +283,7 @@ function renderKpis() {
   const available = availableOrders(); const customerTrips = trips.filter(trip => tripLinksForCustomer(trip).length);
   $('availableKpi').textContent = available.length; $('todayKpi').textContent = available.filter(order => scheduleMatches(order, 'Today')).length; $('todayLabel').textContent = dateText(todayIso()); $('activeTripKpi').textContent = customerTrips.filter(trip => ACTIVE_TRIP_STATUSES.has(trip.status) || tripNeedsCorrection(trip)).length; $('awaitingGrnKpi').textContent = customerTrips.filter(trip => trip.status === 'Awaiting GRN').length;
 }
-function renderAll() { document.body.classList.toggle('dispatch-viewer', isDispatchViewer()); $('dispatchViewerNotice').classList.toggle('hidden', !isDispatchViewer()); if (isDispatchViewer()) state.selected.clear(); renderCustomerSwitcher(); renderKpis(); renderSchedule(); renderMissingTripExceptions(); renderOpenOrders(); renderTrips(); }
+function renderAll() { document.body.classList.toggle('dispatch-viewer', isDispatchViewer()); $('dispatchViewerNotice').classList.toggle('hidden', !isDispatchViewer()); if (isDispatchViewer()) state.selected.clear(); updateGmailSyncButton(); renderCustomerSwitcher(); renderKpis(); renderSchedule(); renderMissingTripExceptions(); renderOpenOrders(); renderTrips(); }
 
 function showPo(id) {
   const order = orders.find(item => item.id === id); if (!order) return;
@@ -481,7 +523,7 @@ $('prepareInvoiceForm').addEventListener('submit', savePreparedInvoice); $('prep
 $('editPoForm').addEventListener('submit', saveEditedPo); $('deleteEditPoButton').addEventListener('click', permanentlyDeleteEditedPo); $('closeEditPoDialog').addEventListener('click', () => closeDialog('editPoDialog')); $('cancelEditPoButton').addEventListener('click', () => closeDialog('editPoDialog'));
 $('appointmentForm').addEventListener('submit', saveAppointmentDate); $('closeAppointmentDialog').addEventListener('click', () => closeDialog('appointmentDialog')); $('cancelAppointmentButton').addEventListener('click', () => closeDialog('appointmentDialog'));
 $('tripPoList').addEventListener('change', event => { if (event.target.matches('[data-plan-file]')) handleInvoiceFile(event.target); });
-$('refreshButton').addEventListener('click', loadData); $('signOutButton').addEventListener('click', () => { clearInterval(refreshTimer); session = null; sessionStorage.removeItem(SESSION_KEY); location.reload(); });
+$('refreshButton').addEventListener('click', loadData); $('syncGmailButton').addEventListener('click', startGmailSync); $('signOutButton').addEventListener('click', () => { clearInterval(refreshTimer); session = null; sessionStorage.removeItem(SESSION_KEY); location.reload(); });
 document.body.addEventListener('click', event => { const po = event.target.closest('[data-view-po]'); if (po) showPo(po.dataset.viewPo); const appointment = event.target.closest('[data-edit-appointment]'); if (appointment) openAppointmentEdit(appointment.dataset.editAppointment); const editPo = event.target.closest('[data-edit-po]'); if (editPo) openEditPo(editPo.dataset.editPo); const prepareInvoice = event.target.closest('[data-prepare-invoice]'); if (prepareInvoice) openPrepareInvoice(prepareInvoice.dataset.prepareInvoice); const missingTrip = event.target.closest('[data-record-missing-trip]'); if (missingTrip) openRecordMissingTrip(missingTrip.dataset.recordMissingTrip); const edit = event.target.closest('[data-edit-trip]'); if (edit) openEditTrip(edit.dataset.editTrip); const complete = event.target.closest('[data-complete-trip]'); if (complete) openCompleteTrip(complete.dataset.completeTrip); const remove = event.target.closest('[data-delete-trip]'); if (remove) deleteTrip(remove.dataset.deleteTrip); const documentButton = event.target.closest('[data-open-doc]'); if (documentButton) openDocument(documentButton.dataset.openDoc); });
 $('loginForm').addEventListener('submit', async event => {
   event.preventDefault();
