@@ -210,7 +210,7 @@ function updateGmailSyncButton() {
   if (!button) return;
   button.classList.toggle('hidden', !canTriggerGmailSync());
   if (!canTriggerGmailSync()) return;
-  if (!button.disabled) button.textContent = 'Sync Gmail now';
+  if (!button.disabled) button.textContent = 'Update All POs';
 }
 function startGmailSync() {
   if (!canTriggerGmailSync()) return;
@@ -237,7 +237,7 @@ function startGmailSync() {
   window.setTimeout(() => loadData(), 70 * 1000);
   gmailSyncCooldownTimer = window.setTimeout(() => {
     button.disabled = false;
-    button.textContent = 'Sync Gmail now';
+    button.textContent = 'Update All POs';
     gmailSyncCooldownTimer = null;
   }, GMAIL_SYNC_COOLDOWN_MS);
 }
