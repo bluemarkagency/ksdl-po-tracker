@@ -263,13 +263,27 @@ function renderMissingTripExceptions() {
 }
 function tripNeedsCorrection(trip) { return trip.pos.some(link => link.deliveryStatus === 'Needs Correction'); }
 function tripLinksForCustomer(trip) { return state.customer === 'All' ? trip.pos : trip.pos.filter(link => link.customer === state.customer); }
+function isCurrentMonthCompletedTrip(trip) {
+  // Completed trips remain available for the month in which dispatch happened.
+  // Older records stay safely in Supabase for reporting and payment history,
+  // without making the Dispatch list grow forever.
+  const completedDate = (trip.pos || []).map(link => String(link.deliveredAt || '')).filter(Boolean).sort().at(-1) || trip.tripDate;
+  return trip.status === 'Delivered' && !tripNeedsCorrection(trip) && String(completedDate || '').slice(0, 7) === todayIso().slice(0, 7);
+}
 function filteredTrips() {
   const filter = $('tripFilter').value;
-  return trips.filter(trip => tripLinksForCustomer(trip).length).filter(trip => filter === 'All' || (filter === 'Active' ? ACTIVE_TRIP_STATUSES.has(trip.status) || tripNeedsCorrection(trip) : trip.status === 'Delivered' && !tripNeedsCorrection(trip)));
+  return trips.filter(trip => tripLinksForCustomer(trip).length).filter(trip => {
+    const isActive = ACTIVE_TRIP_STATUSES.has(trip.status) || tripNeedsCorrection(trip);
+    const isCurrentCompleted = isCurrentMonthCompletedTrip(trip);
+    if (filter === 'Active') return isActive;
+    if (filter === 'Delivered') return isCurrentCompleted;
+    return isActive || isCurrentCompleted;
+  });
 }
 function docButton(path, label) { return path ? `<button class="doc-link-button" type="button" data-open-doc="${safe(path)}">${safe(label)}</button>` : `<span class="doc-missing">${safe(label)} unavailable</span>`; }
 function renderTrips() {
   const visible = filteredTrips(); $('tripCount').textContent = `${visible.length} trip${visible.length === 1 ? '' : 's'}`; $('tripEmpty').classList.toggle('hidden', visible.length !== 0);
+  $('tripEmpty').textContent = $('tripFilter').value === 'Delivered' ? 'No completed trips for the current month.' : 'No trips for this view.';
   $('tripList').innerHTML = visible.map(trip => {
     const links = tripLinksForCustomer(trip); const appointments = links.map(link => link.appointmentDate).filter(Boolean).sort(); const correction = tripNeedsCorrection(trip);
     let actions = '';
